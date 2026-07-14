@@ -1,0 +1,13 @@
+[package]
+name = "n1_core"
+version.workspace = true
+authors.workspace = true
+edition = "2024"
+description = "The operations of this cloud."
+
+[dependencies]
+base64 = { workspace = true }
+bytes = { workspace = true }
+n1_tool = { path = "../n1_tool" }
+rust-crypto = { workspace = true }
+tokio = { workspace = true }

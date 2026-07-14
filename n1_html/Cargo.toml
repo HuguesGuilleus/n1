@@ -1,0 +1,8 @@
+[package]
+name = "n1_html"
+version.workspace = true
+authors.workspace = true
+edition = "2024"
+description = "HTML generation tools"
+
+[dependencies]
