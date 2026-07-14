@@ -3,17 +3,18 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::atomic::AtomicI64;
 
-use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpListener;
 use tokio::spawn;
 
 use crate::op::{self, OpRequest, OpResponse, OpServer};
 use crate::{Result, errs};
-use n1_tool::proto_http::{HTTPParser, HTTPRequest, response_bytes};
-use n1_tool::{Error, ErrorKind, mime};
+use n1_tool::proto_http::{HTTPParser, HTTPRequest, StatusHTTP, response_bytes, response_chunks};
+use n1_tool::{Config, ConfigMemoryMutex, Error, ErrorKind, mime};
 
 pub async fn run() -> io::Result<()> {
     let server = Arc::new(OpServer {
+        config: Arc::new(ConfigMemoryMutex::new()),
         nb: AtomicI64::new(14),
     });
 
@@ -36,45 +37,54 @@ pub async fn run() -> io::Result<()> {
 }
 
 pub async fn handle_wrap(
-    server: &OpServer,
+    server: &OpServer<impl Config + Unpin>,
     request: HTTPRequest<impl AsyncRead + Unpin>,
-    mut w: impl AsyncWrite + Unpin,
+    w: impl AsyncWrite + Unpin,
 ) -> io::Result<()> {
     match handle_op(server, request).await {
-        Ok(OpResponse::HTML(html)) => response_bytes(w, mime::HTML, html.as_bytes()).await,
-        Ok(OpResponse::Chunks(mut chunks)) => {
-            let mut buff = String::new();
-            buff.push_str("HTTP/1.1 200 OK\r\n");
-            buff.push_str("Content-Type: text/plain; charset=utf-8\r\n");
-            buff.push_str(format!("Content-Length: {}\r\n", chunks.len()).as_str());
-            buff.push_str("\r\n");
-            w.write_all(buff.as_bytes()).await?;
-
-            while let Some(data) = chunks.next() {
-                w.write_all(&data).await?;
-            }
-
-            Ok(())
+        Ok(OpResponse::HTML(html)) => {
+            response_bytes(w, StatusHTTP::OK, mime::HTML, html.as_bytes()).await
+        }
+        Ok(OpResponse::Chunks(chunks)) => {
+            response_chunks(w, StatusHTTP::OK, mime::TEXT, chunks).await
         }
         Err(Error {
-            kind: ErrorKind::NotFound,
+            kind: ErrorKind::SubIO | ErrorKind::Internal,
             ..
-        }) => response_bytes(w, mime::TEXT, "Not Found".as_bytes()).await,
-        Err(err, ..) => response_bytes(w, mime::TEXT, err.msg.as_bytes()).await,
+        }) => {
+            response_bytes(
+                w,
+                StatusHTTP::InternalServerError,
+                mime::TEXT,
+                b"Internal server error",
+            )
+            .await
+        }
+        Err(Error {
+            kind: ErrorKind::BadRequest,
+            msg,
+        }) => response_bytes(w, StatusHTTP::BadRequest, mime::TEXT, msg.as_bytes()).await,
+        Err(Error {
+            kind: ErrorKind::NotFound,
+            msg,
+        }) => response_bytes(w, StatusHTTP::NotFound, mime::TEXT, msg.as_bytes()).await,
     }
 }
 
-pub async fn handle_op<R: AsyncRead + Unpin>(
-    server: &OpServer,
+pub async fn handle_op<R: AsyncRead + Unpin, C: Config>(
+    server: &OpServer<C>,
     request: HTTPRequest<R>,
-) -> Result<OpResponse> {
+) -> Result<OpResponse<C>> {
     match request.path.as_str() {
-        "/io" => Ok(op::big(server, parse_request(server, request).await?).await),
+        "/io" => op::big(server, parse_request(server, request).await?).await,
         "/" => op::add(server, parse_request(server, request).await?).await,
         _ => Err(errs::NOT_FOUND),
     }
 }
 
-pub async fn parse_request<R>(_server: &OpServer, _request: HTTPRequest<R>) -> Result<OpRequest> {
+pub async fn parse_request<R: AsyncRead, C: Config>(
+    _server: &OpServer<C>,
+    _request: HTTPRequest<R>,
+) -> Result<OpRequest> {
     Ok(OpRequest { nb: 2 })
 }

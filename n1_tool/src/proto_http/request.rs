@@ -16,7 +16,7 @@ pub enum Method {
     X,
 }
 
-pub struct HTTPRequest<B> {
+pub struct HTTPRequest<B: AsyncRead> {
     pub method: Method,
     /// Decoded path
     pub path: String,

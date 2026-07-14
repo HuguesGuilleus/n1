@@ -1,13 +1,15 @@
 mod token;
 
-use std::sync::atomic::AtomicI64;
+use std::sync::{Arc, atomic::AtomicI64};
 
 use bytes::Bytes;
+use n1_tool::{Chunk, Chunks, Config};
 
 use crate::Result;
 pub use token::*;
 
-pub struct OpServer {
+pub struct OpServer<C> {
+    pub config: Arc<C>,
     pub nb: AtomicI64,
 }
 
@@ -15,14 +17,14 @@ pub struct OpRequest {
     pub nb: i64,
 }
 
-pub enum OpResponse {
+pub type OpResult<C> = Result<OpResponse<C>>;
+
+pub enum OpResponse<C: Config> {
     HTML(String),
-    Chunks(Chunks),
+    Chunks(Chunks<C>),
 }
 
-pub async fn add(server: &OpServer, req: OpRequest) -> Result<OpResponse> {
-    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-
+pub async fn add<C: Config>(server: &OpServer<C>, req: OpRequest) -> OpResult<C> {
     let nb = req.nb
         + server
             .nb
@@ -31,38 +33,24 @@ pub async fn add(server: &OpServer, req: OpRequest) -> Result<OpResponse> {
     Ok(OpResponse::HTML(format!("{}", nb)))
 }
 
-pub async fn big(_server: &OpServer, _req: OpRequest) -> OpResponse {
-    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-    OpResponse::Chunks(Chunks::new())
-}
+pub async fn big<C: Config>(server: &OpServer<C>, _req: OpRequest) -> OpResult<C> {
+    let b1 = Bytes::from_static(b"Hello ");
+    let b2 = Bytes::from_static(b"World!\r\n");
+    server.config.fs_set(42, 1, b1.clone()).await?;
+    server.config.fs_set(42, 2, b2.clone()).await?;
 
-pub struct Chunks {
-    pub a: Option<Bytes>,
-    pub b: Option<Bytes>,
-}
-
-impl Chunks {
-    fn new() -> Self {
-        Chunks {
-            a: Some(Bytes::from_static(b"abc\n")),
-            b: Some(Bytes::from_static(b"def\n")),
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.a.as_ref().map(|a| a.len()).unwrap_or(0)
-            + self.b.as_ref().map(|b| b.len()).unwrap_or(0)
-    }
-
-    pub fn next(&mut self) -> Option<Bytes> {
-        if let Some(data) = self.a.clone() {
-            self.a = None;
-            Some(data)
-        } else if let Some(data) = self.b.clone() {
-            self.b = None;
-            Some(data)
-        } else {
-            None
-        }
-    }
+    Ok(OpResponse::Chunks(Chunks::new(
+        server.config.clone(),
+        42,
+        &[
+            Chunk {
+                len: b1.len(),
+                oid: 1,
+            },
+            Chunk {
+                len: b2.len(),
+                oid: 2,
+            },
+        ],
+    )))
 }

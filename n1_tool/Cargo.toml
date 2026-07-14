@@ -6,6 +6,9 @@ edition = "2024"
 description = "All tool used by n1_core or other projects."
 
 [dependencies]
+async-trait = { workspace = true }
 bytes = { workspace = true }
 tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 urlencoding = { workspace = true }

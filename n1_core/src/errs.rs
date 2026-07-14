@@ -1,4 +1,4 @@
-pub use n1_tool::{Error, ErrorKind, Result};
+pub use n1_tool::errs::*;
 
 macro_rules! E {
     ($n:ident,$k:ident, $m:expr) => {
@@ -19,4 +19,3 @@ E!(TOKEN_BASE64, BadRequest, "cannot parse base64 in token");
 E!(TOKEN_WRONG_LENGTH, BadRequest, "token wrong lenght");
 E!(TOKEN_OBSOLETE, BadRequest, "obsolete token");
 E!(TOKEN_SIGNATURE, BadRequest, "wrong token signature");
-E!(NOT_FOUND, NotFound, "not found");
