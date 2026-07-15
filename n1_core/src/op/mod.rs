@@ -1,10 +1,13 @@
-mod home;
+mod compo;
+pub mod home;
 mod token;
 
-use std::sync::{Arc, atomic::AtomicI64};
+use std::fmt::Debug;
+use std::sync::Arc;
 
 use bytes::Bytes;
-use n1_tool::{Chunk, Chunks, Config, mime};
+use n1_tool::{Chunk, Chunks, Config};
+use serde::de::DeserializeOwned;
 
 use crate::Result;
 pub use token::*;
@@ -13,11 +16,15 @@ pub const OID_GLOBAL_HOME: u32 = 1;
 
 pub struct OpServer<C> {
     pub config: Arc<C>,
-    pub nb: AtomicI64,
 }
 
-pub struct OpRequest {
-    pub nb: i64,
+pub struct OpRequest<D: DTO> {
+    pub token: Token,
+    pub dto: D,
+}
+
+pub trait DTO: DeserializeOwned + Debug {
+    fn check(&self) -> Result<()>;
 }
 
 pub type OpResult<C> = Result<OpResponse<C>>;
@@ -25,6 +32,13 @@ pub type OpResult<C> = Result<OpResponse<C>>;
 pub enum OpResponse<C: Config> {
     Bytes(&'static str, Bytes),
     Chunks(Chunks<C>),
+    Ok,
+}
+
+impl DTO for () {
+    fn check(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 pub async fn init<C: Config + Unpin>(server: &OpServer<C>) -> Result<()> {
@@ -33,19 +47,7 @@ pub async fn init<C: Config + Unpin>(server: &OpServer<C>) -> Result<()> {
     Ok(())
 }
 
-pub async fn add<C: Config>(server: &OpServer<C>, req: OpRequest) -> OpResult<C> {
-    let nb = req.nb
-        + server
-            .nb
-            .fetch_add(req.nb, std::sync::atomic::Ordering::AcqRel);
-
-    Ok(OpResponse::Bytes(
-        mime::HTML,
-        Bytes::from_owner(format!("{}", nb)),
-    ))
-}
-
-pub async fn big<C: Config>(server: &OpServer<C>, _req: OpRequest) -> OpResult<C> {
+pub async fn big<C: Config>(server: &OpServer<C>, _req: OpRequest<()>) -> OpResult<C> {
     let b1 = Bytes::from_static(b"Hello ");
     let b2 = Bytes::from_static(b"World!\r\n");
     server.config.fs_set(42, 1, b1.clone()).await?;

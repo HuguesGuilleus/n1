@@ -1,7 +1,4 @@
-use std::{
-    io,
-    sync::{Arc, atomic::AtomicI64},
-};
+use std::{io, sync::Arc};
 
 use n1_core::{
     op::{self, OpServer},
@@ -13,7 +10,6 @@ use n1_tool::ConfigMemoryMutex;
 async fn main() -> io::Result<()> {
     let server = Arc::new(OpServer {
         config: Arc::new(ConfigMemoryMutex::new()),
-        nb: AtomicI64::new(14),
     });
     op::init(&server)
         .await

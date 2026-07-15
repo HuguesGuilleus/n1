@@ -5,6 +5,21 @@ use tokio::io::{AsyncWrite, AsyncWriteExt};
 use crate::{Chunks, Config};
 pub use status::StatusHTTP;
 
+pub async fn response_empty<W: AsyncWrite + Unpin>(
+    mut w: W,
+    status: StatusHTTP,
+) -> std::io::Result<()> {
+    let mut buff = String::new();
+    buff.push_str("HTTP/1.1 ");
+    buff.push_str(status.as_str());
+    buff.push_str("Content-Type: 0\r\n");
+    buff.push_str("\r\n");
+
+    w.write_all(buff.as_bytes()).await?;
+
+    Ok(())
+}
+
 pub async fn response_bytes<W: AsyncWrite + Unpin>(
     mut w: W,
     status: StatusHTTP,

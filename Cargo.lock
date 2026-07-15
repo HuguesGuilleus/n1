@@ -107,6 +107,7 @@ dependencies = [
  "n1_tool",
  "rust-crypto",
  "serde",
+ "serde_json",
  "tokio",
 ]
 
