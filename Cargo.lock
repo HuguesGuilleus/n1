@@ -103,8 +103,10 @@ version = "0.1.0"
 dependencies = [
  "base64",
  "bytes",
+ "n1_html",
  "n1_tool",
  "rust-crypto",
+ "serde",
  "tokio",
 ]
 

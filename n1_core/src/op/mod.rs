@@ -1,12 +1,15 @@
+mod home;
 mod token;
 
 use std::sync::{Arc, atomic::AtomicI64};
 
 use bytes::Bytes;
-use n1_tool::{Chunk, Chunks, Config};
+use n1_tool::{Chunk, Chunks, Config, mime};
 
 use crate::Result;
 pub use token::*;
+
+pub const OID_GLOBAL_HOME: u32 = 1;
 
 pub struct OpServer<C> {
     pub config: Arc<C>,
@@ -20,8 +23,14 @@ pub struct OpRequest {
 pub type OpResult<C> = Result<OpResponse<C>>;
 
 pub enum OpResponse<C: Config> {
-    HTML(String),
+    Bytes(&'static str, Bytes),
     Chunks(Chunks<C>),
+}
+
+pub async fn init<C: Config + Unpin>(server: &OpServer<C>) -> Result<()> {
+    home::init(server).await?;
+
+    Ok(())
 }
 
 pub async fn add<C: Config>(server: &OpServer<C>, req: OpRequest) -> OpResult<C> {
@@ -30,7 +39,10 @@ pub async fn add<C: Config>(server: &OpServer<C>, req: OpRequest) -> OpResult<C>
             .nb
             .fetch_add(req.nb, std::sync::atomic::Ordering::AcqRel);
 
-    Ok(OpResponse::HTML(format!("{}", nb)))
+    Ok(OpResponse::Bytes(
+        mime::HTML,
+        Bytes::from_owner(format!("{}", nb)),
+    ))
 }
 
 pub async fn big<C: Config>(server: &OpServer<C>, _req: OpRequest) -> OpResult<C> {

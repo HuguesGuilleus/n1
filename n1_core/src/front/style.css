@@ -1,0 +1,173 @@
+:root {
+	--SP: 1rem;
+	--LINE: .2rem;
+	--W: 40rem;
+
+	--c: black;
+}
+
+[hidden] {
+	display: none !important;
+}
+
+/* ELEMENT */
+
+body {
+	font-family: "Courier New", monospace;
+	background: #eae5dc;
+	color: black;
+	font-size: large;
+	margin: 0;
+}
+
+header {
+	background: white;
+}
+
+main {
+	padding: var(--SP);
+}
+
+p {
+	text-indent: calc(var(--SP)*3);
+	text-align: justify;
+	max-width: var(--W);
+}
+
+button,
+code,
+fieldset,
+input,
+pre,
+textarea {
+	font: inherit;
+	border: none;
+	padding: 0;
+	background: unset;
+}
+
+textarea.norh {
+	resize: vertical;
+}
+
+pre {
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+hr {
+	border: solid var(--LINE) var(--c);
+	border-top: 0;
+}
+
+/* COLOR AND BLOCK */
+
+.act,
+button,
+input,
+textarea,
+[contenteditable] {
+	--c: #F92;
+
+	&:focus,
+	&:hover {
+		--c: #F62;
+	}
+}
+
+a {
+	text-decoration: none;
+	color: var(--c);
+	--c: #5AF;
+
+	&:hover {
+		--c: #98F;
+	}
+}
+
+/* just background */
+.bg {
+	color: black;
+	background: var(--c);
+	padding: 0 var(--LINE);
+}
+
+/* border block */
+.bb {
+	display: block;
+	border: solid var(--c) var(--LINE);
+	padding: var(--SP);
+	color: black;
+}
+
+/* block with padding and background */
+.bl {
+	display: block;
+	color: black;
+	background: var(--c);
+	padding: var(--SP);
+}
+
+[data-drop="true"] {
+	background: repeating-linear-gradient(-45deg, transparent 0 1rem, #dcbca3 1rem 1.2rem);
+}
+
+/* BLOCKS */
+
+.w {
+	margin: 0 auto;
+	max-width: var(--W);
+}
+
+/* flex vertical and horizontal */
+.fv,
+.fh {
+	display: flex;
+	flex-wrap: wrap;
+
+	&>* {
+		margin: 0;
+	}
+}
+
+/* flex vertical */
+.fv {
+	flex-direction: column;
+}
+
+.g2 {
+	display: grid;
+	grid-template-columns: auto 1fr;
+}
+
+/* Add a gap in flexbox and margin. */
+.gap {
+	gap: var(--SP);
+}
+
+/* margin vertical */
+.mv {
+	margin: var(--SP) 0;
+}
+
+/* margin right */
+.mr {
+	margin-right: var(--SP);
+}
+
+/* margin left auto */
+.mlauto {
+	margin-left: auto;
+}
+
+/* Display in columns with sub block */
+.cols {
+	column-width: 30rem;
+	column-gap: var(--sp);
+	column-rule: var(--LINE);
+
+	&>* {
+		break-inside: avoid;
+		margin-bottom: var(--SP);
+	}
+}
