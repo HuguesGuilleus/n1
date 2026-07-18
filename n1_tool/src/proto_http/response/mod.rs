@@ -65,3 +65,23 @@ pub async fn response_chunks<C: Config + Unpin, W: AsyncWrite + Unpin>(
 
     Ok(())
 }
+
+pub async fn response_cookie<W: AsyncWrite + Unpin>(
+    mut w: W,
+    name: &str,
+    value: String,
+) -> std::io::Result<()> {
+    let mut buff = String::new();
+    buff.push_str("HTTP/1.1 200 OK\r\n");
+    buff.push_str("Set-Cookie: ");
+    buff.push_str(name);
+    buff.push_str("=");
+    buff.push_str(&value);
+    buff.push_str("; SameSite=Strict; Secure; HttpOnly");
+    buff.push_str("\r\n");
+    buff.push_str("Content-Length: 0\r\n");
+    buff.push_str("\r\n");
+    w.write_all(buff.as_bytes()).await?;
+
+    Ok(())
+}

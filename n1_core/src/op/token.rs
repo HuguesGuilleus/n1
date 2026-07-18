@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{Result, errs};
 
 /// A parsed token with all user access.
@@ -13,7 +15,7 @@ pub struct Token {
     pub groups_vec: Vec<(u32, TokenLevel)>,
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Serialize, Deserialize)]
 pub enum TokenLevel {
     /// Zero access
     None = 0,

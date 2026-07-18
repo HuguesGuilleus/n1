@@ -1,6 +1,7 @@
 use std::io;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use bytes::Bytes;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite};
@@ -8,9 +9,11 @@ use tokio::net::TcpListener;
 use tokio::spawn;
 
 use crate::op::{self, DTO, OpRequest, OpResponse, OpServer, Token};
+use crate::token::token_encode;
 use crate::{Result, errs, front};
 use n1_tool::proto_http::{
-    HTTPParser, HTTPRequest, Method, StatusHTTP, response_bytes, response_chunks, response_empty,
+    HTTPParser, HTTPRequest, Method, StatusHTTP, response_bytes, response_chunks, response_cookie,
+    response_empty,
 };
 use n1_tool::{Config, Error, ErrorKind, mime};
 
@@ -44,6 +47,21 @@ pub async fn handle_wrap(
         Ok(OpResponse::Bytes(mime, data)) => response_bytes(w, StatusHTTP::OK, mime, &data).await,
         Ok(OpResponse::Chunks(chunks)) => {
             response_chunks(w, StatusHTTP::OK, mime::TEXT, chunks).await
+        }
+        Ok(OpResponse::Token(token)) => {
+            response_cookie(
+                w,
+                "auth",
+                token_encode(
+                    &token,
+                    b"key",
+                    SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs(),
+                ),
+            )
+            .await
         }
         Err(Error {
             kind: ErrorKind::SubIO | ErrorKind::Internal,
@@ -94,6 +112,9 @@ pub async fn handle_op<R: AsyncRead + Unpin, C: Config>(
         // Action
         (_, "/io") => op::big(serv, parse_request_url(serv, r).await?).await,
         (Method::PUT, "/_home/") => op::home::edit(serv, &parse_request_body(serv, r).await?).await,
+        (Method::PUT, "/_login") => {
+            op::user::login::login(serv, &parse_request_body(serv, r).await?).await
+        }
 
         // Page
         (Method::GET, p) => {

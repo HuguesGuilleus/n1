@@ -12,6 +12,8 @@ macro_rules! E {
 E!(DECODE_REQUEST, BadRequest, "cannot decode request data");
 E!(FIELD_CONTENT, BadRequest, "the field 'content' is empty");
 E!(FIELD_DESC, BadRequest, "the field 'desc' is empty");
+E!(FIELD_NAME, BadRequest, "the field 'name' is empty");
+E!(FIELD_PASSWORD, BadRequest, "the field 'password' is empty");
 E!(FIELD_TITLE, BadRequest, "the field 'title' is empty");
 E!(FORBIDEN_GLOBAL, BadRequest, "no access this global item");
 E!(FORBIDEN_GROUP, BadRequest, "no access this group");
@@ -23,3 +25,4 @@ E!(TOKEN_OBSOLETE, BadRequest, "obsolete token");
 E!(TOKEN_PREFIX, BadRequest, "unknown token prefix");
 E!(TOKEN_SIGNATURE, BadRequest, "wrong token signature");
 E!(TOKEN_WRONG_LENGTH, BadRequest, "token wrong lenght");
+E!(WRONG_LOGIN, BadRequest, "wrong login information");

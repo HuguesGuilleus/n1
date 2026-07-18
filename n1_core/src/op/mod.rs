@@ -1,9 +1,10 @@
 mod compo;
 pub mod home;
 mod token;
+pub mod user;
 
-use std::fmt::Debug;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
+use std::{collections::BTreeMap, fmt::Debug};
 
 use bytes::Bytes;
 use n1_tool::{Chunk, Chunks, Config};
@@ -11,11 +12,14 @@ use serde::de::DeserializeOwned;
 
 use crate::Result;
 pub use token::*;
+use user::User;
 
-pub const OID_GLOBAL_HOME: u32 = 1;
+pub const OID_GLOBAL_USER: u32 = 1;
+pub const OID_GLOBAL_HOME: u32 = 3;
 
 pub struct OpServer<C> {
     pub config: Arc<C>,
+    pub user: RwLock<BTreeMap<u32, User>>,
 }
 
 pub struct OpRequest<D: DTO> {
@@ -33,6 +37,7 @@ pub enum OpResponse<C: Config> {
     Bytes(&'static str, Bytes),
     Chunks(Chunks<C>),
     Ok,
+    Token(Token),
 }
 
 impl DTO for () {
@@ -41,10 +46,15 @@ impl DTO for () {
     }
 }
 
-pub async fn init<C: Config + Unpin>(server: &OpServer<C>) -> Result<()> {
-    home::init(server).await?;
+pub async fn init<C: Config + Unpin>(config: C) -> Result<OpServer<C>> {
+    let mut server = OpServer {
+        config: Arc::new(config),
+        user: RwLock::new(BTreeMap::new()),
+    };
+    home::init(&mut server).await?;
+    user::init(&mut server).await?;
 
-    Ok(())
+    Ok(server)
 }
 
 pub async fn big<C: Config>(server: &OpServer<C>, _req: OpRequest<()>) -> OpResult<C> {
