@@ -16,7 +16,7 @@ const MAX_AGE: u64 = 7 * 24 * 60 * 60;
  * ```txt
  * token = "T0." + base64(data + hmac-sha256(data))
  * data = seconds_since_Epoch:u64 user:access groups:access*
- * access= id:u32 level:u8
+ * access = id:u32 level:u8
  * ```
  */
 pub fn token_encode(token: &Token, key: &[u8], now: u64) -> String {
@@ -69,7 +69,7 @@ pub fn token_decode(s: &str, key: &[u8], now: u64) -> Result<Token> {
     }
     let mut data = &data[0..data.len() - SHA256_BYTES];
 
-    // Check timee
+    // Check time
     let mut buf_u64 = [0u8; 8];
     std::io::Read::read_exact(&mut data, &mut buf_u64).unwrap();
     let time = u64::from_be_bytes(buf_u64);
@@ -116,6 +116,7 @@ impl TryFrom<u8> for TokenLevel {
     type Error = errs::Error;
     fn try_from(value: u8) -> errs::Result<Self> {
         match value {
+            0 => Ok(TokenLevel::None),
             1 => Ok(TokenLevel::Read),
             2 => Ok(TokenLevel::Write),
             3 => Ok(TokenLevel::Admin),

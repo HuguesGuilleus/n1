@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{Result, errs};
 
 /// A parsed token with all user access.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Token {
     /// User ID.
     /// No auth if `id == 0`
@@ -15,9 +15,10 @@ pub struct Token {
     pub groups_vec: Vec<(u32, TokenLevel)>,
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Serialize, Deserialize, Default)]
 pub enum TokenLevel {
     /// Zero access
+    #[default]
     None = 0,
     /// The user can see the data.
     Read = 1,

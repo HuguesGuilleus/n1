@@ -9,7 +9,7 @@ use tokio::net::TcpListener;
 use tokio::spawn;
 
 use crate::op::{self, DTO, OpRequest, OpResponse, OpServer, Token};
-use crate::token::token_encode;
+use crate::token::{token_decode, token_encode};
 use crate::{Result, errs, front};
 use n1_tool::proto_http::{
     HTTPParser, HTTPRequest, Method, StatusHTTP, response_bytes, response_chunks, response_cookie,
@@ -17,7 +17,12 @@ use n1_tool::proto_http::{
 };
 use n1_tool::{Config, Error, ErrorKind, mime};
 
-pub async fn run<C: Config + Unpin + 'static>(server: Arc<OpServer<C>>) -> io::Result<()> {
+pub struct HTTPServer<C: Config> {
+    pub op: OpServer<C>,
+    pub key: [u8; 64],
+}
+
+pub async fn run<C: Config + Unpin + 'static>(server: Arc<HTTPServer<C>>) -> io::Result<()> {
     let server = server.clone();
     let addr: SocketAddr = ([127, 0, 0, 1], 8000).into();
     let listener = TcpListener::bind(addr).await?;
@@ -38,7 +43,7 @@ pub async fn run<C: Config + Unpin + 'static>(server: Arc<OpServer<C>>) -> io::R
 }
 
 pub async fn handle_wrap(
-    server: &OpServer<impl Config + Unpin>,
+    server: &HTTPServer<impl Config + Unpin>,
     request: HTTPRequest<impl AsyncRead + Unpin>,
     w: impl AsyncWrite + Unpin,
 ) -> io::Result<()> {
@@ -54,7 +59,7 @@ pub async fn handle_wrap(
                 "auth",
                 token_encode(
                     &token,
-                    b"key",
+                    &server.key,
                     SystemTime::now()
                         .duration_since(UNIX_EPOCH)
                         .unwrap()
@@ -87,7 +92,7 @@ pub async fn handle_wrap(
 }
 
 pub async fn handle_op<R: AsyncRead + Unpin, C: Config>(
-    serv: &OpServer<C>,
+    serv: &HTTPServer<C>,
     r: HTTPRequest<R>,
 ) -> Result<OpResponse<C>> {
     match (r.method, r.path.as_str()) {
@@ -105,58 +110,79 @@ pub async fn handle_op<R: AsyncRead + Unpin, C: Config>(
         )),
 
         // Console
-        (Method::GET, "/_home/") => {
-            op::home::console(serv, &parse_request_url(serv, r).await?).await
-        }
+        (Method::GET, "/_home/") => op::home::console(&serv.op, &request_url(serv, r).await?).await,
 
         // Action
-        (_, "/io") => op::big(serv, parse_request_url(serv, r).await?).await,
-        (Method::PUT, "/_home/") => op::home::edit(serv, &parse_request_body(serv, r).await?).await,
+        (_, "/io") => op::big(&serv.op, request_url(serv, r).await?).await,
+        (Method::PUT, "/_home/") => op::home::edit(&serv.op, &request_body(serv, r).await?).await,
         (Method::PUT, "/_login") => {
-            op::user::login::login(serv, &parse_request_body(serv, r).await?).await
+            op::user::login::login(&serv.op, &request_body(serv, r).await?).await
         }
 
         // Page
         (Method::GET, p) => {
-            let (mime, data) = serv.config.page_get(p).await?;
+            let (mime, data) = serv.op.config.page_get(p).await?;
             Ok(OpResponse::Bytes(mime, data))
         }
         _ => Err(errs::NOT_FOUND),
     }
 }
 
-pub async fn parse_request_url<R: AsyncRead, C: Config, D: DTO>(
-    _server: &OpServer<C>,
+pub async fn request_url<R: AsyncRead, C: Config, D: DTO>(
+    server: &HTTPServer<C>,
     request: HTTPRequest<R>,
 ) -> Result<OpRequest<D>> {
+    let token = get_token(&server.key, &request);
+
     let data = match request.path[1..].split_once('/') {
         Some((_, "")) | None => "null",
         Some((_, data)) => data,
     };
     let dto = serde_json::from_str(data).map_err(|_| errs::DECODE_REQUEST)?;
 
-    Ok(OpRequest {
-        token: Token::test_alice(),
-        dto,
-    })
+    Ok(OpRequest { token, dto })
 }
 
-pub async fn parse_request_body<R: AsyncRead + Unpin, C: Config, D: DTO>(
-    _server: &OpServer<C>,
+pub async fn request_body<R: AsyncRead + Unpin, C: Config, D: DTO>(
+    server: &HTTPServer<C>,
     mut request: HTTPRequest<R>,
 ) -> Result<OpRequest<D>> {
+    let token = get_token(&server.key, &request);
+
     let mut buf = Vec::new();
     request.body.read_to_end(&mut buf).await?;
-
     let data: &[u8] = match &buf[..] {
         b"" => b"null",
         _ => &buf,
     };
-
     let dto = serde_json::from_slice(data).map_err(|_| errs::DECODE_REQUEST)?;
 
-    Ok(OpRequest {
-        token: Token::test_alice(),
-        dto,
-    })
+    Ok(OpRequest { token, dto })
+}
+
+fn get_token<B: AsyncRead>(key: &[u8], request: &HTTPRequest<B>) -> Token {
+    let cookie = request
+        .headers
+        .get("Cookie")
+        .map(|c| c.as_str())
+        .unwrap_or("")
+        .split("; ")
+        .filter(|cookie| cookie.starts_with("auth="))
+        .next();
+
+    if let Some(cookie) = cookie {
+        token_decode(
+            &cookie[5..],
+            key,
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+        )
+        .inspect_err(|err| eprintln!("Cookie auth token fail: {:?}", err))
+        .ok()
+        .unwrap_or_default()
+    } else {
+        Token::default()
+    }
 }
