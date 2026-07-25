@@ -5,3 +5,4 @@ pub mod proto_http;
 mod token;
 
 pub use errs::{Error, Result};
+pub use op::{DTO, OpRequest, OpResponse, OpServer};

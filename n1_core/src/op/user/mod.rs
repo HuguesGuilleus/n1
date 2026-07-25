@@ -5,16 +5,16 @@ use serde::Deserialize;
 
 use super::{DTO, OpRequest, OpServer};
 use crate::{
-    Result, errs,
+    Result,
     op::{OID_GLOBAL_USER, TokenLevel},
 };
 
 #[derive(Debug, PartialEq, Deserialize, Clone)]
 pub struct User {
-    uid: u32,
-    name: String,
-    password: String,
-    global: TokenLevel,
+    pub uid: u32,
+    pub name: String,
+    pub password: String,
+    pub global: TokenLevel,
     /// Access for this group
     pub groups_array: [(u32, TokenLevel); 5],
     pub groups_vec: Vec<(u32, TokenLevel)>,

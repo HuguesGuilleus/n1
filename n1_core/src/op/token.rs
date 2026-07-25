@@ -115,3 +115,14 @@ fn test_token_level_order() {
     assert!(TokenLevel::Read < TokenLevel::Admin);
     assert!(TokenLevel::Write < TokenLevel::Admin);
 }
+
+impl TokenLevel {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Read => "read",
+            Self::Write => "write",
+            Self::Admin => "admin",
+        }
+    }
+}

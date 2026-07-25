@@ -1,5 +1,6 @@
 mod compo;
 pub mod home;
+pub mod menu;
 mod token;
 pub mod user;
 

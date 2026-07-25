@@ -92,7 +92,7 @@ pub async fn handle_wrap(
 }
 
 pub async fn handle_op<R: AsyncRead + Unpin, C: Config>(
-    serv: &HTTPServer<C>,
+    s: &HTTPServer<C>,
     r: HTTPRequest<R>,
 ) -> Result<OpResponse<C>> {
     match r.path.as_str() {
@@ -106,15 +106,17 @@ pub async fn handle_op<R: AsyncRead + Unpin, C: Config>(
             Bytes::from_static(front::ROBOTSTXT),
         )),
 
-        "/io" => op::big(&serv.op, from_url(serv, r)?).await,
+        "/io" => op::big(&s.op, from_url(s, r)?).await,
 
-        "/_home/" => op::home::page_console(&serv.op, &from_url(serv, r)?).await,
-        "/:home/" => op::home::json_edit(&serv.op, &from_body(serv, r).await?).await,
+        "/_home/" => op::home::page_console(&s.op, &from_url(s, r)?).await,
+        "/:home/" => op::home::json_edit(&s.op, &from_body(s, r).await?).await,
 
-        "/:login" => op::user::login::login(&serv.op, &from_body(serv, r).await?).await,
+        "/:login" => op::user::login::login(&s.op, &from_body(s, r).await?).await,
+
+        "/_" => op::menu::page(&s.op, &from_url(s, r)?),
 
         p => {
-            let (mime, data) = serv.op.config.page_get(p).await?;
+            let (mime, data) = s.op.config.page_get(p).await?;
             Ok(OpResponse::Bytes(mime, data))
         }
     }

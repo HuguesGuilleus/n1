@@ -19,6 +19,7 @@ E!(FORBIDEN_GLOBAL, BadRequest, "no access this global item");
 E!(FORBIDEN_GROUP, BadRequest, "no access this group");
 E!(FORBIDEN_OUTSIDE, BadRequest, "not in this group");
 E!(NO_AUTH, BadRequest, "No authentification token");
+E!(NOT_FOUND_USER, BadRequest, "not found user");
 E!(TOKEN_BASE64, BadRequest, "cannot parse base64 in token");
 E!(TOKEN_LEVEL, BadRequest, "unknown this token level");
 E!(TOKEN_OBSOLETE, BadRequest, "obsolete token");
