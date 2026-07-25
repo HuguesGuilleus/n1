@@ -41,3 +41,9 @@ E!(EOF, Internal, "end of file");
 E!(TIME_FAIL, Internal, "get time is fall");
 E!(DB_ENCODE, Internal, "encode data from DB fail");
 E!(DB_DECODE, Internal, "decode data from DB fail");
+
+impl<T> From<std::sync::PoisonError<T>> for Error {
+    fn from(_: std::sync::PoisonError<T>) -> Self {
+        MUTEX_POISONING
+    }
+}

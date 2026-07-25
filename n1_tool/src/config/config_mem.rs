@@ -36,24 +36,24 @@ impl ConfigMemoryMutex {
 #[async_trait]
 impl Config for ConfigMemoryMutex {
     async fn fs_get(&self, eid: u32, oid: u32) -> Result<Bytes> {
-        let mutex = self.0.lock().map_err(|_| errs::MUTEX_POISONING)?;
+        let mutex = self.0.lock()?;
         mutex.fs.get(&(eid, oid)).cloned().ok_or(errs::NOT_FOUND)
     }
 
     async fn fs_set(&self, eid: u32, oid: u32, data: Bytes) -> Result<()> {
-        let mut mutex = self.0.lock().map_err(|_| errs::MUTEX_POISONING)?;
+        let mut mutex = self.0.lock()?;
         mutex.fs.insert((eid, oid), data);
         Ok(())
     }
 
     async fn fs_rm_object(&self, eid: u32, oid: u32) -> Result<()> {
-        let mut mutex = self.0.lock().map_err(|_| errs::MUTEX_POISONING)?;
+        let mut mutex = self.0.lock()?;
         mutex.fs.remove(&(eid, oid));
         Ok(())
     }
 
     async fn fs_rm_entity(&self, eid: u32) -> Result<()> {
-        let mut mutex = self.0.lock().map_err(|_| errs::MUTEX_POISONING)?;
+        let mut mutex = self.0.lock()?;
         let mut oids = Vec::with_capacity(mutex.fs.len());
         for (&(local_eid, oid), _) in &mutex.fs {
             if eid == local_eid {
@@ -67,23 +67,23 @@ impl Config for ConfigMemoryMutex {
     }
 
     async fn fs_new_object(&self, _: u32) -> Result<u32> {
-        let mut mutex = self.0.lock().map_err(|_| errs::MUTEX_POISONING)?;
+        let mut mutex = self.0.lock()?;
         mutex.id_increment += 1;
         Ok(mutex.id_increment)
     }
     async fn fs_new_entity(&self) -> Result<u32> {
-        let mut mutex = self.0.lock().map_err(|_| errs::MUTEX_POISONING)?;
+        let mut mutex = self.0.lock()?;
         mutex.id_increment += 1;
         Ok(mutex.id_increment)
     }
 
     async fn fs_scan(&self) -> Result<Vec<(u32, u32)>> {
-        let mutex = self.0.lock().map_err(|_| errs::MUTEX_POISONING)?;
+        let mutex = self.0.lock()?;
         Ok(mutex.fs.keys().copied().collect::<Vec<(u32, u32)>>())
     }
 
     async fn fs_len(&self, eid: u32, oid: u32) -> Result<usize> {
-        let mutex = self.0.lock().map_err(|_| errs::MUTEX_POISONING)?;
+        let mutex = self.0.lock()?;
         mutex
             .fs
             .get(&(eid, oid))
@@ -115,13 +115,13 @@ impl Config for ConfigMemoryMutex {
     }
 
     async fn page_add(&self, path: &str, mime: &'static str, data: Bytes) -> Result<()> {
-        let mut mutex = self.0.lock().map_err(|_| errs::MUTEX_POISONING)?;
+        let mut mutex = self.0.lock()?;
         mutex.pages.insert(path.to_string(), (mime, data));
         Ok(())
     }
 
     async fn page_get(&self, path: &str) -> Result<(&'static str, Bytes)> {
-        let mutex = self.0.lock().map_err(|_| errs::MUTEX_POISONING)?;
+        let mutex = self.0.lock()?;
         match mutex.pages.get(path) {
             Some(page) => Ok(page.clone()),
             None => Err(errs::NOT_FOUND),
@@ -129,7 +129,7 @@ impl Config for ConfigMemoryMutex {
     }
 
     fn now(&self) -> Result<u64> {
-        let mutex = self.0.lock().map_err(|_| errs::MUTEX_POISONING)?;
+        let mutex = self.0.lock()?;
         if let Some(now) = mutex.now {
             return Ok(now);
         }

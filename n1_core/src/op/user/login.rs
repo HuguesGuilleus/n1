@@ -31,7 +31,7 @@ pub async fn login<C: Config>(
     serv: &OpServer<C>,
     r: &OpRequest<LoginDTO>,
 ) -> Result<OpResponse<C>> {
-    let users = serv.user.read().map_err(|_| errs::MUTEX_POISONING)?;
+    let users = serv.user.read()?;
     for (_, user) in users.iter() {
         if user.name == r.dto.name {
             if user.password == r.dto.password {

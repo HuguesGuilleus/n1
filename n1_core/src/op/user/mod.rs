@@ -26,7 +26,7 @@ pub async fn init<C: Config>(serv: &mut OpServer<C>) -> Result<()> {
         .await?;
 
     let users: Vec<User> = serv.config.obj_fetch(0, OID_GLOBAL_USER).await?;
-    let users_map = serv.user.get_mut().map_err(|_| errs::MUTEX_POISONING)?;
+    let users_map = serv.user.get_mut()?;
     for u in users {
         users_map.insert(u.uid, u.clone());
     }
