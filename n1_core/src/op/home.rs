@@ -94,7 +94,7 @@ fn render_pub(home: &HomeState) -> Bytes {
     )
 }
 
-pub async fn edit<C: Config>(
+pub async fn json_edit<C: Config>(
     server: &OpServer<C>,
     r: &OpRequest<HomeState>,
 ) -> Result<OpResponse<C>> {
@@ -110,7 +110,10 @@ pub async fn edit<C: Config>(
     Ok(OpResponse::Ok)
 }
 
-pub async fn console<C: Config>(server: &OpServer<C>, r: &OpRequest<()>) -> Result<OpResponse<C>> {
+pub async fn page_console<C: Config>(
+    server: &OpServer<C>,
+    r: &OpRequest<()>,
+) -> Result<OpResponse<C>> {
     r.token.access_global(super::TokenLevel::Admin)?;
     let state = server.config.obj_fetch(0, OID_GLOBAL_HOME).await?;
     Ok(OpResponse::Bytes(mime::HTML, render_console(&state)))
@@ -134,14 +137,14 @@ fn render_console(state: &HomeState) -> Bytes {
                         + [H - "button.bl onclick=send()" +"Envoyer"]
                     + ""]
                     +[H - "script" + DirectHTML(r#"const send=()=>{
-                        fetch("/_home/", {
+                        fetch("/:home/", {
                             method: "PUT",
                             body: JSON.stringify({
                                 title: _title.value,
                                 desc: _desc.innerText ,
                                 content: _content.innerText ,
                             }),
-                        }).then(r=>r);
+                        });
                     }"#)]
                 + ""]
             + ""]

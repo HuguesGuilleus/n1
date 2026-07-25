@@ -12,7 +12,7 @@ use crate::op::{self, DTO, OpRequest, OpResponse, OpServer, Token};
 use crate::token::{token_decode, token_encode};
 use crate::{Result, errs, front};
 use n1_tool::proto_http::{
-    HTTPParser, HTTPRequest, Method, StatusHTTP, response_bytes, response_chunks, response_cookie,
+    HTTPParser, HTTPRequest, StatusHTTP, response_bytes, response_chunks, response_cookie,
     response_empty,
 };
 use n1_tool::{Config, Error, ErrorKind, mime};
@@ -95,40 +95,32 @@ pub async fn handle_op<R: AsyncRead + Unpin, C: Config>(
     serv: &HTTPServer<C>,
     r: HTTPRequest<R>,
 ) -> Result<OpResponse<C>> {
-    match (r.method, r.path.as_str()) {
-        // Asset
-        (Method::GET, "/_style.css") => {
-            Ok(OpResponse::Bytes(mime::CSS, Bytes::from_static(front::CSS)))
-        }
-        (Method::GET, "/favicon.webp") => Ok(OpResponse::Bytes(
+    match r.path.as_str() {
+        "/_style.css" => Ok(OpResponse::Bytes(mime::CSS, Bytes::from_static(front::CSS))),
+        "/favicon.webp" => Ok(OpResponse::Bytes(
             mime::WEBP,
             Bytes::from_static(front::FAVICON),
         )),
-        (Method::GET, "/robots.txt") => Ok(OpResponse::Bytes(
+        "/robots.txt" => Ok(OpResponse::Bytes(
             mime::TEXT,
             Bytes::from_static(front::ROBOTSTXT),
         )),
 
-        // Console
-        (Method::GET, "/_home/") => op::home::console(&serv.op, &request_url(serv, r).await?).await,
+        "/io" => op::big(&serv.op, from_url(serv, r)?).await,
 
-        // Action
-        (_, "/io") => op::big(&serv.op, request_url(serv, r).await?).await,
-        (Method::PUT, "/_home/") => op::home::edit(&serv.op, &request_body(serv, r).await?).await,
-        (Method::PUT, "/_login") => {
-            op::user::login::login(&serv.op, &request_body(serv, r).await?).await
-        }
+        "/_home/" => op::home::page_console(&serv.op, &from_url(serv, r)?).await,
+        "/:home/" => op::home::json_edit(&serv.op, &from_body(serv, r).await?).await,
 
-        // Page
-        (Method::GET, p) => {
+        "/:login" => op::user::login::login(&serv.op, &from_body(serv, r).await?).await,
+
+        p => {
             let (mime, data) = serv.op.config.page_get(p).await?;
             Ok(OpResponse::Bytes(mime, data))
         }
-        _ => Err(errs::NOT_FOUND),
     }
 }
 
-pub async fn request_url<R: AsyncRead, C: Config, D: DTO>(
+pub fn from_url<R: AsyncRead, C: Config, D: DTO>(
     server: &HTTPServer<C>,
     request: HTTPRequest<R>,
 ) -> Result<OpRequest<D>> {
@@ -143,7 +135,7 @@ pub async fn request_url<R: AsyncRead, C: Config, D: DTO>(
     Ok(OpRequest { token, dto })
 }
 
-pub async fn request_body<R: AsyncRead + Unpin, C: Config, D: DTO>(
+pub async fn from_body<R: AsyncRead + Unpin, C: Config, D: DTO>(
     server: &HTTPServer<C>,
     mut request: HTTPRequest<R>,
 ) -> Result<OpRequest<D>> {

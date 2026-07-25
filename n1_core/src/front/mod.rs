@@ -12,5 +12,6 @@ pub const FAVICON: &[u8] = include_bytes!("favicon.webp");
 
 pub const ROBOTSTXT: &[u8] = b"User-agent: *
 Allow: /
-Allow: /_*
+Disallow: /_*
+Disallow: /.*
 ";

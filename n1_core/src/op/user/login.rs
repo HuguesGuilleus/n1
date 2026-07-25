@@ -41,8 +41,9 @@ pub async fn login<C: Config>(
                     groups_array: user.groups_array,
                     groups_vec: user.groups_vec.clone(),
                 }));
+            } else {
+                return Err(errs::WRONG_LOGIN);
             }
-            return Err(errs::WRONG_LOGIN);
         }
     }
     return Err(errs::WRONG_LOGIN);
@@ -67,7 +68,7 @@ pub fn render() -> Bytes {
             + [H - "script"
                 + DirectHTML(
                     r#"const send=()=>{
-                        fetch("", {
+                        fetch("/:login", {
                             method: "PUT",
                             body: JSON.stringify({
                                 name: _name.value,
