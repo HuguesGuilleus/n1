@@ -1,8 +1,10 @@
 mod errs;
 mod front;
+mod init_dev;
 pub mod op;
 pub mod proto_http;
 mod token;
 
 pub use errs::{Error, Result};
-pub use op::{DTO, OpRequest, OpResponse, OpServer};
+pub use init_dev::init_dev;
+pub use op::{DTO, ID, OpRequest, OpResponse, OpServer};

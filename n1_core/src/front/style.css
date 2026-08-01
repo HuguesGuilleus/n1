@@ -60,6 +60,10 @@ hr {
 	border-top: 0;
 }
 
+h1 {
+	margin: var(--SP) 0;
+}
+
 /* COLOR AND BLOCK */
 
 .act,
@@ -148,6 +152,11 @@ a {
 /* margin vertical */
 .mv {
 	margin: var(--SP) 0;
+}
+
+/* margin top */
+.mt {
+	margin-top: var(--SP);
 }
 
 /* margin right */

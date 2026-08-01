@@ -127,10 +127,12 @@ impl_nb!(u8);
 impl_nb!(u16);
 impl_nb!(u32);
 impl_nb!(u64);
+impl_nb!(usize);
 impl_nb!(i8);
 impl_nb!(i16);
 impl_nb!(i32);
 impl_nb!(i64);
+impl_nb!(isize);
 
 impl<F: Fn() -> I, I: Iterator<Item = U>, U: Html> Html for F {
     fn render(&self, buf: &mut String) {

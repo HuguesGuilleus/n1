@@ -1,4 +1,5 @@
 mod compo;
+pub mod dropbox;
 pub mod home;
 pub mod menu;
 mod token;
@@ -9,18 +10,20 @@ use std::{collections::BTreeMap, fmt::Debug};
 
 use bytes::Bytes;
 use n1_tool::{Chunk, Chunks, Config};
+use serde::Deserialize;
 use serde::de::DeserializeOwned;
 
 use crate::Result;
+use crate::op::user::Entity;
 pub use token::*;
-use user::User;
 
-pub const OID_GLOBAL_USER: u32 = 1;
+pub const OID_GLOBAL_ENTITY: u32 = 1;
 pub const OID_GLOBAL_HOME: u32 = 3;
+pub const OID_ENTITY_DROPBOX: u32 = 4;
 
 pub struct OpServer<C> {
     pub config: Arc<C>,
-    pub user: RwLock<BTreeMap<u32, User>>,
+    pub entities: RwLock<BTreeMap<u32, Entity>>,
 }
 
 pub struct OpRequest<D: DTO> {
@@ -47,10 +50,19 @@ impl DTO for () {
     }
 }
 
+#[derive(Debug, PartialEq, Deserialize)]
+pub struct ID(u32);
+
+impl DTO for ID {
+    fn check(&self) -> Result<()> {
+        todo!()
+    }
+}
+
 pub async fn init<C: Config + Unpin>(config: C) -> Result<OpServer<C>> {
     let mut server = OpServer {
         config: Arc::new(config),
-        user: RwLock::new(BTreeMap::new()),
+        entities: RwLock::new(BTreeMap::new()),
     };
     home::init(&mut server).await?;
     user::init(&mut server).await?;

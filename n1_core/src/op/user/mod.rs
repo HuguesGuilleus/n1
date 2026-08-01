@@ -6,8 +6,14 @@ use serde::Deserialize;
 use super::{DTO, OpRequest, OpServer};
 use crate::{
     Result,
-    op::{OID_GLOBAL_USER, TokenLevel},
+    op::{OID_GLOBAL_ENTITY, TokenLevel},
 };
+
+#[derive(Debug, PartialEq, Deserialize, Clone)]
+pub enum Entity {
+    User(User),
+    Group(Group),
+}
 
 #[derive(Debug, PartialEq, Deserialize, Clone)]
 pub struct User {
@@ -20,34 +26,46 @@ pub struct User {
     pub groups_vec: Vec<(u32, TokenLevel)>,
 }
 
+#[derive(Debug, PartialEq, Deserialize, Clone)]
+pub struct Group {
+    pub gid: u32,
+    pub name: String,
+    pub users: Vec<(u32, TokenLevel)>,
+}
+
 pub async fn init<C: Config>(serv: &mut OpServer<C>) -> Result<()> {
     serv.config
         .page_add("/_login", mime::HTML, login::render())
         .await?;
 
-    let users: Vec<User> = serv.config.obj_fetch(0, OID_GLOBAL_USER).await?;
-    let users_map = serv.user.get_mut()?;
-    for u in users {
-        users_map.insert(u.uid, u.clone());
-    }
-
-    users_map.insert(
-        101,
-        User {
-            uid: 101,
-            name: "eve".to_string(),
-            password: "56".to_string(),
-            global: TokenLevel::Admin,
-            groups_array: [
-                (201, TokenLevel::Admin),
-                (0, TokenLevel::None),
-                (0, TokenLevel::None),
-                (0, TokenLevel::None),
-                (0, TokenLevel::None),
-            ],
-            groups_vec: Vec::with_capacity(0),
-        },
-    );
+    // Load entities
+    let entities: Vec<Entity> = serv.config.obj_fetch(0, OID_GLOBAL_ENTITY).await?;
+    let entities_map = serv.entities.get_mut()?;
+    entities.into_iter().for_each(|entity| {
+        entities_map.insert(
+            match entity {
+                Entity::User(User { uid, .. }) => uid,
+                Entity::Group(Group { gid, .. }) => gid,
+            },
+            entity,
+        );
+    });
 
     Ok(())
+}
+
+impl Entity {
+    pub fn id(&self) -> u32 {
+        match self {
+            Entity::User(user) => user.uid,
+            Entity::Group(group) => group.gid,
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        match self {
+            Entity::User(user) => &user.name,
+            Entity::Group(group) => &group.name,
+        }
+    }
 }

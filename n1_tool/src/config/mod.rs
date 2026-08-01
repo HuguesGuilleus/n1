@@ -8,7 +8,7 @@ use bytes::Bytes;
 use serde::{Serialize, de::DeserializeOwned};
 
 pub use crate::errs::Result;
-pub use chunks::{Chunk, Chunks};
+pub use chunks::{Chunk, Chunks, chuncks_len};
 pub use config_mem::ConfigMemoryMutex;
 
 #[async_trait]

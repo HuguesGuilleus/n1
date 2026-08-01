@@ -6,7 +6,7 @@ use serde::Deserialize;
 use super::{DTO, OpRequest, OpServer};
 use crate::{
     Result, errs, front,
-    op::{OpResponse, Token, compo},
+    op::{OpResponse, Token, compo, user::Entity},
 };
 
 #[derive(Debug, Deserialize)]
@@ -31,18 +31,20 @@ pub async fn login<C: Config>(
     serv: &OpServer<C>,
     r: &OpRequest<LoginDTO>,
 ) -> Result<OpResponse<C>> {
-    let users = serv.user.read()?;
-    for (_, user) in users.iter() {
-        if user.name == r.dto.name {
-            if user.password == r.dto.password {
-                return Ok(OpResponse::Token(Token {
-                    uid: user.uid,
-                    global: user.global,
-                    groups_array: user.groups_array,
-                    groups_vec: user.groups_vec.clone(),
-                }));
-            } else {
-                return Err(errs::WRONG_LOGIN);
+    let users = serv.entities.read()?;
+    for (_, entity) in users.iter() {
+        if let Entity::User(user) = entity {
+            if user.name == r.dto.name {
+                if user.password == r.dto.password {
+                    return Ok(OpResponse::Token(Token {
+                        uid: user.uid,
+                        global: user.global,
+                        groups_array: user.groups_array,
+                        groups_vec: user.groups_vec.clone(),
+                    }));
+                } else {
+                    return Err(errs::WRONG_LOGIN);
+                }
             }
         }
     }
@@ -74,7 +76,7 @@ pub fn render() -> Bytes {
                                 name: _name.value,
                                 password: _password.value,
                             }),
-                        }).then(r=>r);
+                        }).then(r=>r.ok && (location="/_"));
                     }"#,
                 )]
             + ""]

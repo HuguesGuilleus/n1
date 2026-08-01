@@ -97,7 +97,7 @@ pub async fn handle_op<R: AsyncRead + Unpin, C: Config>(
 ) -> Result<OpResponse<C>> {
     match r.path.as_str() {
         "/_style.css" => Ok(OpResponse::Bytes(mime::CSS, Bytes::from_static(front::CSS))),
-        "/favicon.webp" => Ok(OpResponse::Bytes(
+        "/_favicon.webp" => Ok(OpResponse::Bytes(
             mime::WEBP,
             Bytes::from_static(front::FAVICON),
         )),
@@ -107,6 +107,8 @@ pub async fn handle_op<R: AsyncRead + Unpin, C: Config>(
         )),
 
         "/io" => op::big(&s.op, from_url(s, r)?).await,
+
+        p if p.starts_with("/_dropbox/") => op::dropbox::page(&s.op, &from_url(s, r)?).await,
 
         "/_home/" => op::home::page_console(&s.op, &from_url(s, r)?).await,
         "/:home/" => op::home::json_edit(&s.op, &from_body(s, r).await?).await,

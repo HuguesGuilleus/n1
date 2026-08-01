@@ -1,6 +1,8 @@
+use std::{collections::BTreeMap, iter::once};
+
 use serde::{Deserialize, Serialize};
 
-use crate::{Result, errs};
+use crate::{Result, errs, op::user::Entity};
 
 /// A parsed token with all user access.
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -70,6 +72,30 @@ impl Token {
             }
         }
         Err(errs::FORBIDEN_OUTSIDE)
+    }
+
+    pub fn groups(&self) -> impl Iterator<Item = (u32, TokenLevel)> {
+        once((self.uid, TokenLevel::Admin))
+            .chain(self.groups_array.into_iter())
+            .chain(self.groups_vec.iter().copied())
+            .filter(|(gid, _)| *gid != 0)
+    }
+
+    pub fn groups_name<'a>(
+        &self,
+        entities: &'a BTreeMap<u32, Entity>,
+    ) -> impl Iterator<Item = (u32, TokenLevel, &'a str)> {
+        once((self.uid, TokenLevel::Admin))
+            .chain(self.groups_array.into_iter())
+            .chain(self.groups_vec.iter().copied())
+            .filter(|(gid, _)| *gid != 0)
+            .map(move |(eid, level)| {
+                (
+                    eid,
+                    level,
+                    entities.get(&eid).map(Entity::name).unwrap_or(""),
+                )
+            })
     }
 
     /// Create a super admin user.

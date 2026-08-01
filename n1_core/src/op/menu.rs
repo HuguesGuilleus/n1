@@ -1,13 +1,18 @@
 use bytes::Bytes;
 
-use crate::*;
+use crate::{op::user::Entity, *};
 use n1_html::{H, Html};
 use n1_tool::{Config, mime};
 
 pub fn page<C: Config>(server: &OpServer<C>, r: &OpRequest<()>) -> Result<OpResponse<C>> {
     r.token.is_auth()?;
-    let users = server.user.read()?;
-    let user = users.get(&r.token.uid).ok_or(errs::NOT_FOUND_USER)?;
+    let entities = server.entities.read()?;
+    let entity = entities.get(&r.token.uid).ok_or(errs::NOT_FOUND_USER)?;
+    let user = if let Entity::User(user) = entity {
+        user
+    } else {
+        return Err(errs::EXPECT_USER);
+    };
 
     Ok(OpResponse::Bytes(
         mime::HTML,

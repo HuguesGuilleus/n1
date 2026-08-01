@@ -1,11 +1,13 @@
 use std::{io, sync::Arc};
 
 use bytes::Bytes;
+use serde::{Deserialize, Serialize};
 
 use super::Config;
 use crate::errs;
 
 /** A big file with multiple chunks as content. */
+#[derive(Debug)]
 pub struct Chunks<C: Config> {
     config: Arc<C>,
     eid: u32,
@@ -13,7 +15,7 @@ pub struct Chunks<C: Config> {
     position: usize,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize, Serialize)]
 pub struct Chunk {
     pub len: usize,
     pub oid: u32,
@@ -71,6 +73,10 @@ impl<C: Config> Chunks<C> {
     }
 }
 
+pub fn chuncks_len(chunks: &[Chunk]) -> usize {
+    chunks.iter().map(|c| c.len).sum()
+}
+
 #[tokio::test]
 async fn chunck() {
     use super::ConfigMemoryMutex;
@@ -96,6 +102,7 @@ async fn chunck() {
     );
 
     assert_eq!(c.len(), 9);
+    assert_eq!(chuncks_len(&c.chunks), 9);
     c.skip(5);
 
     assert_eq!(c.next().await.unwrap(), Some(Bytes::from_static(b"c")));
