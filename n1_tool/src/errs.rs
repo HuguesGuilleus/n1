@@ -1,13 +1,14 @@
-use std::io;
+use std::{io, time::SystemTimeError};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ErrorKind {
-    SubIO,
-    NotFound,
     BadRequest,
+    Forbiden,
     Internal,
+    NotFound,
+    SubIO,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -21,6 +22,15 @@ impl From<io::Error> for Error {
         match value.kind() {
             io::ErrorKind::NotFound => NOT_FOUND,
             _ => IO_ERROR,
+        }
+    }
+}
+
+impl From<SystemTimeError> for Error {
+    fn from(_: SystemTimeError) -> Self {
+        Error {
+            kind: ErrorKind::Internal,
+            msg: "get system time elapsed",
         }
     }
 }

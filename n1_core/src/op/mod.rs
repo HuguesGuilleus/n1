@@ -35,15 +35,6 @@ pub trait DTO: DeserializeOwned + Debug {
     fn check(&self) -> Result<()>;
 }
 
-pub type OpResult<C> = Result<OpResponse<C>>;
-
-pub enum OpResponse<C: Config> {
-    Bytes(&'static str, Bytes),
-    Chunks(Chunks<C>),
-    Ok,
-    Token(Token),
-}
-
 impl DTO for () {
     fn check(&self) -> Result<()> {
         Ok(())
@@ -70,13 +61,13 @@ pub async fn init<C: Config + Unpin>(config: C) -> Result<OpServer<C>> {
     Ok(server)
 }
 
-pub async fn big<C: Config>(server: &OpServer<C>, _req: OpRequest<()>) -> OpResult<C> {
+pub async fn big<C: Config>(server: &OpServer<C>, _req: OpRequest<()>) -> Result<Chunks<C>> {
     let b1 = Bytes::from_static(b"Hello ");
     let b2 = Bytes::from_static(b"World!\r\n");
     server.config.fs_set(42, 1, b1.clone()).await?;
     server.config.fs_set(42, 2, b2.clone()).await?;
 
-    Ok(OpResponse::Chunks(Chunks::new(
+    Ok(Chunks::new(
         server.config.clone(),
         42,
         &[
@@ -89,5 +80,5 @@ pub async fn big<C: Config>(server: &OpServer<C>, _req: OpRequest<()>) -> OpResu
                 oid: 2,
             },
         ],
-    )))
+    ))
 }

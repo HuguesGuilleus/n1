@@ -1,10 +1,9 @@
 use bytes::Bytes;
-use n1_html::{DirectHTML, H, Html, Q};
 use serde::{Deserialize, Serialize};
 
-use super::{DTO, OpRequest, compo};
-use super::{OID_GLOBAL_HOME, OpResponse, OpServer};
+use super::{DTO, OID_GLOBAL_HOME, OpRequest, OpServer, TokenLevel, compo};
 use crate::{Result, errs, front};
+use n1_html::{DirectHTML, H, Html, Q};
 use n1_tool::{Config, mime};
 
 /// The State and DTO for home.
@@ -66,6 +65,19 @@ pub async fn init(server: &OpServer<impl Config>) -> Result<()> {
     Ok(())
 }
 
+pub async fn json_edit(server: &OpServer<impl Config>, r: OpRequest<HomeState>) -> Result<()> {
+    r.token.access_global(TokenLevel::Admin)?;
+
+    server
+        .config
+        .page_add("/", mime::HTML, render_pub(&r.dto))
+        .await?;
+
+    server.config.obj_store(0, OID_GLOBAL_HOME, &r.dto).await?;
+
+    Ok(())
+}
+
 fn render_pub(home: &HomeState) -> Bytes {
     Bytes::from_owner(
         [H - "html lang=fr"
@@ -94,33 +106,14 @@ fn render_pub(home: &HomeState) -> Bytes {
     )
 }
 
-pub async fn json_edit<C: Config>(
-    server: &OpServer<C>,
-    r: &OpRequest<HomeState>,
-) -> Result<OpResponse<C>> {
-    r.token.access_global(super::TokenLevel::Admin)?;
-
-    server
-        .config
-        .page_add("/", mime::HTML, render_pub(&r.dto))
-        .await?;
-
-    server.config.obj_store(0, OID_GLOBAL_HOME, &r.dto).await?;
-
-    Ok(OpResponse::Ok)
-}
-
-pub async fn page_console<C: Config>(
-    server: &OpServer<C>,
-    r: &OpRequest<()>,
-) -> Result<OpResponse<C>> {
+pub async fn page_console(server: &OpServer<impl Config>, r: OpRequest<()>) -> Result<String> {
     r.token.access_global(super::TokenLevel::Admin)?;
     let state = server.config.obj_fetch(0, OID_GLOBAL_HOME).await?;
-    Ok(OpResponse::Bytes(mime::HTML, render_console(&state)))
+    Ok(render_console(&state))
 }
 
-fn render_console(state: &HomeState) -> Bytes {
-    Bytes::from_owner([H - "html lang=fr"
+fn render_console(state: &HomeState) -> String {
+    [H - "html lang=fr"
         + [H - "head" + front::HEAD + [H - "title" + "Modification de l'accueil"]]
          + [H - "body"
             + compo::header(true ,  "Modification de l'accueil" )
@@ -149,5 +142,5 @@ fn render_console(state: &HomeState) -> Bytes {
                 + ""]
             + ""]
         + ""]
-    .render_page())
+    .render_page()
 }

@@ -149,6 +149,11 @@ a {
 	gap: var(--SP);
 }
 
+/* margin everywhere */
+.m {
+	margin: var(--SP);
+}
+
 /* margin vertical */
 .mv {
 	margin: var(--SP) 0;

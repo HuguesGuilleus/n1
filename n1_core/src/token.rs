@@ -19,7 +19,7 @@ const MAX_AGE: u64 = 7 * 24 * 60 * 60;
  * access = id:u32 level:u8
  * ```
  */
-pub fn token_encode(token: &Token, key: &[u8], now: u64) -> String {
+pub fn token_encode(s: &mut String, token: &Token, key: &[u8], now: u64) {
     let mut hasher = Hmac::new(Sha256::new(), key);
     let mut data: Vec<u8> =
         Vec::with_capacity(8 + 5 + 5 * 5 + 5 * token.groups_vec.len() + hasher.output_bytes());
@@ -29,7 +29,12 @@ pub fn token_encode(token: &Token, key: &[u8], now: u64) -> String {
     data.write(&token.uid.to_be_bytes()).unwrap();
     data.push(token.global as u8);
 
-    for &(id, level) in token.groups_array.iter().chain(token.groups_vec.iter()) {
+    for &(id, level) in token
+        .groups_array
+        .iter()
+        .chain(token.groups_vec.iter())
+        .filter(|(gid, _)| *gid != 0)
+    {
         data.write(&id.to_be_bytes()).unwrap();
         data.push(level as u8);
     }
@@ -39,10 +44,8 @@ pub fn token_encode(token: &Token, key: &[u8], now: u64) -> String {
     data.resize(data_size + hasher.output_bytes(), 0);
     hasher.raw_result(&mut data[data_size..]);
 
-    let mut s = String::from("T0.");
-    BASE64_URL_SAFE_NO_PAD.encode_string(data, &mut s);
-
-    s
+    s.push_str("T0.");
+    BASE64_URL_SAFE_NO_PAD.encode_string(data, s);
 }
 
 // Decode a token. See [encode] for format detail.
@@ -153,6 +156,8 @@ fn test_token_encode() {
         groups_vec: vec![(0xAA_BB_CC_06, TokenLevel::Admin)],
     };
 
-    assert_eq!(str_token, token_encode(&token, b"key", 1780998183));
+    let mut s = String::new();
+    token_encode(&mut s, &token, b"key", 1780998183);
+    assert_eq!(str_token, &s);
     assert_eq!(Ok(token), token_decode(str_token, b"key", 1780998183 + 10));
 }
