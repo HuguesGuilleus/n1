@@ -61,7 +61,14 @@ hr {
 }
 
 h1 {
+	display: table;
 	margin: var(--SP) 0;
+	padding: var(--SP);
+	background: white;
+
+	&::before {
+		content: "# ";
+	}
 }
 
 /* COLOR AND BLOCK */

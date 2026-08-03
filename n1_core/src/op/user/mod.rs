@@ -11,6 +11,7 @@ use crate::{
 
 #[derive(Debug, PartialEq, Deserialize, Clone)]
 pub enum Entity {
+    None(u32),
     User(User),
     Group(Group),
 }
@@ -44,6 +45,7 @@ pub async fn init<C: Config>(serv: &mut OpServer<C>) -> Result<()> {
     entities.into_iter().for_each(|entity| {
         entities_map.insert(
             match entity {
+                Entity::None(id) => id,
                 Entity::User(User { uid, .. }) => uid,
                 Entity::Group(Group { gid, .. }) => gid,
             },
@@ -57,6 +59,7 @@ pub async fn init<C: Config>(serv: &mut OpServer<C>) -> Result<()> {
 impl Entity {
     pub fn id(&self) -> u32 {
         match self {
+            Entity::None(id) => *id,
             Entity::User(user) => user.uid,
             Entity::Group(group) => group.gid,
         }
@@ -64,8 +67,24 @@ impl Entity {
 
     pub fn name(&self) -> &str {
         match self {
+            Entity::None(_) => "~",
             Entity::User(user) => &user.name,
             Entity::Group(group) => &group.name,
         }
+    }
+}
+
+impl Default for Entity {
+    fn default() -> Self {
+        Entity::None(0)
+    }
+}
+
+impl User {
+    pub fn groups(&self) -> impl Iterator<Item = (u32, TokenLevel)> {
+        self.groups_array
+            .into_iter()
+            .chain(self.groups_vec.iter().copied())
+            .filter(|(id, _)| *id != 0)
     }
 }

@@ -33,9 +33,9 @@ pub async fn page(server: &OpServer<impl Config>, r: OpRequest<ID>) -> Result<St
     let owner = entities.get(&r.dto.0).ok_or(errs::NOT_FOUND_ENTITY)?;
 
     Ok([H - "html lang=fr"
-        + [H - "head" + front::HEAD + [H - "title" + "Dropbox / " + owner.name()]]
+        + [H - "head" + front::HEAD + [H - "title" + "Dropbox @" + owner.name()]]
         + [H - "body"
-            + compo::header(true, H - "" + "Dropbox / " + owner.name())
+            + compo::header(true, H - "" + "Dropbox @" + owner.name())
             + [H - "main.w"
                 + [H - "div.fh.gap"
                     + || {
