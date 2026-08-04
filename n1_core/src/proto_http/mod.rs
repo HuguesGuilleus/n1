@@ -61,6 +61,8 @@ pub async fn handle<R: AsyncRead + Unpin, C: Config>(
         // Actions with no return
         ":home" => with_body(s, r, op::home::json_edit).await,
         ":login" => make_token(s, r, op::user::login::login).await,
+        ":dropbox.text.add" => with_body(s, r, op::dropbox::text_add).await,
+        ":dropbox.text.rm" => with_body(s, r, op::dropbox::text_rm).await,
 
         // Serve generated files
         _ => {
@@ -121,6 +123,7 @@ async fn with_body<
 
     let mut buf = Vec::new();
     r.body.read_to_end(&mut buf).await?;
+    println!("{:?}", str::from_utf8(&buf ));
     let data: &[u8] = match &buf[..] {
         b"" => b"null",
         _ => &buf,

@@ -13,8 +13,8 @@ use n1_tool::{Chunk, Chunks, Config};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 
-use crate::Result;
 use crate::op::user::Entity;
+use crate::{Result, errs};
 pub use token::*;
 
 pub const OID_GLOBAL_ENTITY: u32 = 1;
@@ -46,7 +46,10 @@ pub struct ID(u32);
 
 impl DTO for ID {
     fn check(&self) -> Result<()> {
-        todo!()
+        if self.0 == 0 {
+            return Err(errs::FIELD_ID);
+        }
+        Ok(())
     }
 }
 

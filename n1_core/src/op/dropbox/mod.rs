@@ -1,3 +1,5 @@
+mod text;
+
 use crate::{
     op::{OID_ENTITY_DROPBOX, compo},
     *,
@@ -5,6 +7,7 @@ use crate::{
 use n1_html::{DirectHTML, H, Html};
 use n1_tool::{Chunk, Config, chuncks_len};
 use serde::{Deserialize, Serialize};
+pub use text::*;
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone, PartialEq)]
 pub struct State {
@@ -25,7 +28,7 @@ pub struct DropFile {
 
 pub async fn page(server: &OpServer<impl Config>, r: OpRequest<ID>) -> Result<String> {
     if r.dto.0 != r.token.uid {
-        r.token.group_global(r.dto.0, op::TokenLevel::Write)?;
+        r.token.access_group(r.dto.0, op::TokenLevel::Write)?;
     }
 
     let state: State = server.config.obj_fetch(r.dto.0, OID_ENTITY_DROPBOX).await?;
@@ -44,14 +47,14 @@ pub async fn page(server: &OpServer<impl Config>, r: OpRequest<ID>) -> Result<St
                             .flat_map(|(gid, _)| {
                                 entities.get(&gid).map(|e| (gid, e.name()))
                             })
-                            .map(|(gid, name)| H - "a.bl href=/_dropbox/" - gid + name)
+                            .map(|(gid, name)| H - "a.bl href=/_dropbox/" - gid +"@"+ name)
                     }]
                 + (!state.texts.is_empty()).then(|| [H - "h1" + "Textes"])
                 + [H + || {
                     state.texts.iter().map(|(id, text)| {
                         H - "div.bl.mv"
                             + text
-                            + [H - "button.bl.mt data-id=" - *id + "Supprimer"]
+                            + [H - "button.bl.mt onclick=textRm(event) data-eid="  -owner.id() - " data-oid=" - *id + "Supprimer"]
                     })
                 }]
                 + (!state.files.is_empty()).then(|| [H - "h1" + "Fichiers"])
@@ -75,6 +78,18 @@ pub async fn page(server: &OpServer<impl Config>, r: OpRequest<ID>) -> Result<St
         + [H - "script" + DirectHTML(r#"document.querySelectorAll("time").forEach(
             t=>t.innerText = new Intl.DateTimeFormat(document.documentElement.lang,{dateStyle:"full",timeStyle:"long"})
                 .format(new Date(parseInt(t.innerText)*1000))
-            );"#)]]
+            );
+
+            const textRm = async ({target}) => {
+                fetch("/:dropbox.text.rm", {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        eid: parseInt(target.dataset.eid),
+                        oid: parseInt(target.dataset.oid),
+                    })
+                }).then(_ => target.parentElement.remove())
+            };
+
+        "#)]]
     .render_page())
 }

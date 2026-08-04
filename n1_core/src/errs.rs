@@ -10,15 +10,19 @@ macro_rules! E {
 }
 
 E!(DECODE_REQUEST, BadRequest, "cannot decode request data");
-E!(FIELD_CONTENT, BadRequest, "the field 'content' is empty");
-E!(FIELD_DESC, BadRequest, "the field 'desc' is empty");
-E!(FIELD_NAME, BadRequest, "the field 'name' is empty");
-E!(FIELD_PASSWORD, BadRequest, "the field 'password' is empty");
-E!(FIELD_TITLE, BadRequest, "the field 'title' is empty");
+E!(EXPECT_USER, BadRequest, "expected a user");
+E!(FIELD_CONTENT, BadRequest, "empty 'content' field");
+E!(FIELD_DESC, BadRequest, "empty 'desc' field");
+E!(FIELD_ENTITY, BadRequest, "empty entity ID 'eid' field");
+E!(FIELD_ID, BadRequest, "empty 'id' field");
+E!(FIELD_NAME, BadRequest, "empty 'name' field");
+E!(FIELD_OID, BadRequest, "empty object ID 'oid' field");
+E!(FIELD_STR, BadRequest, "empty 'str' field");
+E!(FIELD_PASSWORD, BadRequest, "empty 'password' field");
+E!(FIELD_TITLE, BadRequest, "empty 'title' field");
 E!(FORBIDEN_GLOBAL, Forbiden, "no access this global item");
 E!(FORBIDEN_GROUP, Forbiden, "no access this group");
 E!(FORBIDEN_OUTSIDE, Forbiden, "not in this group");
-E!(EXPECT_USER, BadRequest, "expected a user");
 E!(NO_AUTH, BadRequest, "No authentification token");
 E!(NOT_FOUND_ENTITY, NotFound, "not found entity");
 E!(NOT_FOUND_USER, NotFound, "not found user");

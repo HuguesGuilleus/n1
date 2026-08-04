@@ -48,7 +48,7 @@ impl Token {
         }
         Ok(())
     }
-    /// Check if the token permit this value.
+    /// Check if the token permit to access this global value.
     pub fn access_global(&self, level: TokenLevel) -> Result<()> {
         self.is_auth()?;
         if self.global < level {
@@ -56,7 +56,8 @@ impl Token {
         }
         Ok(())
     }
-    pub fn group_global(&self, gid: u32, level: TokenLevel) -> Result<()> {
+    /// Check if the token permit this value for a spectific group.
+    pub fn access_group(&self, gid: u32, level: TokenLevel) -> Result<()> {
         self.is_auth()?;
         let iter = self
             .groups_array
