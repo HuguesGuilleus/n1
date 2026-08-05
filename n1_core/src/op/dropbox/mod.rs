@@ -1,3 +1,4 @@
+mod public;
 mod text;
 
 use crate::{
@@ -6,11 +7,16 @@ use crate::{
 };
 use n1_html::{DirectHTML, H, Html};
 use n1_tool::{Chunk, Config, chuncks_len};
+pub use public::*;
 use serde::{Deserialize, Serialize};
 pub use text::*;
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone, PartialEq)]
 pub struct State {
+    // The shadown nb, used to publish page.
+    // Zero mean to public page.
+    pub shadow: u32,
+
     pub texts_inc: u32,
     pub texts: Vec<(u32, String)>,
 

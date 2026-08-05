@@ -5,6 +5,7 @@ pub mod menu;
 mod token;
 pub mod user;
 
+use std::collections::BTreeSet;
 use std::sync::{Arc, RwLock};
 use std::{collections::BTreeMap, fmt::Debug};
 
@@ -24,6 +25,7 @@ pub const OID_ENTITY_DROPBOX: u32 = 4;
 pub struct OpServer<C> {
     pub config: Arc<C>,
     pub entities: RwLock<BTreeMap<u32, Entity>>,
+    pub shadow: RwLock<BTreeSet<u32>>,
 }
 
 pub struct OpRequest<D: DTO> {
@@ -53,15 +55,23 @@ impl DTO for ID {
     }
 }
 
-pub async fn init<C: Config + Unpin>(config: C) -> Result<OpServer<C>> {
-    let mut server = OpServer {
-        config: Arc::new(config),
-        entities: RwLock::new(BTreeMap::new()),
-    };
-    home::init(&mut server).await?;
-    user::init(&mut server).await?;
+impl<C: Config> OpServer<C> {
+    pub fn new(config: C) -> Self {
+        OpServer {
+            config: Arc::new(config),
+            entities: RwLock::new(BTreeMap::new()),
+            shadow: RwLock::new(BTreeSet::new()),
+        }
+    }
 
-    Ok(server)
+    pub async fn init(mut self) -> Result<Self> {
+        user::init(&mut self).await?;
+
+        home::init(&mut self).await?;
+        dropbox::render_public(&self).await?;
+
+        Ok(self)
+    }
 }
 
 pub async fn big<C: Config>(server: &OpServer<C>, _req: OpRequest<()>) -> Result<Chunks<C>> {

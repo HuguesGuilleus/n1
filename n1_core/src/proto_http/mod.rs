@@ -123,7 +123,6 @@ async fn with_body<
 
     let mut buf = Vec::new();
     r.body.read_to_end(&mut buf).await?;
-    println!("{:?}", str::from_utf8(&buf ));
     let data: &[u8] = match &buf[..] {
         b"" => b"null",
         _ => &buf,
