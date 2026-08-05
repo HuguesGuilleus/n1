@@ -2,10 +2,8 @@ use std::{io, sync::Arc};
 
 use n1_core::{
     init_dev,
-    op::{self},
     proto_http::{self, HTTPServer},
 };
-use n1_tool::ConfigMemoryMutex;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
@@ -14,11 +12,9 @@ async fn main() -> io::Result<()> {
         key[i] = i as u8;
     }
 
-    let mut op = op::init(ConfigMemoryMutex::new())
+    let op = init_dev()
         .await
         .map_err(|err| io::Error::new(io::ErrorKind::Other, err.msg))?;
-
-    init_dev(&mut op).await.unwrap();
 
     let server = Arc::new(HTTPServer { op, key });
 

@@ -46,8 +46,7 @@ pub struct IDAndEntity {
 }
 impl DTO for IDAndEntity {
     fn check(&self) -> Result<()> {
-        println!("check") ;
-         if self.eid == 0 {
+        if self.eid == 0 {
             return Err(errs::FIELD_ENTITY);
         }
         if self.oid == 0 {
@@ -82,8 +81,7 @@ pub async fn text_rm(server: &OpServer<impl Config>, r: OpRequest<IDAndEntity>) 
 
 #[tokio::test]
 async fn text() -> Result<()> {
-    let mut server = super::super::init(n1_tool::ConfigMemoryMutex::new()).await?;
-    crate::init_dev(&mut server).await?;
+    let server = crate::init_dev().await?;
 
     text_add(
         &server,

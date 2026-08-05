@@ -80,7 +80,7 @@ pub async fn page(server: &OpServer<impl Config>, r: OpRequest<ID>) -> Result<St
                 .format(new Date(parseInt(t.innerText)*1000))
             );
 
-            const textRm = async ({target}) => {
+            const textRm = ({target}) => {
                 fetch("/:dropbox.text.rm", {
                     method: 'PUT',
                     body: JSON.stringify({

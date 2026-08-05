@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use n1_tool::{Chunk, Config, Result};
+use n1_tool::{Chunk, Config, ConfigMemoryMutex, Result};
 
 use crate::{
     OpServer,
@@ -10,9 +10,11 @@ use crate::{
     },
 };
 
-pub async fn init_dev(serv: &mut OpServer<impl Config>) -> Result<()> {
+pub async fn init_dev() -> Result<OpServer<n1_tool::ConfigMemoryMutex>> {
+    let mut server = op::init(ConfigMemoryMutex::new()).await?;
+
     // Set users
-    let entities_map = serv.entities.get_mut()?;
+    let entities_map = server.entities.get_mut()?;
     entities_map.insert(
         101,
         Entity::User(User {
@@ -41,7 +43,7 @@ pub async fn init_dev(serv: &mut OpServer<impl Config>) -> Result<()> {
     );
 
     // Set dropbox
-    serv.config.obj_store(101 , OID_ENTITY_DROPBOX, op::dropbox::State{
+    server.config.obj_store(101 , OID_ENTITY_DROPBOX, op::dropbox::State{
         texts_inc: 3  ,
         texts: vec![
             (0, "Text 1".to_string()),
@@ -58,12 +60,14 @@ pub async fn init_dev(serv: &mut OpServer<impl Config>) -> Result<()> {
             ]
         }],
     }).await ?;
-    serv.config
+    server
+        .config
         .fs_set(101, 2001, Bytes::from_static(b"123"))
         .await?;
-    serv.config
+    server
+        .config
         .fs_set(101, 2002, Bytes::from_static(b"456!"))
         .await?;
 
-    Ok(())
+    Ok(server)
 }
