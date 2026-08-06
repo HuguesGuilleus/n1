@@ -66,7 +66,9 @@ pub fn render() -> Bytes {
                 + ""]
             + [H - "script"
                 + DirectHTML(
-                    r#"const send=()=>{
+                    r#"
+                    _password.addEventListener("keydown", event => event.key == "Enter" && send());
+                    const send=()=>{
                         fetch("/:login", {
                             method: "PUT",
                             body: JSON.stringify({
