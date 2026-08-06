@@ -16,6 +16,14 @@ pub trait Html {
     }
 }
 
+impl Html for String {
+    fn render(&self, buf: &mut String) {
+        self.as_str().render(buf);
+    }
+    fn size(&self) -> usize {
+        self.as_str().size()
+    }
+}
 impl Html for &String {
     fn render(&self, buf: &mut String) {
         self.as_str().render(buf);

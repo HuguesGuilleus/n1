@@ -40,6 +40,7 @@ pub async fn page(server: &OpServer<impl Config>, r: OpRequest<()>) -> Result<St
                                 + [H - "a.bl href=/_dropbox/" - gid + "fichiers"]
                                 + [H - "a.bl href=/_dropbox/" - gid + "dépôt"]
                                 + [H - "a.bl href=/_mail/" - gid + "mail"]
+                                + [H - "a.bl href=/_wiki/" - gid + "wiki"]
                                 + ""]
                             + ""]
                     })

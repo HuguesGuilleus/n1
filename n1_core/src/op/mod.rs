@@ -4,6 +4,7 @@ pub mod home;
 pub mod menu;
 mod token;
 pub mod user;
+pub mod wiki;
 
 use std::collections::BTreeSet;
 use std::sync::{Arc, RwLock};
@@ -21,6 +22,7 @@ pub use token::*;
 pub const OID_GLOBAL_ENTITY: u32 = 1;
 pub const OID_GLOBAL_HOME: u32 = 3;
 pub const OID_ENTITY_DROPBOX: u32 = 4;
+pub const OID_ENTITY_WIKI: u32 = 5;
 
 pub struct OpServer<C> {
     pub config: Arc<C>,
@@ -69,6 +71,7 @@ impl<C: Config> OpServer<C> {
 
         home::init(&mut self).await?;
         dropbox::render_public(&self).await?;
+        wiki::render_pub(&self).await?;
 
         Ok(self)
     }
