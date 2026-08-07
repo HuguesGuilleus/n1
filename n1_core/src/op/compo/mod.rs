@@ -30,4 +30,4 @@ pub const TIME_JS: DirectHTML = DirectHTML(
 );
 
 pub const LOGIN_JS: DirectHTML =
-    DirectHTML(r#"(localStorage.getItem("isauth")?login:logout).remove();"#);
+    DirectHTML(r#"(localStorage.getItem("isauth")?logout:login).remove();"#);

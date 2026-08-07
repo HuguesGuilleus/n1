@@ -1,5 +1,7 @@
+mod render_priv;
 mod render_pub;
 
+pub use render_priv::*;
 pub use render_pub::render_pub;
 use serde::{Deserialize, Serialize};
 
