@@ -16,6 +16,7 @@ E!(FIELD_DESC, BadRequest, "empty 'desc' field");
 E!(FIELD_ENTITY, BadRequest, "empty entity ID 'eid' field");
 E!(FIELD_ID, BadRequest, "empty 'id' field");
 E!(FIELD_NAME, BadRequest, "empty 'name' field");
+E!(FIELD_NOT_EMPTY, BadRequest, "expected empty data");
 E!(FIELD_OID, BadRequest, "empty object ID 'oid' field");
 E!(FIELD_PASSWORD, BadRequest, "empty 'password' field");
 E!(FIELD_STR, BadRequest, "empty 'str' field");

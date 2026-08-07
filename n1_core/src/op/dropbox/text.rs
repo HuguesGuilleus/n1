@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 use crate::{
     DTO, OpRequest, OpServer, Result, errs,
-    op::{OID_ENTITY_DROPBOX, TokenLevel, dropbox::State},
+    op::{EntityAndObjectDTO, OID_ENTITY_DROPBOX, TokenLevel, dropbox::State},
 };
 
 #[derive(Debug, PartialEq, Deserialize)]
@@ -39,23 +39,10 @@ pub async fn text_add(server: &OpServer<impl Config>, r: OpRequest<IDandString>)
     Ok(())
 }
 
-#[derive(Debug, PartialEq, Deserialize)]
-pub struct IDAndEntity {
-    pub eid: u32,
-    pub oid: u32,
-}
-impl DTO for IDAndEntity {
-    fn check(&self) -> Result<()> {
-        if self.eid == 0 {
-            return Err(errs::FIELD_ENTITY);
-        }
-        if self.oid == 0 {
-            return Err(errs::FIELD_OID);
-        }
-        Ok(())
-    }
-}
-pub async fn text_rm(server: &OpServer<impl Config>, r: OpRequest<IDAndEntity>) -> Result<()> {
+pub async fn text_rm(
+    server: &OpServer<impl Config>,
+    r: OpRequest<EntityAndObjectDTO>,
+) -> Result<()> {
     if r.token.uid != r.dto.eid {
         r.token.access_group(r.dto.eid, TokenLevel::Write)?;
     }
@@ -100,7 +87,7 @@ async fn text() -> Result<()> {
         &server,
         OpRequest {
             token: crate::op::Token::test_alice(),
-            dto: IDAndEntity { eid: 1, oid: 0 },
+            dto: EntityAndObjectDTO { eid: 1, oid: 0 },
         },
     )
     .await

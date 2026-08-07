@@ -9,7 +9,7 @@ use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::net::TcpListener;
 use tokio::spawn;
 
-use crate::op::{self, DTO, OpServer, Token};
+use crate::op::{self, DTO, OpServer, Token, URLDTO};
 use crate::token::{token_decode, token_encode};
 use crate::{OpRequest, Result, errs, front};
 use n1_tool::proto_http::{
@@ -54,9 +54,11 @@ pub async fn handle<R: AsyncRead + Unpin, C: Config>(
         ":io" => with_url(s, r, op::big).await,
 
         // Render HTML
-        "_home" => with_url(s, r, op::home::page_console).await,
-        "_dropbox" => with_url(s, r, op::dropbox::page).await,
         "_" => with_url(s, r, op::menu::page).await,
+        "_dropbox" => with_url(s, r, op::dropbox::page).await,
+        "_home" => with_url(s, r, op::home::page_console).await,
+        "_wiki_page" => with_url(s, r, op::wiki::render_priv_page).await,
+        "_wiki" => with_url(s, r, op::wiki::render_priv_index).await,
 
         // Actions with no return
         ":home" => with_body(s, r, op::home::json_edit).await,
@@ -91,7 +93,7 @@ async fn with_url<
     R: AsyncRead,
     F: AsyncFn(&OpServer<C>, OpRequest<D>) -> Result<O>,
     O: Into<Response<C>>,
-    D: DTO,
+    D: URLDTO,
 >(
     s: &HTTPServer<C>,
     r: HTTPRequest<R>,
@@ -99,11 +101,12 @@ async fn with_url<
 ) -> Result<Response<C>> {
     let token = get_token(&s.key, &r);
 
-    let data = match r.path[1..].split_once('/') {
-        Some((_, "")) | None => "null",
-        Some((_, data)) => data,
-    };
-    let dto = serde_json::from_str(data).map_err(|_| errs::DECODE_REQUEST)?;
+    let dto = URLDTO::url_decode(
+        r.path[1..]
+            .split_once('/')
+            .map(|(_, data)| data)
+            .unwrap_or(""),
+    )?;
 
     Ok(f(&s.op, OpRequest { token, dto }).await?.into())
 }

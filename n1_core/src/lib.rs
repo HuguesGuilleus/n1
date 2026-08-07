@@ -7,4 +7,4 @@ mod token;
 
 pub use errs::{Error, Result};
 pub use init_dev::init_dev;
-pub use op::{DTO, ID, OpRequest, OpServer};
+pub use op::{DTO, OpRequest, OpServer};

@@ -5,7 +5,7 @@ use n1_tool::{Config, Result, mime};
 use crate::{
     OpServer, front,
     op::{
-        OID_ENTITY_WIKI, compo,
+        EntityAndObjectDTO, OID_ENTITY_WIKI, compo,
         user::{Entity, Group},
         wiki::{Page, State},
     },
@@ -106,7 +106,12 @@ async fn render_pub_page<C: Config>(
                                 + [H - "div.bl"
                                     + &page.title
                                     + " "
-                                    + [H - "a.bg" + "Éditer la page"]
+                                    + [H - "a.bg href=/_wiki_page/"
+                                        - EntityAndObjectDTO {
+                                            eid: owner.gid,
+                                            oid: page.id,
+                                        }
+                                        + "Éditer la page"]
                                     + ""],
                         )
                         + [H - "main.w"

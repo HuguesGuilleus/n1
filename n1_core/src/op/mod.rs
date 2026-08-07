@@ -1,22 +1,22 @@
 mod compo;
 pub mod dropbox;
+mod dto;
 pub mod home;
 pub mod menu;
 mod token;
 pub mod user;
 pub mod wiki;
 
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::sync::{Arc, RwLock};
-use std::{collections::BTreeMap, fmt::Debug};
 
 use bytes::Bytes;
 use n1_tool::{Chunk, Chunks, Config};
-use serde::Deserialize;
-use serde::de::DeserializeOwned;
 
+use crate::Result;
 use crate::op::user::Entity;
-use crate::{Result, errs};
+pub use dto::*;
 pub use token::*;
 
 pub const OID_GLOBAL_ENTITY: u32 = 1;
@@ -33,28 +33,6 @@ pub struct OpServer<C> {
 pub struct OpRequest<D: DTO> {
     pub token: Token,
     pub dto: D,
-}
-
-pub trait DTO: DeserializeOwned + Debug {
-    fn check(&self) -> Result<()>;
-}
-
-impl DTO for () {
-    fn check(&self) -> Result<()> {
-        Ok(())
-    }
-}
-
-#[derive(Debug, PartialEq, Deserialize)]
-pub struct ID(u32);
-
-impl DTO for ID {
-    fn check(&self) -> Result<()> {
-        if self.0 == 0 {
-            return Err(errs::FIELD_ID);
-        }
-        Ok(())
-    }
 }
 
 impl<C: Config> OpServer<C> {
