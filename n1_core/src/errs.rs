@@ -2,7 +2,7 @@ pub use n1_tool::errs::*;
 
 macro_rules! E {
     ($n:ident,$k:ident, $m:expr) => {
-        pub const $n: Error = Error {
+        pub const $n: AtomicError = AtomicError {
             kind: ErrorKind::$k,
             msg: $m,
         };

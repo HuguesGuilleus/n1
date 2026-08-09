@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use n1_html::{DirectHTML, H, Html};
-use n1_tool::{Config, mime};
+use n1_tool::{AtomicError, Config, mime};
 
 use crate::{
     OpServer, Result, front,
@@ -8,7 +8,7 @@ use crate::{
 };
 
 pub async fn render_public(server: &OpServer<impl Config>) -> Result<()> {
-    let entities = server.entities.read()?;
+    let entities = server.entities.read().map_err(AtomicError::from)?;
     for (&eid, entity) in entities.iter() {
         let state: State = server.config.obj_fetch(eid, OID_ENTITY_DROPBOX).await?;
         if state.shadow == 0 {

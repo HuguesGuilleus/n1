@@ -14,10 +14,10 @@ pub struct IDandString {
 impl DTO for IDandString {
     fn check(&self) -> Result<()> {
         if self.eid == 0 {
-            return Err(errs::FIELD_ENTITY);
+            return Err(errs::FIELD_ENTITY.into());
         }
         if self.str.is_empty() {
-            return Err(errs::FIELD_STR);
+            return Err(errs::FIELD_STR.into());
         }
         Ok(())
     }

@@ -61,7 +61,7 @@ impl<C: Config> Chunks<C> {
             .config
             .fs_get(self.eid, chunck.oid)
             .await
-            .map_err(|err| match err {
+            .map_err(|err| match err.atomic {
                 errs::NOT_FOUND => io::Error::from(io::ErrorKind::NotFound),
                 _ => io::Error::from(io::ErrorKind::Other),
             })?;

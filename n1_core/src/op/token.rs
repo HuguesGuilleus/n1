@@ -44,7 +44,7 @@ impl Token {
     /// Check authentification. Return `errs::NO_AUTH` if no authentification.
     pub fn is_auth(&self) -> Result<()> {
         if self.uid == 0 {
-            return Err(errs::NO_AUTH);
+            return Err(errs::NO_AUTH.into());
         }
         Ok(())
     }
@@ -52,7 +52,7 @@ impl Token {
     pub fn access_global(&self, level: TokenLevel) -> Result<()> {
         self.is_auth()?;
         if self.global < level {
-            return Err(errs::FORBIDEN_GLOBAL);
+            return Err(errs::FORBIDEN_GLOBAL.into());
         }
         Ok(())
     }
@@ -67,12 +67,12 @@ impl Token {
         for (token_group, token_level) in iter {
             if token_group == gid {
                 if token_level < level {
-                    return Err(errs::FORBIDEN_GROUP);
+                    return Err(errs::FORBIDEN_GROUP.into());
                 }
                 return Ok(());
             }
         }
-        Err(errs::FORBIDEN_OUTSIDE)
+        Err(errs::FORBIDEN_OUTSIDE.into())
     }
 
     pub fn groups(&self) -> impl Iterator<Item = (u32, TokenLevel)> {

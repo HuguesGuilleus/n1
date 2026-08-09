@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use n1_tool::{Chunk, Config, ConfigMemoryMutex, Result};
+use n1_tool::{AtomicError, Chunk, Config, ConfigMemoryMutex, Result};
 
 use crate::{
     OpServer,
@@ -14,7 +14,7 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::ConfigMemoryMutex>> {
     let mut server = OpServer::new(ConfigMemoryMutex::new());
 
     // Set users
-    let entities_map = server.entities.get_mut()?;
+    let entities_map = server.entities.get_mut().map_err(AtomicError::from)?;
     entities_map.insert(
         101,
         Entity::User(User {

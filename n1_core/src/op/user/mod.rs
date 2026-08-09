@@ -1,6 +1,6 @@
 pub mod login;
 
-use n1_tool::{Config, mime};
+use n1_tool::{AtomicError, Config, mime};
 use serde::Deserialize;
 
 use super::{DTO, OpRequest, OpServer};
@@ -41,7 +41,7 @@ pub async fn init<C: Config>(serv: &mut OpServer<C>) -> Result<()> {
 
     // Load entities
     let entities: Vec<Entity> = serv.config.obj_fetch(0, OID_GLOBAL_ENTITY).await?;
-    let entities_map = serv.entities.get_mut()?;
+    let entities_map = serv.entities.get_mut().map_err(AtomicError::from)?;
     entities.into_iter().for_each(|entity| {
         entities_map.insert(
             match entity {

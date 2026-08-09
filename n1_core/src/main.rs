@@ -14,7 +14,7 @@ async fn main() -> io::Result<()> {
 
     let op = init_dev()
         .await
-        .map_err(|err| io::Error::new(io::ErrorKind::Other, err.msg))?;
+        .map_err(|err| io::Error::new(io::ErrorKind::Other, err.atomic.msg))?;
 
     let server = Arc::new(HTTPServer { op, key });
 

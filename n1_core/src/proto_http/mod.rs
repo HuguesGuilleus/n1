@@ -5,6 +5,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use bytes::Bytes;
 use n1_html::{H, Html};
+use n1_tool::errs::Error;
 use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::net::TcpListener;
 use tokio::spawn;
@@ -15,7 +16,7 @@ use crate::{OpRequest, Result, errs, front};
 use n1_tool::proto_http::{
     HTTPParser, HTTPRequest, Response, ResponseBody, StatusHTTP, write_response,
 };
-use n1_tool::{Config, Error, ErrorKind, mime};
+use n1_tool::{AtomicError, Config, ErrorKind, mime};
 
 pub struct HTTPServer<C: Config> {
     pub op: OpServer<C>,
@@ -126,7 +127,10 @@ async fn with_body<
     let token = get_token(&s.key, &r);
 
     let mut buf = Vec::new();
-    r.body.read_to_end(&mut buf).await?;
+    r.body
+        .read_to_end(&mut buf)
+        .await
+        .map_err(AtomicError::from)?;
     let data: &[u8] = match &buf[..] {
         b"" => b"null",
         _ => &buf,
@@ -174,7 +178,10 @@ async fn make_token<
     f: F,
 ) -> Result<Response<C>> {
     let mut buf = Vec::new();
-    r.body.read_to_end(&mut buf).await?;
+    r.body
+        .read_to_end(&mut buf)
+        .await
+        .map_err(AtomicError::from)?;
     let data: &[u8] = match &buf[..] {
         b"" => b"null",
         _ => &buf,
@@ -195,7 +202,10 @@ async fn make_token<
         &mut header_value,
         &token,
         &s.key,
-        SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(AtomicError::from)?
+            .as_secs(),
     );
     header_value.push_str("; SameSite=Strict; Secure; HttpOnly");
 
@@ -208,7 +218,7 @@ async fn make_token<
 }
 
 fn print_error<C: Config>(err: Error) -> Response<C> {
-    let status = match err.kind {
+    let status = match err.atomic.kind {
         ErrorKind::BadRequest => StatusHTTP::BadRequest,
         ErrorKind::Forbiden => StatusHTTP::Forbidden,
         ErrorKind::Internal => StatusHTTP::InternalServerError,
@@ -222,7 +232,7 @@ fn print_error<C: Config>(err: Error) -> Response<C> {
             + [H - "body.m"
                 + "\r\n"
                 + [H - "h1" + status.as_str()]
-                + [H - "div.mv" + err.msg]
+                + [H - "div.mv" + err.atomic.msg]
                 + "\r\n"
                 + [H - "div.fh.gap"
                     + [H - "a.bl href=/ " + "///"]

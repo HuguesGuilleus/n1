@@ -22,7 +22,7 @@ impl DTO for () {
 impl URLDTO for () {
     fn url_decode(url: &str) -> Result<Self> {
         if url != "" {
-            return Err(errs::FIELD_NOT_EMPTY);
+            return Err(errs::FIELD_NOT_EMPTY.into());
         }
         Ok(())
     }
@@ -31,14 +31,14 @@ impl URLDTO for () {
 impl DTO for u32 {
     fn check(&self) -> Result<()> {
         if *self == 0 {
-            return Err(errs::FIELD_ID);
+            return Err(errs::FIELD_ID.into());
         }
         Ok(())
     }
 }
 impl URLDTO for u32 {
     fn url_decode(url: &str) -> Result<Self> {
-        url.parse::<u32>().map_err(|_| errs::DECODE_REQUEST)
+        url.parse::<u32>().map_err(|_| errs::DECODE_REQUEST.into())
     }
 }
 
@@ -50,10 +50,10 @@ pub struct EntityAndObjectDTO {
 impl DTO for EntityAndObjectDTO {
     fn check(&self) -> Result<()> {
         if self.eid == 0 {
-            return Err(errs::FIELD_ENTITY);
+            return Err(errs::FIELD_ENTITY.into());
         }
         if self.oid == 0 {
-            return Err(errs::FIELD_OID);
+            return Err(errs::FIELD_OID.into());
         }
         Ok(())
     }

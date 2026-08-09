@@ -59,7 +59,7 @@ pub fn token_decode(s: &str, key: &[u8], now: u64) -> Result<Token> {
 
     // check size
     if data.len() < 8 + 5 + SHA256_BYTES {
-        return Err(errs::TOKEN_WRONG_LENGTH);
+        return Err(errs::TOKEN_WRONG_LENGTH.into());
     }
 
     // Check signature
@@ -68,7 +68,7 @@ pub fn token_decode(s: &str, key: &[u8], now: u64) -> Result<Token> {
     let mut signature = [0; SHA256_BYTES];
     hasher.raw_result(&mut signature);
     if !fixed_time_eq(&signature, &data[data.len() - SHA256_BYTES..]) {
-        return Err(errs::TOKEN_SIGNATURE);
+        return Err(errs::TOKEN_SIGNATURE.into());
     }
     let mut data = &data[0..data.len() - SHA256_BYTES];
 
@@ -77,13 +77,13 @@ pub fn token_decode(s: &str, key: &[u8], now: u64) -> Result<Token> {
     std::io::Read::read_exact(&mut data, &mut buf_u64).unwrap();
     let time = u64::from_be_bytes(buf_u64);
     if time < now && now + MAX_AGE < time {
-        return Err(errs::TOKEN_OBSOLETE);
+        return Err(errs::TOKEN_OBSOLETE.into());
     }
 
     // TOKEN_WRONG_LENGTH
     let chuncks = data.chunks_exact(5);
     if chuncks.remainder().len() != 0 {
-        return Err(errs::TOKEN_WRONG_LENGTH);
+        return Err(errs::TOKEN_WRONG_LENGTH.into());
     }
     let mut parts = chuncks.map(|chunck| {
         let mut buf_u32 = [0u8; 4];
@@ -93,8 +93,8 @@ pub fn token_decode(s: &str, key: &[u8], now: u64) -> Result<Token> {
     });
 
     let (uid, global) = match parts.next() {
-        None => return Err(errs::TOKEN_WRONG_LENGTH),
-        Some(Err(err)) => return Err(err),
+        None => return Err(errs::TOKEN_WRONG_LENGTH.into()),
+        Some(Err(err)) => return Err(err.into()),
         Some(Ok((uid, global))) => (uid, global),
     };
 
@@ -123,7 +123,7 @@ impl TryFrom<u8> for TokenLevel {
             1 => Ok(TokenLevel::Read),
             2 => Ok(TokenLevel::Write),
             3 => Ok(TokenLevel::Admin),
-            _ => Err(errs::TOKEN_LEVEL),
+            _ => Err(errs::TOKEN_LEVEL.into()),
         }
     }
 }

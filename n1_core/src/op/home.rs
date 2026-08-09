@@ -20,13 +20,13 @@ pub struct HomeState {
 impl DTO for HomeState {
     fn check(&self) -> Result<()> {
         if self.title.is_empty() {
-            return Err(errs::FIELD_TITLE);
+            return Err(errs::FIELD_TITLE.into());
         }
         if self.desc.is_empty() {
-            return Err(errs::FIELD_DESC);
+            return Err(errs::FIELD_DESC.into());
         }
         if self.content.is_empty() {
-            return Err(errs::FIELD_CONTENT);
+            return Err(errs::FIELD_CONTENT.into());
         }
         Ok(())
     }

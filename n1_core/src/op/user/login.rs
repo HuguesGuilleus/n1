@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use n1_html::{DirectHTML, H, Html};
-use n1_tool::Config;
+use n1_tool::{AtomicError, Config};
 use serde::Deserialize;
 
 use super::{DTO, OpRequest, OpServer};
@@ -18,17 +18,17 @@ pub struct LoginDTO {
 impl DTO for LoginDTO {
     fn check(&self) -> Result<()> {
         if self.name.is_empty() {
-            return Err(errs::FIELD_NAME);
+            return Err(errs::FIELD_NAME.into());
         }
         if self.password.is_empty() {
-            return Err(errs::FIELD_PASSWORD);
+            return Err(errs::FIELD_PASSWORD.into());
         }
         Ok(())
     }
 }
 
 pub async fn login(serv: &OpServer<impl Config>, r: OpRequest<LoginDTO>) -> Result<Token> {
-    let users = serv.entities.read()?;
+    let users = serv.entities.read().map_err(AtomicError::from)?;
     for (_, entity) in users.iter() {
         if let Entity::User(user) = entity {
             if user.name == r.dto.name {
@@ -40,12 +40,12 @@ pub async fn login(serv: &OpServer<impl Config>, r: OpRequest<LoginDTO>) -> Resu
                         groups_vec: user.groups_vec.clone(),
                     });
                 } else {
-                    return Err(errs::WRONG_LOGIN);
+                    return Err(errs::WRONG_LOGIN.into());
                 }
             }
         }
     }
-    return Err(errs::WRONG_LOGIN);
+    return Err(errs::WRONG_LOGIN.into());
 }
 
 pub fn render() -> Bytes {

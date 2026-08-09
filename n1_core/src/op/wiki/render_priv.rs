@@ -1,5 +1,5 @@
 use n1_html::{H, Html, Q};
-use n1_tool::{Config, Result};
+use n1_tool::{AtomicError, Config, Result};
 
 use crate::{
     OpRequest, OpServer,
@@ -15,11 +15,11 @@ pub async fn render_priv_index(
     r.token.access_group(r.dto, TokenLevel::Write)?;
 
     let owner = {
-        let entities = server.entities.read()?;
+        let entities = server.entities.read().map_err(AtomicError::from)?;
         match entities.get(&r.dto) {
             Some(Entity::Group(group)) => group.clone(),
-            Some(_) => return Err(errs::FORBIDEN_GROUP),
-            None => return Err(errs::NOT_FOUND),
+            Some(_) => return Err(errs::FORBIDEN_GROUP.into()),
+            None => return Err(errs::NOT_FOUND.into()),
         }
     };
     let wiki: State = server.config.obj_fetch(r.dto, OID_ENTITY_WIKI).await?;
@@ -76,11 +76,11 @@ pub async fn render_priv_page(
     r.token.access_group(r.dto.eid, TokenLevel::Write)?;
 
     let owner = {
-        let entities = server.entities.read()?;
+        let entities = server.entities.read().map_err(AtomicError::from)?;
         match entities.get(&r.dto.eid) {
             Some(Entity::Group(group)) => group.clone(),
-            Some(_) => return Err(errs::FORBIDEN_GROUP),
-            None => return Err(errs::NOT_FOUND),
+            Some(_) => return Err(errs::FORBIDEN_GROUP.into()),
+            None => return Err(errs::NOT_FOUND.into()),
         }
     };
 
@@ -127,11 +127,11 @@ pub async fn render_priv_new(server: &OpServer<impl Config>, r: OpRequest<u32>) 
     r.token.access_group(r.dto, TokenLevel::Write)?;
 
     let owner = {
-        let entities = server.entities.read()?;
+        let entities = server.entities.read().map_err(AtomicError::from)?;
         match entities.get(&r.dto) {
             Some(Entity::Group(group)) => group.clone(),
-            Some(_) => return Err(errs::FORBIDEN_GROUP),
-            None => return Err(errs::NOT_FOUND),
+            Some(_) => return Err(errs::FORBIDEN_GROUP.into()),
+            None => return Err(errs::NOT_FOUND.into()),
         }
     };
 

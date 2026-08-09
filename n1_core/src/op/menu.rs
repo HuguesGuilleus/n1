@@ -4,12 +4,15 @@ use n1_tool::Config;
 
 pub async fn page(server: &OpServer<impl Config>, r: OpRequest<()>) -> Result<String> {
     r.token.is_auth()?;
-    let entities = server.entities.read()?;
-    let entity = entities.get(&r.token.uid).ok_or(errs::NOT_FOUND_USER)?;
+    let entities = server.entities.read().map_err(AtomicError::from)?;
+    let entity = entities
+        .get(&r.token.uid)
+        .ok_or(errs::NOT_FOUND_USER)
+        .map_err(AtomicError::from)?;
     let user = if let Entity::User(user) = entity {
         user
     } else {
-        return Err(errs::EXPECT_USER);
+        return Err(errs::EXPECT_USER.into());
     };
 
     Ok([H - "html lang=fr"

@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use n1_html::{DirectHTML, H, Html};
-use n1_tool::{Config, Result, mime};
+use n1_tool::{AtomicError, Config, Result, mime};
 
 use crate::{
     OpServer, front,
@@ -12,7 +12,7 @@ use crate::{
 };
 
 pub async fn render_pub<C: Config>(server: &OpServer<C>) -> Result<()> {
-    let entities = server.entities.read()?;
+    let entities = server.entities.read().map_err(AtomicError::from)?;
     for owner in entities.values() {
         if let Entity::Group(group) = owner {
             render_pub_one(server, group)
