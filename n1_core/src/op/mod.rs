@@ -1,6 +1,7 @@
 mod compo;
 pub mod dropbox;
 mod dto;
+pub mod fs;
 pub mod home;
 pub mod menu;
 mod token;
@@ -54,6 +55,9 @@ impl<C: Config> OpServer<C> {
         Ok(self)
     }
 }
+
+/// Indicate that the return type will be retured in JSON.
+pub struct Json<T>(pub T);
 
 pub async fn big<C: Config>(server: &OpServer<C>, _req: OpRequest<()>) -> Result<Chunks<C>> {
     let b1 = Bytes::from_static(b"Hello ");

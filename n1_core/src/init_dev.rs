@@ -30,6 +30,10 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::ConfigMemoryMutex>> {
                 (0, TokenLevel::None),
             ],
             groups_vec: Vec::with_capacity(0),
+            fs: op::fs::FsysState {
+                dirs: vec![],
+                dirs_increment: 0,
+            },
         }),
     );
 

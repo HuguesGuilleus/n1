@@ -6,11 +6,12 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use bytes::Bytes;
 use n1_html::{H, Html};
 use n1_tool::errs::Error;
+use serde::Serialize;
 use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::net::TcpListener;
 use tokio::spawn;
 
-use crate::op::{self, DTO, OpServer, Token, URLDTO};
+use crate::op::{self, DTO, Json, OpServer, Token, URLDTO};
 use crate::token::{token_decode, token_encode};
 use crate::{OpRequest, Result, errs, front};
 use n1_tool::proto_http::{
@@ -67,6 +68,7 @@ pub async fn handle<R: AsyncRead + Unpin, C: Config>(
         ":login" => make_token(s, r, op::user::login::login).await,
         ":dropbox.text.add" => with_body(s, r, op::dropbox::text_add).await,
         ":dropbox.text.rm" => with_body(s, r, op::dropbox::text_rm).await,
+        ":fs.mkdir" => with_body(s, r, op::fs::mkdir).await,
 
         // Serve generated files
         _ => {
@@ -88,6 +90,17 @@ fn asset<C: Config>(mime: &'static str, bytes: &'static [u8]) -> Result<Response
         header: None,
         body: ResponseBody::Bytes(Bytes::from_static(bytes)),
     })
+}
+
+impl<C: Config, T: Serialize> From<Json<T>> for Response<C> {
+    fn from(v: Json<T>) -> Self {
+        Response {
+            status: StatusHTTP::OK,
+            mime: mime::JSON,
+            header: None,
+            body: ResponseBody::Bytes(Bytes::from_owner(serde_json::to_vec(&v.0).unwrap())),
+        }
+    }
 }
 
 async fn with_url<
@@ -232,7 +245,7 @@ fn print_error<C: Config>(err: Error) -> Response<C> {
             + [H - "body.m"
                 + "\r\n"
                 + [H - "h1" + status.as_str()]
-                + [H - "div.mv" + err.atomic.msg]
+                + [H - "div.mv" + err.atomic.message]
                 + "\r\n"
                 + [H - "div.fh.gap"
                     + [H - "a.bl href=/ " + "///"]
