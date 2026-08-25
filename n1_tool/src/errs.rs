@@ -15,7 +15,7 @@ pub struct Error {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct AtomicError {
     pub kind: ErrorKind,
-    pub msg: &'static str,
+    pub message: &'static str,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -25,6 +25,15 @@ pub enum ErrorKind {
     Internal,
     NotFound,
     SubIO,
+}
+
+impl AtomicError {
+    pub fn push<S: ToString>(self, msg: S) -> Result<()> {
+        Err(Error {
+            atomic: self,
+            context: vec![msg.to_string()],
+        })
+    }
 }
 
 impl Error {
@@ -57,7 +66,7 @@ impl From<SystemTimeError> for AtomicError {
     fn from(_: SystemTimeError) -> Self {
         AtomicError {
             kind: ErrorKind::Internal,
-            msg: "get system time elapsed",
+            message: "get system time elapsed",
         }
     }
 }
@@ -72,7 +81,7 @@ macro_rules! E {
     ($n:ident,$k:ident, $m:expr) => {
         pub const $n: AtomicError = AtomicError {
             kind: ErrorKind::$k,
-            msg: $m,
+            message: $m,
         };
     };
 }

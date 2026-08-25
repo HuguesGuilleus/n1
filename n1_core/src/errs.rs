@@ -4,13 +4,14 @@ macro_rules! E {
     ($n:ident,$k:ident, $m:expr) => {
         pub const $n: AtomicError = AtomicError {
             kind: ErrorKind::$k,
-            msg: $m,
+            message: $m,
         };
     };
 }
 
 E!(DECODE_REQUEST, BadRequest, "cannot decode request data");
 E!(EXPECT_USER, BadRequest, "expected a user");
+E!(FIELD_EMPTY, BadRequest, "empty field");
 E!(FIELD_CONTENT, BadRequest, "empty 'content' field");
 E!(FIELD_DESC, BadRequest, "empty 'desc' field");
 E!(FIELD_ENTITY, BadRequest, "empty entity ID 'eid' field");
