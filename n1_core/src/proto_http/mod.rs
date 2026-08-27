@@ -27,6 +27,13 @@ pub struct HTTPServer<C: Config> {
 pub async fn run<C: Config + Unpin + 'static>(server: Arc<HTTPServer<C>>) -> io::Result<()> {
     let addr: SocketAddr = ([127, 0, 0, 1], 8000).into();
     let listener = TcpListener::bind(addr).await?;
+    run_with_listener(listener, server).await
+}
+
+pub async fn run_with_listener<C: Config + Unpin + 'static>(
+    listener: TcpListener,
+    server: Arc<HTTPServer<C>>,
+) -> io::Result<()> {
     loop {
         let server = server.clone();
         let (mut stream, _) = listener.accept().await?;

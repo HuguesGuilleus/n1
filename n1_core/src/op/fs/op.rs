@@ -6,7 +6,7 @@ use crate::{DTO, OpRequest, OpServer, Result, errs};
 
 #[derive(Debug, Deserialize)]
 pub struct MkdirDTO {
-    _parent: u32,
+    parent: u32,
     name: String,
 }
 
