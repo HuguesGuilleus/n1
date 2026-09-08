@@ -27,10 +27,10 @@ pub async fn render_priv_index(
     Ok([H - "html lang=fr"
         + [H - "head" + front::HEAD + [H - "title" + "Wiki"]]
         + [H - "body"
-            + compo::header2(
-                H + [H - "a.bl href=/@" - &owner.name + "@" + &owner.name]
-                    + [H - "a.bl href=/_wiki/" - owner.gid + "[wiki]"]
-                    + [H - "div.bl" + "Édition du wiki"],
+            + compo::header(
+                H + [H - "a.bg href=/_wiki/" - owner.gid + "wiki" + " @" + &owner.name]
+                    + " "
+                    + "Édition du wiki",
             )
             + [H - "main.w.fv.gap"
                 + (wiki.shadow == 0).then(|| {
@@ -94,11 +94,9 @@ pub async fn render_priv_page(
     Ok([H - "html lang=fr"
         + [H - "head" + front::HEAD + [H - "title" + "Wiki " + &page.title]]
         + [H - "body"
-            + compo::header2([H
-                + [H - "a.bl href=/@" - &owner.name + "@" + &owner.name]
-                + [H - "a.bl href=/_wiki/" - owner.gid + "[wiki]"]
-                + [H - "div.bl" + "Édition d'une page"]
-                + ""])
+            + compo::header(H +
+                [H - "a.bg href=/_wiki/" - owner.gid + "wiki"+ " @" + &owner.name ]
+                + " " + "Modification d'une page")
             + [H - "main.w.fv.gap"
                 + [H - "i" + "Modification: " + [H - "time" + page.last_edit]]
                 + [H - "div.bl.fv.gap"
@@ -138,11 +136,11 @@ pub async fn render_priv_new(server: &OpServer<impl Config>, r: OpRequest<u32>) 
     Ok([H - "html lang=fr"
         + [H - "head" + front::HEAD + [H - "title" + "Nouvelle page du wiki"]]
         + [H - "body"
-            + compo::header2([H
-                + [H - "a.bl href=/@" - &owner.name + "@" + &owner.name]
-                + [H - "a.bl href=/_wiki/" - owner.gid + "[wiki]"]
-                + [H - "div.bl" + "Nouvelle page"]
-                + ""])
+            + compo::header(
+                H + [H - "a.bg href=/_wiki/" - owner.gid + "wiki" + " @" + &owner.name]
+                    + " "
+                    + "Nouvelle d'une page",
+            )
             + [H - "main.w"
                 + [H - "div.bl.fv.gap"
                     + [H - "div" + [H - "input.bl placeholder=Titre"]]

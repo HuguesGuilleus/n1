@@ -55,10 +55,6 @@ async fn render_pub_index<C: Config>(
                 [H - "html lang=fr"
                     + [H - "head" + front::HEAD + [H - "title" + "Wiki de " + &owner.name]]
                     + [H - "body"
-                        + compo::header2(
-                            H + [H - "a.bl href=/@" - &owner.name + "@" + &owner.name]
-                                + [H - "a.bl href=./ " + "[wiki]"],
-                        )
                         + [H - "main.w"
                             + [H - "div.fv.gap"
                                 + || {
@@ -100,7 +96,7 @@ async fn render_pub_page<C: Config>(
                 [H - "html lang=fr"
                     + [H - "head" + front::HEAD + [H - "title" + &page.title]]
                     + [H - "body"
-                        + compo::header2(
+                        + compo::header(
                             H + [H - "a.bl href=/@" - &owner.name + "@" + &owner.name]
                                 + [H - "a.bl href=./ " + "[wiki]"]
                                 + [H - "div.bl"
@@ -114,6 +110,7 @@ async fn render_pub_page<C: Config>(
                                         + "Éditer la page"]
                                     + ""],
                         )
+                        + compo::header(H - "Wiki" + "@" + &owner.name)
                         + [H - "main.w"
                             + [H - "div"
                                 + [H - "i"

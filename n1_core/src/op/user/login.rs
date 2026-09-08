@@ -53,7 +53,7 @@ pub fn render() -> Bytes {
         [H - "html lang=fr"
             + [H - "head" + front::HEAD + [H - "title" + "Connexion"]]
             + [H - "body"
-                + compo::header(false, "Connexion")
+                + compo::header("Connexion")
                 + [H - "main.w"
                     + [H - "div.act.bb.fv.gap"
                         + [H - "label for=_name" + "Nom du compte:"]

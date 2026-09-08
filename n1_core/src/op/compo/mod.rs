@@ -1,28 +1,7 @@
-use std::ops::Not;
-
 use n1_html::{DirectHTML, H};
 
-pub fn header(auth: bool, inside: impl n1_html::Html) -> impl n1_html::Html {
-    [H - "header.fh"
-        + [H - "a.bl href=/_" + "///"]
-        + [H - "div.bl" + inside]
-        + auth.then_some(H - "a.bl.mlauto id=logout href=/_logout" + "Déconnexion")
-        + auth.not().then_some(
-            H + [H - "a.bl.mlauto id=login href=/_login" + "Connexion"]
-                + [H - "a.bl.mlauto id=logout href=/_logout" + "Déconnexion"]
-                + [H - "script"
-                    + DirectHTML(r#"(localStorage.getItem("isauth")?login:logout).hidden=!0"#)],
-        )
-        + ""]
-}
-
-pub fn header2(inside: impl n1_html::Html) -> impl n1_html::Html {
-    [H - "header.fh"
-        + [H - "a.bl href=/_" + "///"]
-        + inside
-        + [H - "a.bl.mlauto id=login href=/_login" + "Connexion"]
-        + [H - "a.bl.mlauto id=logout href=/_logout" + "Déconnexion"]
-        + ""]
+pub fn header(inside: impl n1_html::Html) -> impl n1_html::Html {
+    [H - "header.fh" + [H - "h1.bl" + inside] + [H - "a.bl.mlauto href=/_" + "Menu"] + ""]
 }
 
 pub const TIME_JS: DirectHTML = DirectHTML(

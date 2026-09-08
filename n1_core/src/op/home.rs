@@ -90,7 +90,7 @@ fn render_pub(home: &HomeState) -> Bytes {
                     - DirectHTML("\"")]
                 + ""]
             + [H - "body"
-                + compo::header(false, "Accueil")
+                + compo::header("Accueil")
                 + [H - "main.w"
                     + [H - "h1" + &home.title]
                     + (|| {
@@ -116,7 +116,7 @@ fn render_console(state: &HomeState) -> String {
     [H - "html lang=fr"
         + [H - "head" + front::HEAD + [H - "title" + "Modification de l'accueil"]]
          + [H - "body"
-            + compo::header(true ,  "Modification de l'accueil" )
+            + compo::header("Modification de l'accueil" )
             + [H - "main.w"
                     + [H - "div.act.bb.fv.gap"
                         + [H - "div.g2.gap"

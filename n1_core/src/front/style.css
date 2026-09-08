@@ -61,6 +61,11 @@ hr {
 }
 
 h1 {
+	font: inherit;
+	margin: 0;
+}
+
+h2 {
 	display: table;
 	margin: var(--SP) 0;
 	padding: var(--SP);

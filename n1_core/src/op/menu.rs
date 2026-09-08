@@ -19,20 +19,23 @@ pub async fn page(server: &OpServer<impl Config>, r: OpRequest<()>) -> Result<St
         + [H - "head" + front::HEAD + [H - "title" + "Menu"]]
         + [H - "body"
             + op::compo::header(
-                true,
                 H - "" + "Menu @" + &user.name + " [" + user.global.as_str() + "]",
             )
             + [H - "main.w"
-                + [H - "h1" + "Utilisateur"]
+                + [H - "h2" + "Utilisateur"]
                 + [H - "div.fh.gap"
                     + [H - "a.bl href=/_bio/" - user.uid + "bio"]
                     + [H - "a.bl href=/_dropbox/" - user.uid + "fichiers"]
                     + [H - "a.bl href=/_dropbox/" - user.uid + "dépôt"]
                     + [H - "a.bl href=/_mail/" - user.uid + "mail"]
                     + ""]
+                + [H - "div.mv.fh.gap"
+                    + [H - "button.bl" + "Nouveau mot de passe"]
+                    + [H - "button.bl" + "Supprimer le compte"]
+                    + ""]
                 + (|| {
                     user.groups().map(|(gid, _)| {
-                        [H + [H - "h1"
+                        [H + [H - "h2"
                             + "Groupe: "
                             + entities
                                 .get(&gid)
@@ -48,14 +51,10 @@ pub async fn page(server: &OpServer<impl Config>, r: OpRequest<()>) -> Result<St
                             + ""]
                     })
                 })
-                + [H - "h1" + "Administration"]
+                + [H - "h2" + "Administration"]
                 + [H - "div.fh.gap.mv"
                     + [H - "a.bl href=/_users" + "Utilisateurs"]
                     + [H - "a.bl href=/_groups" + "Groupes"]
-                    + ""]
-                + [H - "div.fh.gap"
-                    + [H - "button.bl" + "Nouveau mot de passe"]
-                    + [H - "button.bl" + "Supprimer le compte"]
                     + ""]
                 + ""]
             + ""]

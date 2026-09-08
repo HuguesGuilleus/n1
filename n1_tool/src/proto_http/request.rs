@@ -20,7 +20,7 @@ pub struct HTTPRequest<B: AsyncRead> {
     pub method: Method,
     /// Decoded path
     pub path: String,
-    /// Un decoded query without `?`
+    /// Undecoded query without `?`
     pub query: String,
     pub headers: BTreeMap<String, String>,
     pub body: B,
@@ -42,6 +42,7 @@ pub enum Error {
     NotVersion1,
     WrongSyntax,
     WrongURLEncode,
+    TooLong,
 }
 
 impl<R: AsyncRead + Unpin> HTTPParser<R> {
@@ -63,6 +64,9 @@ impl<R: AsyncRead + Unpin> HTTPParser<R> {
         self.buffer[self.cursor_end..].fill(0);
 
         while !self.contain_full_headers() {
+            if self.cursor_end == self.buffer.len() {
+                return Err(Error::TooLong);
+            }
             match (self.r).read(&mut self.buffer[self.cursor_end..]).await {
                 Ok(read_len) => self.cursor_end += read_len,
                 Err(_) => return Err(Error::IO),

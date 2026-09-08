@@ -253,6 +253,7 @@ fn print_error<C: Config>(err: Error) -> Response<C> {
                 + "\r\n"
                 + [H - "h1" + status.as_str()]
                 + [H - "div.mv" + err.atomic.message]
+                + [|| err.context.iter().map(|s| [H - "div" + s + "\n"])]
                 + "\r\n"
                 + [H - "div.fh.gap"
                     + [H - "a.bl href=/ " + "///"]

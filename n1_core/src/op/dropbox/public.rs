@@ -31,14 +31,14 @@ pub fn render_public_one(uid: u32, name: &str) -> String {
     [H - "html lang=fr"
         + [H - "head" + front::HEAD + [H - "title" + "Dépôt pour @" + name]]
         + [H - "body"
-            + compo::header(false, H - "" + "Dépôt pour @" + name)
+            + compo::header(H - "" + "Dépôt pour @" + name)
             + [H - "main.w"
-                + [H - "h1" + "Envoyer un texte"]
+                + [H - "h2" + "Envoyer un texte"]
                 + [H - "div.bl"
                     + [H - "div.mv id=textData contenteditable=plaintext-only" + "Message"]
                     + [H - "button.bl id=textSend" + "Envoyer"]
                     + ""]
-                + [H - "h1" + "Envoyer un fichier"]
+                + [H - "h2" + "Envoyer un fichier"]
                 + ""]
             + ""]
         + [H - "script"

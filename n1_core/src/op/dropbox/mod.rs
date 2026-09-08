@@ -44,7 +44,7 @@ pub async fn page(server: &OpServer<impl Config>, r: OpRequest<u32>) -> Result<S
     Ok([H - "html lang=fr"
         + [H - "head" + front::HEAD + [H - "title" + "Dropbox @" + owner.name()]]
         + [H - "body"
-            + compo::header(true, H - "" + "Dropbox @" + owner.name())
+            + compo::header( H - "" + "Dropbox @" + owner.name())
             + [H - "main.w"
                 + [H - "div.fh.gap"
                     + || {
@@ -55,7 +55,7 @@ pub async fn page(server: &OpServer<impl Config>, r: OpRequest<u32>) -> Result<S
                             })
                             .map(|(gid, name)| H - "a.bl href=/_dropbox/" - gid +"@"+ name)
                     }]
-                + (!state.texts.is_empty()).then(|| [H - "h1" + "Textes"])
+                + (!state.texts.is_empty()).then(|| [H - "h2" + "Textes"])
                 + [H + || {
                     state.texts.iter().map(|(id, text)| {
                         H - "div.bl.mv"
@@ -63,7 +63,7 @@ pub async fn page(server: &OpServer<impl Config>, r: OpRequest<u32>) -> Result<S
                             + [H - "button.bl.mt onclick=textRm(event) data-eid="  -owner.id() - " data-oid=" - *id + "Supprimer"]
                     })
                 }]
-                + (!state.files.is_empty()).then(|| [H - "h1" + "Fichiers"])
+                + (!state.files.is_empty()).then(|| [H - "h2" + "Fichiers"])
                 + [H + || {
                     state.files.iter().map(|f| {
                         H - "div.bl.mv"
