@@ -5,14 +5,14 @@ use crate::{
     OpRequest, OpServer,
     errs::{self},
     front,
-    op::{EntityAndObjectDTO, OID_ENTITY_WIKI, TokenLevel, compo, user::Entity, wiki::State},
+    op::{EntityAndObjectDTO, OID_ENTITY_WIKI, compo, user::Entity, wiki::State},
 };
 
 pub async fn render_priv_index(
     server: &OpServer<impl Config>,
     r: OpRequest<u32>,
 ) -> Result<String> {
-    r.token.access_group(r.dto, TokenLevel::Write)?;
+    r.token.check_access_write(r.dto, OID_ENTITY_WIKI)?;
 
     let owner = {
         let entities = server.entities.read().map_err(AtomicError::from)?;
@@ -22,7 +22,10 @@ pub async fn render_priv_index(
             None => return Err(errs::NOT_FOUND.into()),
         }
     };
-    let wiki: State = server.config.obj_fetch(r.dto, OID_ENTITY_WIKI).await?;
+    let wiki: State = server
+        .config
+        .obj_fetch(r.dto, OID_ENTITY_WIKI as u32)
+        .await?;
 
     Ok([H - "html lang=fr"
         + [H - "head" + front::HEAD + [H - "title" + "Wiki"]]
@@ -73,7 +76,7 @@ pub async fn render_priv_page(
     server: &OpServer<impl Config>,
     r: OpRequest<EntityAndObjectDTO>,
 ) -> Result<String> {
-    r.token.access_group(r.dto.eid, TokenLevel::Write)?;
+    r.token.check_access_write(r.dto.eid, OID_ENTITY_WIKI)?;
 
     let owner = {
         let entities = server.entities.read().map_err(AtomicError::from)?;
@@ -84,7 +87,10 @@ pub async fn render_priv_page(
         }
     };
 
-    let wiki: State = server.config.obj_fetch(r.dto.eid, OID_ENTITY_WIKI).await?;
+    let wiki: State = server
+        .config
+        .obj_fetch(r.dto.eid, OID_ENTITY_WIKI as u32)
+        .await?;
     let page = &wiki.pages[wiki
         .pages
         .binary_search_by(|page| page.id.cmp(&r.dto.oid))
@@ -122,7 +128,7 @@ pub async fn render_priv_page(
 }
 
 pub async fn render_priv_new(server: &OpServer<impl Config>, r: OpRequest<u32>) -> Result<String> {
-    r.token.access_group(r.dto, TokenLevel::Write)?;
+    r.token.check_access_write(r.dto, OID_ENTITY_WIKI)?;
 
     let owner = {
         let entities = server.entities.read().map_err(AtomicError::from)?;

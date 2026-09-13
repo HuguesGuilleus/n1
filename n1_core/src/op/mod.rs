@@ -20,10 +20,10 @@ use crate::op::user::Entity;
 pub use dto::*;
 pub use token::*;
 
-pub const OID_GLOBAL_ENTITY: u32 = 1;
-pub const OID_GLOBAL_HOME: u32 = 3;
-pub const OID_ENTITY_DROPBOX: u32 = 4;
-pub const OID_ENTITY_WIKI: u32 = 5;
+pub const OID_GLOBAL_ENTITY: u16 = 1;
+pub const OID_GLOBAL_HOME: u16 = 3;
+pub const OID_ENTITY_DROPBOX: u16 = 4;
+pub const OID_ENTITY_WIKI: u16 = 5;
 
 pub struct OpServer<C> {
     pub config: Arc<C>,

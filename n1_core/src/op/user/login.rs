@@ -6,7 +6,7 @@ use serde::Deserialize;
 use super::{DTO, OpRequest, OpServer};
 use crate::{
     Result, errs, front,
-    op::{Token, compo, user::Entity},
+    op::{Token, TokenItem, compo, user::Entity},
 };
 
 #[derive(Debug, Deserialize)]
@@ -33,11 +33,12 @@ pub async fn login(serv: &OpServer<impl Config>, r: OpRequest<LoginDTO>) -> Resu
         if let Entity::User(user) = entity {
             if user.name == r.dto.name {
                 if user.password == r.dto.password {
+                    let mut access = [TokenItem::default(); Token::ACCESS_LEN];
+                    access[0..user.access.len()].copy_from_slice(&user.access);
                     return Ok(Token {
                         uid: user.uid,
-                        global: user.global,
-                        groups_array: user.groups_array,
-                        groups_vec: user.groups_vec.clone(),
+                        is_admin: user.is_admin,
+                        access,
                     });
                 } else {
                     return Err(errs::WRONG_LOGIN.into());

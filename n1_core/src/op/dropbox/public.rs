@@ -10,7 +10,10 @@ use crate::{
 pub async fn render_public(server: &OpServer<impl Config>) -> Result<()> {
     let entities = server.entities.read().map_err(AtomicError::from)?;
     for (&eid, entity) in entities.iter() {
-        let state: State = server.config.obj_fetch(eid, OID_ENTITY_DROPBOX).await?;
+        let state: State = server
+            .config
+            .obj_fetch(eid, OID_ENTITY_DROPBOX as u32)
+            .await?;
         if state.shadow == 0 {
             continue;
         }

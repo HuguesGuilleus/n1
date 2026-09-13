@@ -3,10 +3,9 @@ pub mod login;
 use n1_tool::{AtomicError, Config, mime};
 use serde::Deserialize;
 
-use super::{DTO, OpRequest, OpServer};
 use crate::{
-    Result,
-    op::{OID_GLOBAL_ENTITY, TokenLevel, fs::FsysState},
+    DTO, OpRequest, OpServer, Result,
+    op::{OID_GLOBAL_ENTITY, Token, TokenItem, fs::FsysState},
 };
 
 #[derive(Debug, PartialEq, Deserialize, Clone)]
@@ -21,10 +20,9 @@ pub struct User {
     pub uid: u32,
     pub name: String,
     pub password: String,
-    pub global: TokenLevel,
+    pub is_admin: bool,
     /// Access for this group
-    pub groups_array: [(u32, TokenLevel); 5],
-    pub groups_vec: Vec<(u32, TokenLevel)>,
+    pub access: Vec<TokenItem>,
 
     pub fs: FsysState,
 }
@@ -33,7 +31,7 @@ pub struct User {
 pub struct Group {
     pub gid: u32,
     pub name: String,
-    pub users: Vec<(u32, TokenLevel)>,
+    pub users: Vec<TokenItem>,
 }
 
 pub async fn init<C: Config>(serv: &mut OpServer<C>) -> Result<()> {
@@ -42,7 +40,7 @@ pub async fn init<C: Config>(serv: &mut OpServer<C>) -> Result<()> {
         .await?;
 
     // Load entities
-    let entities: Vec<Entity> = serv.config.obj_fetch(0, OID_GLOBAL_ENTITY).await?;
+    let entities: Vec<Entity> = serv.config.obj_fetch(0, OID_GLOBAL_ENTITY as u32).await?;
     let entities_map = serv.entities.get_mut().map_err(AtomicError::from)?;
     entities.into_iter().for_each(|entity| {
         entities_map.insert(
@@ -83,10 +81,22 @@ impl Default for Entity {
 }
 
 impl User {
-    pub fn groups(&self) -> impl Iterator<Item = (u32, TokenLevel)> {
-        self.groups_array
+    pub fn groups(&self) -> impl Iterator<Item = u32> {
+        let mut groups = [0u32; Token::ACCESS_LEN];
+        let mut groups_inc = 0;
+
+        let mut previous = 0;
+        for TokenItem { id, .. } in &self.access {
+            if *id != previous {
+                previous = *id;
+                groups[groups_inc] = *id;
+                groups_inc += 1;
+            }
+        }
+
+        groups
             .into_iter()
-            .chain(self.groups_vec.iter().copied())
-            .filter(|(id, _)| *id != 0)
+            .take_while(|&id| id != 0)
+            .filter(|&gid| gid != self.uid)
     }
 }

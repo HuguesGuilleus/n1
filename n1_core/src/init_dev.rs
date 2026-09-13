@@ -4,7 +4,7 @@ use n1_tool::{AtomicError, Chunk, Config, ConfigMemoryMutex, Result};
 use crate::{
     OpServer,
     op::{
-        self, OID_ENTITY_DROPBOX, OID_ENTITY_WIKI, TokenLevel,
+        self, OID_ENTITY_DROPBOX, OID_ENTITY_WIKI, OID_GLOBAL_ENTITY, OID_GLOBAL_HOME, TokenItem,
         dropbox::DropFile,
         user::{Entity, Group, User},
     },
@@ -12,6 +12,30 @@ use crate::{
 
 pub async fn init_dev() -> Result<OpServer<n1_tool::ConfigMemoryMutex>> {
     let mut server = OpServer::new(ConfigMemoryMutex::new());
+
+    // Set user access
+    let access: Vec<TokenItem> = vec![
+        TokenItem {
+            id: 101,
+            app: OID_GLOBAL_ENTITY,
+            can_write: true,
+        },
+        TokenItem {
+            id: 101,
+            app: OID_GLOBAL_HOME,
+            can_write: true,
+        },
+        TokenItem {
+            id: 101,
+            app: OID_ENTITY_DROPBOX,
+            can_write: true,
+        },
+        TokenItem {
+            id: 201,
+            app: OID_ENTITY_WIKI,
+            can_write: true,
+        },
+    ];
 
     // Set users
     let entities_map = server.entities.get_mut().map_err(AtomicError::from)?;
@@ -21,15 +45,8 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::ConfigMemoryMutex>> {
             uid: 101,
             name: "eve".to_string(),
             password: "56".to_string(),
-            global: TokenLevel::Admin,
-            groups_array: [
-                (201, TokenLevel::Admin),
-                (0, TokenLevel::None),
-                (0, TokenLevel::None),
-                (0, TokenLevel::None),
-                (0, TokenLevel::None),
-            ],
-            groups_vec: Vec::with_capacity(0),
+            is_admin: true,
+            access,
             fs: op::fs::FsysState {
                 dirs: vec![],
                 dirs_increment: 0,
@@ -42,12 +59,16 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::ConfigMemoryMutex>> {
         Entity::Group(Group {
             gid: 201,
             name: "world".to_string(),
-            users: vec![(101, TokenLevel::Admin)],
+            users: vec![TokenItem {
+                id: 101,
+                app: OID_ENTITY_WIKI,
+                can_write: true,
+            }],
         }),
     );
 
     // Set dropbox
-    server.config.obj_store(101 , OID_ENTITY_DROPBOX, op::dropbox::State{
+    server.config.obj_store(101 , OID_ENTITY_DROPBOX as u32 , op::dropbox::State{
         shadow: 301,
         texts_inc: 3,
         texts: vec![
@@ -79,7 +100,7 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::ConfigMemoryMutex>> {
         .config
         .obj_store(
             201,
-            OID_ENTITY_WIKI,
+            OID_ENTITY_WIKI as u32,
             op::wiki::State {
                 eid: 201,
                 shadow: 302,

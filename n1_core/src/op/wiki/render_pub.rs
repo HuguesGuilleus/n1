@@ -26,7 +26,10 @@ pub async fn render_pub<C: Config>(server: &OpServer<C>) -> Result<()> {
 }
 
 async fn render_pub_one<C: Config>(server: &OpServer<C>, owner: &Group) -> Result<()> {
-    let state: State = server.config.obj_fetch(owner.gid, OID_ENTITY_WIKI).await?;
+    let state: State = server
+        .config
+        .obj_fetch(owner.gid, OID_ENTITY_WIKI as u32)
+        .await?;
     if state.shadow == 0 {
         return Ok(());
     }

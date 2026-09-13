@@ -165,22 +165,21 @@ fn get_token<B: AsyncRead>(key: &[u8], request: &HTTPRequest<B>) -> Token {
         .headers
         .get("Cookie")
         .map(|c| c.as_str())
-        .unwrap_or("")
+        .unwrap_or_default()
         .split("; ")
-        .filter(|cookie| cookie.starts_with("auth="))
+        .flat_map(|cookie| cookie.strip_prefix("auth="))
         .next();
 
     if let Some(cookie) = cookie {
         token_decode(
-            &cookie[5..],
             key,
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_secs(),
+            cookie,
         )
         .inspect_err(|err| eprintln!("Cookie auth token fail: {:?}", err))
-        .ok()
         .unwrap_or_default()
     } else {
         Token::default()
@@ -211,15 +210,14 @@ async fn make_token<
     let token: Token = f(
         &s.op,
         OpRequest {
-            token: Token::default(),
+            token: get_token(&s.key, &r),
             dto,
         },
     )
     .await?;
 
-    let mut header_value = String::from("auth=");
-    token_encode(
-        &mut header_value,
+    let mut header_value = token_encode(
+        String::from("auth="),
         &token,
         &s.key,
         SystemTime::now()

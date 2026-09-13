@@ -1,155 +1,129 @@
 use std::{collections::BTreeMap, iter::once};
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
-use crate::{Result, errs, op::user::Entity};
+use crate::{
+    Result, errs,
+    op::{OID_ENTITY_DROPBOX, OID_ENTITY_WIKI, OID_GLOBAL_ENTITY, OID_GLOBAL_HOME, user::Entity},
+};
 
-/// A parsed token with all user access.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Token {
-    /// User ID.
-    /// No auth if `id == 0`
     pub uid: u32,
-    /// Level access to global resources.
-    pub global: TokenLevel,
-    /// Access for this group
-    pub groups_array: [(u32, TokenLevel); 5],
-    pub groups_vec: Vec<(u32, TokenLevel)>,
+    pub is_admin: bool,
+    pub access: [TokenItem; Token::ACCESS_LEN],
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Serialize, Deserialize, Default)]
-pub enum TokenLevel {
-    /// Zero access
-    #[default]
-    None = 0,
-    /// The user can see the data.
-    Read = 1,
-    // The user can write data
-    Write = 2,
-    /// The user can remove the group and manage user.
-    Admin = 3,
+#[derive(Debug, Clone, Copy, PartialEq, Default, Deserialize)]
+pub struct TokenItem {
+    pub id: u32,
+    pub app: u16,
+    pub can_write: bool,
 }
 
 impl Token {
-    /// Token to init operation with all priviledge.
+    pub const ACCESS_LEN: usize = 63;
+
     pub fn init() -> Self {
         Self {
-            uid: 1,
-            global: TokenLevel::Admin,
-            groups_array: [(0, TokenLevel::Admin); 5],
-            groups_vec: Vec::with_capacity(0),
+            uid: 0,
+            is_admin: false,
+            access: [TokenItem {
+                id: 0,
+                app: 0,
+                can_write: false,
+            }; 63],
         }
     }
 
-    /// Check authentification. Return `errs::NO_AUTH` if no authentification.
-    pub fn is_auth(&self) -> Result<()> {
+    /// Check if the token is authenticated. Return `errs::NO_AUTH` if not authenticated.
+    pub fn check_auth(&self) -> Result<()> {
         if self.uid == 0 {
             return Err(errs::NO_AUTH.into());
         }
         Ok(())
     }
-    /// Check if the token permit to access this global value.
-    pub fn access_global(&self, level: TokenLevel) -> Result<()> {
-        self.is_auth()?;
-        if self.global < level {
+
+    /// Check if the token has admin access.
+    pub fn check_admin(&self) -> Result<()> {
+        self.check_auth()?;
+        if !self.is_admin {
             return Err(errs::FORBIDEN_GLOBAL.into());
         }
         Ok(())
     }
-    /// Check if the token permit this value for a spectific group.
-    pub fn access_group(&self, gid: u32, level: TokenLevel) -> Result<()> {
-        self.is_auth()?;
-        let iter = self
-            .groups_array
-            .into_iter()
-            .chain(self.groups_vec.iter().copied())
-            .filter(|&(token_group, _)| token_group != 0);
-        for (token_group, token_level) in iter {
-            if token_group == gid {
-                if token_level < level {
-                    return Err(errs::FORBIDEN_GROUP.into());
-                }
+
+    /// Check if the token has read access to a specific group and app.
+    pub fn check_access_read(&self, id: u32, app_id: u16) -> Result<()> {
+        self.check_auth()?;
+        for item in self.access.iter() {
+            if item.id == id && item.app == app_id {
                 return Ok(());
             }
         }
-        Err(errs::FORBIDEN_OUTSIDE.into())
+        Err(errs::FORBIDEN_GROUP.into())
     }
 
-    pub fn groups(&self) -> impl Iterator<Item = (u32, TokenLevel)> {
-        once((self.uid, TokenLevel::Admin))
-            .chain(self.groups_array.into_iter())
-            .chain(self.groups_vec.iter().copied())
-            .filter(|(gid, _)| *gid != 0)
+    /// Check if the token has read access to a specific group and app.
+    pub fn check_access_write(&self, gid: u32, app_id: u16) -> Result<()> {
+        self.check_auth()?;
+        for item in self.access.iter() {
+            if item.id == gid && item.app == app_id && item.can_write {
+                return Ok(());
+            }
+        }
+        Err(errs::FORBIDEN_GROUP.into())
     }
 
-    pub fn groups_name<'a>(
+    pub fn names<'a>(
         &self,
         entities: &'a BTreeMap<u32, Entity>,
-    ) -> impl Iterator<Item = (u32, TokenLevel, &'a str)> {
-        once((self.uid, TokenLevel::Admin))
-            .chain(self.groups_array.into_iter())
-            .chain(self.groups_vec.iter().copied())
-            .filter(|(gid, _)| *gid != 0)
-            .map(move |(eid, level)| {
-                (
-                    eid,
-                    level,
-                    entities.get(&eid).map(Entity::name).unwrap_or(""),
-                )
-            })
+    ) -> impl Iterator<Item = (TokenItem, &'a str)> {
+        once(TokenItem {
+            id: self.uid,
+            app: 0,
+            can_write: self.is_admin,
+        })
+        .chain(self.access.iter().take_while(|item| item.id != 0).copied())
+        .map(move |item| (item, entities.get(&item.id).map(Entity::name).unwrap_or("")))
     }
 
-    /// Create a super admin user.
     pub fn test_alice() -> Self {
+        let mut access = [TokenItem::default(); 63];
+        access[0] = TokenItem {
+            id: 1,
+            app: OID_GLOBAL_ENTITY,
+            can_write: true,
+        };
+        access[0] = TokenItem {
+            id: 1,
+            app: OID_GLOBAL_HOME,
+            can_write: true,
+        };
+        access[0] = TokenItem {
+            id: 1,
+            app: OID_ENTITY_DROPBOX,
+            can_write: true,
+        };
+        access[0] = TokenItem {
+            id: 1,
+            app: OID_ENTITY_WIKI,
+            can_write: true,
+        };
         Self {
             uid: 1,
-            global: TokenLevel::Admin,
-            groups_array: [
-                (10, TokenLevel::Write),
-                (0, TokenLevel::Read),
-                (0, TokenLevel::Read),
-                (0, TokenLevel::Read),
-                (0, TokenLevel::Read),
-            ],
-            groups_vec: Vec::with_capacity(0),
-        }
-    }
-
-    // Create simple user
-    pub fn test_bob() -> Self {
-        Self {
-            uid: 1,
-            global: TokenLevel::Read,
-            groups_array: [
-                (10, TokenLevel::Write),
-                (0, TokenLevel::Read),
-                (0, TokenLevel::Read),
-                (0, TokenLevel::Read),
-                (0, TokenLevel::Read),
-            ],
-            groups_vec: Vec::with_capacity(0),
+            is_admin: true,
+            access,
         }
     }
 }
 
-#[test]
-fn test_token_level_order() {
-    assert!(TokenLevel::None < TokenLevel::Read);
-    assert!(TokenLevel::None < TokenLevel::Write);
-    assert!(TokenLevel::None < TokenLevel::Admin);
-
-    assert!(TokenLevel::Read < TokenLevel::Write);
-    assert!(TokenLevel::Read < TokenLevel::Admin);
-    assert!(TokenLevel::Write < TokenLevel::Admin);
-}
-
-impl TokenLevel {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::None => "none",
-            Self::Read => "read",
-            Self::Write => "write",
-            Self::Admin => "admin",
+impl Default for Token {
+    fn default() -> Self {
+        Self {
+            uid: 0,
+            is_admin: false,
+            access: [TokenItem::default(); Token::ACCESS_LEN],
         }
     }
 }

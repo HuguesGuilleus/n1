@@ -34,10 +34,13 @@ pub struct DropFile {
 
 pub async fn page(server: &OpServer<impl Config>, r: OpRequest<u32>) -> Result<String> {
     if r.dto != r.token.uid {
-        r.token.access_group(r.dto, op::TokenLevel::Write)?;
+        r.token.check_access_write(r.dto, OID_ENTITY_DROPBOX)?;
     }
 
-    let state: State = server.config.obj_fetch(r.dto, OID_ENTITY_DROPBOX).await?;
+    let state: State = server
+        .config
+        .obj_fetch(r.dto, OID_ENTITY_DROPBOX as u32)
+        .await?;
     let entities = server.entities.read().map_err(AtomicError::from)?;
     let owner = entities.get(&r.dto).ok_or(errs::NOT_FOUND_ENTITY)?;
 
@@ -49,11 +52,8 @@ pub async fn page(server: &OpServer<impl Config>, r: OpRequest<u32>) -> Result<S
                 + [H - "div.fh.gap"
                     + || {
                         r.token
-                            .groups()
-                            .flat_map(|(gid, _)| {
-                                entities.get(&gid).map(|e| (gid, e.name()))
-                            })
-                            .map(|(gid, name)| H - "a.bl href=/_dropbox/" - gid +"@"+ name)
+                        .names(&entities)
+                            .map(|(item , name)| H - "a.bl href=/_dropbox/" - item.id +"@"+ name)
                     }]
                 + (!state.texts.is_empty()).then(|| [H - "h2" + "Textes"])
                 + [H + || {

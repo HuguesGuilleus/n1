@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 use crate::{
     DTO, OpRequest, OpServer, Result, errs,
-    op::{EntityAndObjectDTO, OID_ENTITY_DROPBOX, TokenLevel, dropbox::State},
+    op::{EntityAndObjectDTO, OID_ENTITY_DROPBOX, dropbox::State},
 };
 
 #[derive(Debug, PartialEq, Deserialize)]
@@ -25,7 +25,7 @@ impl DTO for IDandString {
 pub async fn text_add(server: &OpServer<impl Config>, r: OpRequest<IDandString>) -> Result<()> {
     let mut state: State = server
         .config
-        .obj_fetch(r.dto.eid, OID_ENTITY_DROPBOX)
+        .obj_fetch(r.dto.eid, OID_ENTITY_DROPBOX as u32)
         .await?;
 
     state.texts.push((state.texts_inc, r.dto.str));
@@ -33,7 +33,7 @@ pub async fn text_add(server: &OpServer<impl Config>, r: OpRequest<IDandString>)
 
     server
         .config
-        .obj_store(r.dto.eid, OID_ENTITY_DROPBOX, &state)
+        .obj_store(r.dto.eid, OID_ENTITY_DROPBOX as u32, &state)
         .await?;
 
     Ok(())
@@ -44,12 +44,12 @@ pub async fn text_rm(
     r: OpRequest<EntityAndObjectDTO>,
 ) -> Result<()> {
     if r.token.uid != r.dto.eid {
-        r.token.access_group(r.dto.eid, TokenLevel::Write)?;
+        r.token.check_access_write(r.dto.eid, OID_ENTITY_DROPBOX)?;
     }
 
     let mut state: State = server
         .config
-        .obj_fetch(r.dto.eid, OID_ENTITY_DROPBOX)
+        .obj_fetch(r.dto.eid, OID_ENTITY_DROPBOX as u32)
         .await?;
 
     let index = state
@@ -60,7 +60,7 @@ pub async fn text_rm(
 
     server
         .config
-        .obj_store(r.dto.eid, OID_ENTITY_DROPBOX, &state)
+        .obj_store(r.dto.eid, OID_ENTITY_DROPBOX as u32, &state)
         .await?;
 
     Ok(())

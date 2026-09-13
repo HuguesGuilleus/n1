@@ -3,7 +3,7 @@ use n1_html::{H, Html};
 use n1_tool::Config;
 
 pub async fn page(server: &OpServer<impl Config>, r: OpRequest<()>) -> Result<String> {
-    r.token.is_auth()?;
+    r.token.check_auth()?;
     let entities = server.entities.read().map_err(AtomicError::from)?;
     let entity = entities
         .get(&r.token.uid)
@@ -19,7 +19,12 @@ pub async fn page(server: &OpServer<impl Config>, r: OpRequest<()>) -> Result<St
         + [H - "head" + front::HEAD + [H - "title" + "Menu"]]
         + [H - "body"
             + op::compo::header(
-                H - "" + "Menu @" + &user.name + " [" + user.global.as_str() + "]",
+                H - ""
+                    + "Menu @"
+                    + &user.name
+                    + " ["
+                    + if user.is_admin { "true" } else { "false" }
+                    + "]",
             )
             + [H - "main.w"
                 + [H - "h2" + "Utilisateur"]
@@ -34,7 +39,7 @@ pub async fn page(server: &OpServer<impl Config>, r: OpRequest<()>) -> Result<St
                     + [H - "button.bl" + "Supprimer le compte"]
                     + ""]
                 + (|| {
-                    user.groups().map(|(gid, _)| {
+                    user.groups().map(|gid| {
                         [H + [H - "h2"
                             + "Groupe: "
                             + entities
