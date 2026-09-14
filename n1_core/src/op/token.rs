@@ -65,10 +65,10 @@ impl Token {
     }
 
     /// Check if the token has read access to a specific group and app.
-    pub fn check_access_write(&self, gid: u32, app_id: u16) -> Result<()> {
+    pub fn check_access_write(&self, id: u32, app_id: u16) -> Result<()> {
         self.check_auth()?;
         for item in self.access.iter() {
-            if item.id == gid && item.app == app_id && item.can_write {
+            if item.id == id && item.app == app_id && item.can_write {
                 return Ok(());
             }
         }

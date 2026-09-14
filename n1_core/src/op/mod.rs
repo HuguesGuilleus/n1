@@ -1,3 +1,4 @@
+pub mod auth;
 mod compo;
 pub mod dropbox;
 mod dto;

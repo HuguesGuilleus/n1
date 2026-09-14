@@ -71,11 +71,14 @@ pub async fn handle<R: AsyncRead + Unpin, C: Config>(
         "_wiki" => with_url(s, r, op::wiki::render_priv_index).await,
 
         // Actions with no return
-        ":home" => with_body(s, r, op::home::json_edit).await,
-        ":login" => make_token(s, r, op::user::login::login).await,
+        ":auth.test.access" => with_body(s, r, op::auth::auth_test_access).await,
+        ":auth.test.id" => with_body(s, r, op::auth::auth_test_id).await,
+        ":auth.test.isadmin" => with_body(s, r, op::auth::auth_test_isadmin).await,
         ":dropbox.text.add" => with_body(s, r, op::dropbox::text_add).await,
         ":dropbox.text.rm" => with_body(s, r, op::dropbox::text_rm).await,
         ":fs.mkdir" => with_body(s, r, op::fs::mkdir).await,
+        ":home" => with_body(s, r, op::home::json_edit).await,
+        ":login" => make_token(s, r, op::user::login::login).await,
 
         // Serve generated files
         _ => {
@@ -225,7 +228,7 @@ async fn make_token<
             .map_err(AtomicError::from)?
             .as_secs(),
     );
-    header_value.push_str("; SameSite=Strict; Secure; HttpOnly");
+    header_value.push_str("; Max-Age=604800; SameSite=Strict; Secure; HttpOnly");
 
     Ok(Response {
         status: StatusHTTP::OK,

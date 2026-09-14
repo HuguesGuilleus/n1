@@ -4,7 +4,7 @@ use n1_tool::{AtomicError, Chunk, Config, ConfigMemoryMutex, Result};
 use crate::{
     OpServer,
     op::{
-        self, OID_ENTITY_DROPBOX, OID_ENTITY_WIKI, OID_GLOBAL_ENTITY, OID_GLOBAL_HOME, TokenItem,
+        self, OID_ENTITY_DROPBOX, OID_ENTITY_WIKI, OID_GLOBAL_HOME, TokenItem,
         dropbox::DropFile,
         user::{Entity, Group, User},
     },
@@ -15,11 +15,6 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::ConfigMemoryMutex>> {
 
     // Set user access
     let access: Vec<TokenItem> = vec![
-        TokenItem {
-            id: 101,
-            app: OID_GLOBAL_ENTITY,
-            can_write: true,
-        },
         TokenItem {
             id: 101,
             app: OID_GLOBAL_HOME,
