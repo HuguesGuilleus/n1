@@ -53,14 +53,14 @@ pub async fn render_priv_index(
                 })
                 + [H - "div.fh" + [H - "a.bl href=/_wiki_new/" - owner.gid + "Nouvelle page"]]
                 + (|| {
-                    wiki.pages.iter().map(|page| {
+                    wiki.articles.iter().map(|page| {
                         H - "a.bl href=/_wiki_page/"
                             - EntityAndObjectDTO {
                                 eid: owner.gid,
-                                oid: page.id,
+                                oid: page.oid,
                             }
                             + [H - "div" + [H - "b" + &page.title]]
-                            + [H - "div" + ".../" + page.id + "-" + &page.slug]
+                            + [H - "div" + ".../" + page.oid + "-" + &page.slug]
                             + [H - "time" + page.last_edit]
                     })
                 })
@@ -91,9 +91,9 @@ pub async fn render_priv_page(
         .config
         .obj_fetch(r.dto.eid, OID_ENTITY_WIKI as u32)
         .await?;
-    let page = &wiki.pages[wiki
-        .pages
-        .binary_search_by(|page| page.id.cmp(&r.dto.oid))
+    let page = &wiki.articles[wiki
+        .articles
+        .binary_search_by(|page| page.oid.cmp(&r.dto.oid))
         .map_err(|_| errs::NOT_FOUND)?];
     let content = server.config.fs_get(r.dto.eid, r.dto.oid).await?;
 
@@ -150,7 +150,7 @@ pub async fn render_priv_new(server: &OpServer<impl Config>, r: OpRequest<u32>) 
             + [H - "main.w"
                 + [H - "div.bl.fv.gap"
                     + [H - "div" + [H - "input.bl placeholder=Titre"]]
-                    + [H - "div" + [H - "input.bl placeholder='Identifiant de l'URL'"]]
+                    + [H - "div" + [H - "input.bl placeholder='Identifiant de l URL'"]]
                     + [H - "div" + [H - "button.bl" + "Nouvelle page"]]
                     + ""]
                 + ""]

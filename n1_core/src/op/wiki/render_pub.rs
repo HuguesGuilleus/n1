@@ -7,7 +7,7 @@ use crate::{
     op::{
         EntityAndObjectDTO, OID_ENTITY_WIKI, compo,
         user::{Entity, Group},
-        wiki::{Page, State},
+        wiki::{Article, State},
     },
 };
 
@@ -35,7 +35,7 @@ async fn render_pub_one<C: Config>(server: &OpServer<C>, owner: &Group) -> Resul
     }
 
     render_pub_index(server, owner, &state).await?;
-    for page in &state.pages {
+    for page in &state.articles {
         render_pub_page(server, owner, &state, &page).await?;
     }
 
@@ -47,7 +47,7 @@ async fn render_pub_index<C: Config>(
     owner: &Group,
     state: &State,
 ) -> Result<()> {
-    let mut pages: Vec<&Page> = state.pages.iter().collect();
+    let mut pages: Vec<&Article> = state.articles.iter().collect();
     pages.sort_by(|p1, p2| p1.slug.cmp(&p2.slug));
     server
         .config
@@ -65,7 +65,7 @@ async fn render_pub_index<C: Config>(
                                         [H - "a.bl href="
                                             - format!(
                                                 "/.{}/{}-{}",
-                                                state.shadow, page.id, page.slug
+                                                state.shadow, page.oid, page.slug
                                             )
                                             + &page.title
                                             + ""]
@@ -85,15 +85,15 @@ async fn render_pub_page<C: Config>(
     server: &OpServer<C>,
     owner: &Group,
     state: &State,
-    page: &Page,
+    page: &Article,
 ) -> Result<()> {
     let content =
-        String::from_utf8_lossy(&server.config.fs_get(state.eid, page.id).await?).to_string();
+        String::from_utf8_lossy(&server.config.fs_get(state.eid, page.oid).await?).to_string();
 
     server
         .config
         .page_add(
-            &format!("/.{}/{}-{}", state.shadow, page.id, page.slug),
+            &format!("/.{}/{}-{}", state.shadow, page.oid, page.slug),
             mime::HTML,
             Bytes::from_owner(
                 [H - "html lang=fr"
@@ -108,7 +108,7 @@ async fn render_pub_page<C: Config>(
                                     + [H - "a.bg href=/_wiki_page/"
                                         - EntityAndObjectDTO {
                                             eid: owner.gid,
-                                            oid: page.id,
+                                            oid: page.oid,
                                         }
                                         + "Éditer la page"]
                                     + ""],

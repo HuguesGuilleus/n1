@@ -79,6 +79,12 @@ pub async fn handle<R: AsyncRead + Unpin, C: Config>(
         ":fs.mkdir" => with_body(s, r, op::fs::mkdir).await,
         ":home" => with_body(s, r, op::home::json_edit).await,
         ":login" => make_token(s, r, op::user::login::login).await,
+        ":wiki.article.get" => with_body(s, r, op::wiki::article_get).await,
+        ":wiki.article.new" => with_body(s, r, op::wiki::article_new).await,
+        ":wiki.article.rm" => with_body(s, r, op::wiki::article_rm).await,
+        ":wiki.article.setContent" => with_body(s, r, op::wiki::article_set_content).await,
+        ":wiki.article.setSlug" => with_body(s, r, op::wiki::article_set_slug).await,
+        ":wiki.article.setTitle" => with_body(s, r, op::wiki::article_set_title).await,
 
         // Serve generated files
         _ => {
