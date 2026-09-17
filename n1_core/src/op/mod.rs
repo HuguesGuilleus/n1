@@ -1,4 +1,4 @@
-pub mod auth;
+mod auth;
 mod compo;
 pub mod dropbox;
 mod dto;
@@ -18,11 +18,13 @@ use n1_tool::{Chunk, Chunks, Config};
 
 use crate::Result;
 use crate::op::user::Entity;
+pub use auth::*;
 pub use dto::*;
 pub use token::*;
 
 pub const OID_GLOBAL_ENTITY: u16 = 1;
 pub const OID_GLOBAL_HOME: u16 = 3;
+pub const OID_ENTITY_FS: u16 = 1;
 pub const OID_ENTITY_DROPBOX: u16 = 4;
 pub const OID_ENTITY_WIKI: u16 = 5;
 

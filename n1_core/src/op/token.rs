@@ -45,7 +45,7 @@ impl Token {
     }
 
     /// Check if the token has admin access.
-    pub fn check_admin(&self) -> Result<()> {
+    pub fn check_isadmin(&self) -> Result<()> {
         self.check_auth()?;
         if !self.is_admin {
             return Err(errs::FORBIDEN_GLOBAL.into());
@@ -56,6 +56,9 @@ impl Token {
     /// Check if the token has read access to a specific group and app.
     pub fn check_access_read(&self, id: u32, app_id: u16) -> Result<()> {
         self.check_auth()?;
+        if self.is_admin {
+            return Ok(());
+        }
         for item in self.access.iter() {
             if item.id == id && item.app == app_id {
                 return Ok(());
@@ -67,6 +70,9 @@ impl Token {
     /// Check if the token has read access to a specific group and app.
     pub fn check_access_write(&self, id: u32, app_id: u16) -> Result<()> {
         self.check_auth()?;
+        if self.is_admin {
+            return Ok(());
+        }
         for item in self.access.iter() {
             if item.id == id && item.app == app_id && item.can_write {
                 return Ok(());

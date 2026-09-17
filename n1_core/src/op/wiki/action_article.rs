@@ -14,7 +14,7 @@ pub struct ArticleIdsDTO {
 impl DTO for ArticleIdsDTO {
     fn check(&self) -> Result<()> {
         if self.owner_id == 0 {
-            errs::FIELD_ID.push("field `owner_id`")?;
+            errs::FIELD_ID_ZERO.push("field `owner_id`")?;
         } else if self.article_id == 0 {
             errs::FIELD_EMPTY.push("field `article_id`")?;
         }
@@ -46,7 +46,7 @@ pub struct NewArticleDTO {
 impl DTO for NewArticleDTO {
     fn check(&self) -> n1_tool::Result<()> {
         if self.owner_id == 0 {
-            errs::FIELD_ID.push("the integer field `owner_id`")?;
+            errs::FIELD_ID_ZERO.push("the integer field `owner_id`")?;
         } else if self.title.trim().is_empty() {
             errs::FIELD_EMPTY.push("the string field `title`")?;
         } else if self.slug.trim().is_empty() {
@@ -90,9 +90,9 @@ pub struct ArticleSetTitleDTO {
 impl DTO for ArticleSetTitleDTO {
     fn check(&self) -> n1_tool::Result<()> {
         if self.owner_id == 0 {
-            errs::FIELD_ID.push("the integer field `owner_id`")?;
+            errs::FIELD_ID_ZERO.push("the integer field `owner_id`")?;
         } else if self.article_id == 0 {
-            errs::FIELD_ID.push("the integer field `article_id`")?;
+            errs::FIELD_ID_ZERO.push("the integer field `article_id`")?;
         } else if self.title.trim().is_empty() {
             errs::FIELD_EMPTY.push("the string field `title`")?;
         }
@@ -131,9 +131,9 @@ pub struct ArticleSetSlugDTO {
 impl DTO for ArticleSetSlugDTO {
     fn check(&self) -> n1_tool::Result<()> {
         if self.owner_id == 0 {
-            errs::FIELD_ID.push("the integer field `owner_id`")?;
+            errs::FIELD_ID_ZERO.push("the integer field `owner_id`")?;
         } else if self.article_id == 0 {
-            errs::FIELD_ID.push("the integer field `page_article_idid`")?;
+            errs::FIELD_ID_ZERO.push("the integer field `page_article_idid`")?;
         } else if self.slug.trim().is_empty() {
             errs::FIELD_EMPTY.push("the string field `slug`")?;
         }
@@ -172,9 +172,9 @@ pub struct ArticleSetContentDTO {
 impl DTO for ArticleSetContentDTO {
     fn check(&self) -> n1_tool::Result<()> {
         if self.owner_id == 0 {
-            errs::FIELD_ID.push("the integer field `owner_id`")?;
+            errs::FIELD_ID_ZERO.push("the integer field `owner_id`")?;
         } else if self.article_id == 0 {
-            errs::FIELD_ID.push("the integer field `article_id`")?;
+            errs::FIELD_ID_ZERO.push("the integer field `article_id`")?;
         } else if self.content.trim().is_empty() {
             errs::FIELD_EMPTY.push("the string field `content`")?;
         }

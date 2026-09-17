@@ -69,7 +69,7 @@ pub async fn init(server: &OpServer<impl Config>) -> Result<()> {
 }
 
 pub async fn json_edit(server: &OpServer<impl Config>, r: OpRequest<HomeState>) -> Result<()> {
-    r.token.check_admin()?;
+    r.token.check_isadmin()?;
 
     server
         .config
@@ -113,7 +113,7 @@ fn render_pub(home: &HomeState) -> Bytes {
 }
 
 pub async fn page_console(server: &OpServer<impl Config>, r: OpRequest<()>) -> Result<String> {
-    r.token.check_admin()?;
+    r.token.check_isadmin()?;
     let state = server.config.obj_fetch(0, OID_GLOBAL_HOME as u32).await?;
     Ok(render_console(&state))
 }

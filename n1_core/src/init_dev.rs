@@ -4,7 +4,7 @@ use n1_tool::{AtomicError, Chunk, Config, ConfigMemoryMutex, Result};
 use crate::{
     OpServer,
     op::{
-        self, OID_ENTITY_DROPBOX, OID_ENTITY_WIKI, OID_GLOBAL_HOME, TokenItem,
+        self, OID_ENTITY_DROPBOX, OID_ENTITY_FS, OID_ENTITY_WIKI, TokenItem,
         dropbox::DropFile,
         user::{Entity, Group, User},
     },
@@ -12,28 +12,9 @@ use crate::{
 
 pub async fn init_dev() -> Result<OpServer<n1_tool::ConfigMemoryMutex>> {
     let mut server = OpServer::new(ConfigMemoryMutex::new());
-
-    // Set user access
-    let access: Vec<TokenItem> = vec![
-        TokenItem {
-            id: 101,
-            app: OID_GLOBAL_HOME,
-            can_write: true,
-        },
-        TokenItem {
-            id: 101,
-            app: OID_ENTITY_DROPBOX,
-            can_write: true,
-        },
-        TokenItem {
-            id: 201,
-            app: OID_ENTITY_WIKI,
-            can_write: true,
-        },
-    ];
-
-    // Set users
     let entities_map = server.entities.get_mut().map_err(AtomicError::from)?;
+
+    // Set "eve" user
     entities_map.insert(
         101,
         Entity::User(User {
@@ -41,7 +22,34 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::ConfigMemoryMutex>> {
             name: "eve".to_string(),
             password: "56".to_string(),
             is_admin: true,
-            access,
+            access: vec![],
+            fs: op::fs::FsysState {
+                dirs: vec![],
+                dirs_increment: 0,
+            },
+        }),
+    );
+
+    // Set bob user
+    entities_map.insert(
+        102,
+        Entity::User(User {
+            uid: 102,
+            name: "bob".to_string(),
+            password: "42".to_string(),
+            is_admin: false,
+            access: vec![
+                TokenItem {
+                    id: 201,
+                    app: OID_ENTITY_FS,
+                    can_write: false,
+                },
+                TokenItem {
+                    id: 201,
+                    app: OID_ENTITY_WIKI,
+                    can_write: true,
+                },
+            ],
             fs: op::fs::FsysState {
                 dirs: vec![],
                 dirs_increment: 0,
@@ -54,11 +62,18 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::ConfigMemoryMutex>> {
         Entity::Group(Group {
             gid: 201,
             name: "world".to_string(),
-            users: vec![TokenItem {
-                id: 101,
-                app: OID_ENTITY_WIKI,
-                can_write: true,
-            }],
+            users: vec![
+                TokenItem {
+                    id: 102,
+                    app: OID_ENTITY_FS,
+                    can_write: false,
+                },
+                TokenItem {
+                    id: 102,
+                    app: OID_ENTITY_WIKI,
+                    can_write: true,
+                },
+            ],
         }),
     );
 

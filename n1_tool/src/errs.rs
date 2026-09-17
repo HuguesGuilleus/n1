@@ -21,8 +21,9 @@ pub struct AtomicError {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ErrorKind {
     BadRequest,
-    Forbiden,
+    Forbidden,
     Internal,
+    NoAuth,
     NotFound,
     SubIO,
 }

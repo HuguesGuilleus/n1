@@ -31,7 +31,7 @@ impl URLDTO for () {
 impl DTO for u32 {
     fn check(&self) -> Result<()> {
         if *self == 0 {
-            return Err(errs::FIELD_ID.into());
+            return Err(errs::FIELD_ID_ZERO.into());
         }
         Ok(())
     }

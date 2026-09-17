@@ -71,9 +71,14 @@ pub async fn handle<R: AsyncRead + Unpin, C: Config>(
         "_wiki" => with_url(s, r, op::wiki::render_priv_index).await,
 
         // Actions with no return
-        ":auth.test.access" => with_body(s, r, op::auth::auth_test_access).await,
-        ":auth.test.id" => with_body(s, r, op::auth::auth_test_id).await,
-        ":auth.test.isadmin" => with_body(s, r, op::auth::auth_test_isadmin).await,
+        ":auth.test.access.read" => with_body(s, r, op::auth_test_access_read).await,
+        ":auth.test.access.write" => with_body(s, r, op::auth_test_access_write).await,
+        ":auth.test.id" => with_body(s, r, op::auth_test_id).await,
+        ":auth.test.isadmin" => with_body(s, r, op::auth_test_isadmin).await,
+        ":auth.check.access.read" => with_body(s, r, op::auth_check_access_read).await,
+        ":auth.check.access.write" => with_body(s, r, op::auth_check_access_write).await,
+        ":auth.check.auth" => with_body(s, r, op::auth_check_auth).await,
+        ":auth.check.isadmin" => with_body(s, r, op::auth_check_isadmin).await,
         ":dropbox.text.add" => with_body(s, r, op::dropbox::text_add).await,
         ":dropbox.text.rm" => with_body(s, r, op::dropbox::text_rm).await,
         ":fs.mkdir" => with_body(s, r, op::fs::mkdir).await,
@@ -247,10 +252,11 @@ async fn make_token<
 fn print_error<C: Config>(err: Error) -> Response<C> {
     let status = match err.atomic.kind {
         ErrorKind::BadRequest => StatusHTTP::BadRequest,
-        ErrorKind::Forbiden => StatusHTTP::Forbidden,
+        ErrorKind::Forbidden => StatusHTTP::Forbidden,
         ErrorKind::Internal => StatusHTTP::InternalServerError,
-        ErrorKind::SubIO => StatusHTTP::InternalServerError,
+        ErrorKind::NoAuth => StatusHTTP::Unauthorized,
         ErrorKind::NotFound => StatusHTTP::NotFound,
+        ErrorKind::SubIO => StatusHTTP::InternalServerError,
     };
 
     let body = ResponseBody::Bytes(Bytes::from_owner(
