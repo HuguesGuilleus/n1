@@ -25,8 +25,6 @@ pub async fn article_get(
     server: &OpServer<impl Config>,
     r: OpRequest<ArticleIdsDTO>,
 ) -> Result<Json<Article>> {
-    r.token.check_access_read(r.dto.owner_id, OID_ENTITY_WIKI)?;
-
     let article: Article = server
         .config
         .obj_fetch(r.dto.owner_id, r.dto.article_id)

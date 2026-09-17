@@ -14,7 +14,6 @@ article_id: body
 
 # Get init page
 PUT http://localhost:8000/:wiki.article.get/
-Cookie: auth={{cookie}}
 {"owner_id":201,"article_id":{{article_id}}}
 HTTP 200
 {"oid":{{article_id}},"slug":"slug1","title":"Title 1","last_edit":1780998183,"content":"..."}
@@ -42,7 +41,6 @@ HTTP 200
 
 # Get edited article
 PUT http://localhost:8000/:wiki.article.get/
-Cookie: auth={{cookie}}
 {"owner_id":201,"article_id":{{article_id}}}
 HTTP 200
 {"oid":{{article_id}},"slug":"slug2","title":"Title 2","last_edit":1780998183,"content":"Lorem ipsum."}
@@ -56,6 +54,5 @@ HTTP 200
 
 # Check article is removed
 PUT http://localhost:8000/:wiki.article.get/
-Cookie: auth={{cookie}}
 {"owner_id":201,"article_id":{{article_id}}}
 HTTP 404
