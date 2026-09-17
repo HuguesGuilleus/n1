@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::io;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -43,7 +44,10 @@ pub async fn run_with_listener<C: Config + Unpin + 'static>(
             let (r, mut w) = stream.split();
             let mut parser = HTTPParser::new(r);
             while let Ok(request) = parser.next().await {
-                let response = handle(&server, request).await.unwrap_or_else(print_error);
+                let accept_html = accept_html(&request.headers);
+                let response = handle(&server, request)
+                    .await
+                    .unwrap_or_else(|err| print_error(err, accept_html));
                 write_response(&mut w, response).await?;
             }
             Ok(())
@@ -169,7 +173,8 @@ async fn with_body<
         b"" => b"null",
         _ => &buf,
     };
-    let dto = serde_json::from_slice(data).map_err(|_| errs::DECODE_REQUEST)?;
+    let dto: D = serde_json::from_slice(data).map_err(|_| errs::DECODE_REQUEST)?;
+    dto.check()?;
 
     Ok(f(&s.op, OpRequest { token, dto }).await?.into())
 }
@@ -249,7 +254,7 @@ async fn make_token<
     })
 }
 
-fn print_error<C: Config>(err: Error) -> Response<C> {
+fn print_error<C: Config>(err: Error, accept_html: bool) -> Response<C> {
     let status = match err.atomic.kind {
         ErrorKind::BadRequest => StatusHTTP::BadRequest,
         ErrorKind::Forbidden => StatusHTTP::Forbidden,
@@ -259,28 +264,88 @@ fn print_error<C: Config>(err: Error) -> Response<C> {
         ErrorKind::SubIO => StatusHTTP::InternalServerError,
     };
 
-    let body = ResponseBody::Bytes(Bytes::from_owner(
-        [H - "html lang=en"
-            + [H - "head" + front::HEAD]
-            + [H - "body.m"
-                + "\r\n"
-                + [H - "h1" + status.as_str()]
-                + [H - "div.mv" + err.atomic.message]
-                + [|| err.context.iter().map(|s| [H - "div" + s + "\n"])]
-                + "\r\n"
-                + [H - "div.fh.gap"
-                    + [H - "a.bl href=/ " + "///"]
-                    + [H - "a.bl href=/_login" + "Login"]
-                    + ""]
-                + "\r\n"]
-            + ""]
-        .render_page(),
-    ));
+    if accept_html {
+        let body = ResponseBody::Bytes(Bytes::from_owner(
+            [H - "html lang=en"
+                + [H - "head" + front::HEAD]
+                + [H - "body.m"
+                    + "\r\n"
+                    + [H - "h1" + status.as_str()]
+                    + [H - "div.mv" + err.atomic.message]
+                    + [|| err.context.iter().map(|s| [H - "div" + s + "\n"])]
+                    + "\r\n"
+                    + [H - "div.fh.gap"
+                        + [H - "a.bl href=/ " + "///"]
+                        + [H - "a.bl href=/_login" + "Login"]
+                        + ""]
+                    + "\r\n"]
+                + ""]
+            .render_page(),
+        ));
 
-    Response {
-        status,
-        mime: mime::HTML,
-        header: None,
-        body,
+        Response {
+            status,
+            mime: mime::HTML,
+            header: None,
+            body,
+        }
+    } else {
+        let mut body = status.as_str().to_string();
+        body.push_str("\n");
+        err.context.iter().rev().for_each(|s| {
+            body.push_str("--- ");
+            body.push_str(s);
+            body.push_str("\n");
+        });
+        body.push_str("--- ");
+        body.push_str(err.atomic.message);
+        body.push_str("\n");
+        Response {
+            status,
+            mime: mime::TEXT,
+            header: None,
+            body: ResponseBody::Bytes(Bytes::from_owner(body)),
+        }
     }
+}
+
+fn accept_html(headers: &BTreeMap<String, String>) -> bool {
+    let accept = headers
+        .iter()
+        .find(|(key, _)| key.eq_ignore_ascii_case("accept"))
+        .map(|(_, value)| value.as_str())
+        .unwrap_or_default();
+
+    let format = accept
+        .split(",")
+        .map(|s| s.trim())
+        .filter(|&s| {
+            s == "text/html"
+                || s.strip_prefix("text/html;").is_some()
+                || s == "text/plain"
+                || s.strip_prefix("text/plain;").is_some()
+        })
+        .next()
+        .unwrap_or_default();
+
+    format.strip_prefix("text/html").is_some()
+}
+#[test]
+fn test_accept_html() {
+    let mut headers = BTreeMap::new();
+    headers.insert(
+        "Accept".to_string(),
+        "text/plain, text/html;q=0.9".to_string(),
+    );
+    assert!(!accept_html(&headers));
+
+    let mut headers = BTreeMap::new();
+    headers.insert(
+        "Accept".to_string(),
+        "text/css, text/html;q=0.9, text/plain;q=0.8".to_string(),
+    );
+    assert!(accept_html(&headers));
+
+    headers.insert("Accept".to_string(), "application/json".to_string());
+    assert!(!accept_html(&headers));
 }

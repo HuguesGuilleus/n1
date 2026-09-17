@@ -16,7 +16,7 @@ impl DTO for ArticleIdsDTO {
         if self.owner_id == 0 {
             errs::FIELD_ID_ZERO.push("field `owner_id`")?;
         } else if self.article_id == 0 {
-            errs::FIELD_EMPTY.push("field `article_id`")?;
+            errs::FIELD_ID_ZERO.push("field `article_id`")?;
         }
         Ok(())
     }
