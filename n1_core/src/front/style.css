@@ -10,9 +10,13 @@
 	display: none !important;
 }
 
-/* ELEMENT */
+/* PAGE BIG ELEMENT */
 
 body {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+
 	font-family: "Courier New", monospace;
 	background: #eae5dc;
 	color: black;
@@ -27,6 +31,15 @@ header {
 main {
 	padding: var(--SP);
 }
+
+footer {
+	margin-top: auto;
+	background: black;
+	color: white;
+	padding: var(--SP);
+}
+
+/* GENERIC ELEMENT */
 
 p {
 	text-indent: calc(var(--SP)*3);
@@ -63,6 +76,11 @@ hr {
 h1 {
 	font: inherit;
 	margin: 0;
+}
+
+h1.big {
+	text-align: center;
+	font-size: 10rem;
 }
 
 h2 {

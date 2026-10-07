@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use n1_html::{DirectHTML, H, Html};
-use n1_tool::{AtomicError, Config};
+use n1_tool::Config;
 use serde::Deserialize;
 
 use super::{DTO, OpRequest, OpServer};
@@ -28,7 +28,7 @@ impl DTO for LoginDTO {
 }
 
 pub async fn login(serv: &OpServer<impl Config>, r: OpRequest<LoginDTO>) -> Result<Token> {
-    let users = serv.entities.read().map_err(AtomicError::from)?;
+    let users = serv.entities.read().await;
     for (_, entity) in users.iter() {
         if let Entity::User(user) = entity {
             if user.name == r.dto.name {

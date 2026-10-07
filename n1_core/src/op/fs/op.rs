@@ -13,7 +13,7 @@ pub struct MkdirDTO {
 impl DTO for MkdirDTO {
     fn check(&self) -> Result<()> {
         if self.name.is_empty() {
-            errs::FIELD_EMPTY.push("field 'name'")?;
+            errs::FIELD_EMPTY.push_result("field 'name'")?;
         }
         Ok(())
     }

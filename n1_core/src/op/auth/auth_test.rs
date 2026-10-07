@@ -24,10 +24,10 @@ pub struct AccessDTO {
 impl DTO for AccessDTO {
     fn check(&self) -> Result<()> {
         if self.owner_id == 0 {
-            errs::FIELD_ID_ZERO.push(format!("integer field `owner_id` is zero"))?;
+            errs::FIELD_ID_ZERO.push_result(format!("integer field `owner_id` is zero"))?;
         }
         if self.app_id == 0 {
-            errs::FIELD_EMPTY.push(format!("integer field app is zero"))?;
+            errs::FIELD_EMPTY.push_result(format!("integer field app is zero"))?;
         }
         Ok(())
     }

@@ -1,5 +1,5 @@
 use n1_html::{H, Html, Q};
-use n1_tool::{AtomicError, Config, Result};
+use n1_tool::{Config, Result};
 
 use crate::{
     OpRequest, OpServer,
@@ -15,7 +15,7 @@ pub async fn render_priv_index(
     r.token.check_access_write(r.dto, OID_ENTITY_WIKI)?;
 
     let owner = {
-        let entities = server.entities.read().map_err(AtomicError::from)?;
+        let entities = server.entities.read().await;
         match entities.get(&r.dto) {
             Some(Entity::Group(group)) => group.clone(),
             Some(_) => return Err(errs::FORBIDEN_GROUP.into()),
@@ -79,7 +79,7 @@ pub async fn render_priv_page(
     r.token.check_access_write(r.dto.eid, OID_ENTITY_WIKI)?;
 
     let owner = {
-        let entities = server.entities.read().map_err(AtomicError::from)?;
+        let entities = server.entities.read().await;
         match entities.get(&r.dto.eid) {
             Some(Entity::Group(group)) => group.clone(),
             Some(_) => return Err(errs::FORBIDEN_GROUP.into()),
@@ -131,7 +131,7 @@ pub async fn render_priv_new(server: &OpServer<impl Config>, r: OpRequest<u32>) 
     r.token.check_access_write(r.dto, OID_ENTITY_WIKI)?;
 
     let owner = {
-        let entities = server.entities.read().map_err(AtomicError::from)?;
+        let entities = server.entities.read().await;
         match entities.get(&r.dto) {
             Some(Entity::Group(group)) => group.clone(),
             Some(_) => return Err(errs::FORBIDEN_GROUP.into()),

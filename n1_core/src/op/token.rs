@@ -9,15 +9,22 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
+    /// The identifier of user.
     pub uid: u32,
+    /// This token has a global administrator privilege.
+    /// Can perform any action without restriction.
     pub is_admin: bool,
+    /// The access rights of this token for different groups and apps.
     pub access: [TokenItem; Token::ACCESS_LEN],
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Default, Deserialize)]
 pub struct TokenItem {
+    // The owner identifier of the ressource.
     pub id: u32,
+    // The application identifier.
     pub app: u16,
+    // Read or write access.
     pub can_write: bool,
 }
 

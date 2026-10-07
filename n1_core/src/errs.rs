@@ -11,9 +11,10 @@ macro_rules! E {
 
 E!(DECODE_REQUEST, BadRequest, "cannot decode request data");
 E!(EXPECT_USER, BadRequest, "expected a user");
-E!(FIELD_EMPTY, BadRequest, "empty field");
+E!(EXPECT_REEL_ENTITY, BadRequest, "expected a user of a group");
 E!(FIELD_CONTENT, BadRequest, "empty 'content' field");
 E!(FIELD_DESC, BadRequest, "empty 'desc' field");
+E!(FIELD_EMPTY, BadRequest, "empty field");
 E!(FIELD_ENTITY, BadRequest, "empty entity ID 'eid' field");
 E!(FIELD_ID_ZERO, BadRequest, "identifier field is zero");
 E!(FIELD_NAME, BadRequest, "empty 'name' field");

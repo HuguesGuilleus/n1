@@ -41,7 +41,7 @@ pub async fn page(server: &OpServer<impl Config>, r: OpRequest<u32>) -> Result<S
         .config
         .obj_fetch(r.dto, OID_ENTITY_DROPBOX as u32)
         .await?;
-    let entities = server.entities.read().map_err(AtomicError::from)?;
+    let entities = server.entities.read().await;
     let owner = entities.get(&r.dto).ok_or(errs::NOT_FOUND_ENTITY)?;
 
     Ok([H - "html lang=fr"

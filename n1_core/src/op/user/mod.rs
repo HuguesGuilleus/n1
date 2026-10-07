@@ -1,6 +1,6 @@
 pub mod login;
 
-use n1_tool::{AtomicError, Config, mime};
+use n1_tool::{Config, mime};
 use serde::Deserialize;
 
 use crate::{
@@ -34,14 +34,15 @@ pub struct Group {
     pub users: Vec<TokenItem>,
 }
 
-pub async fn init<C: Config>(serv: &mut OpServer<C>) -> Result<()> {
-    serv.config
+pub async fn init<C: Config>(server: &mut OpServer<C>) -> Result<()> {
+    server
+        .config
         .page_add("/_login", mime::HTML, login::render())
         .await?;
 
     // Load entities
-    let entities: Vec<Entity> = serv.config.obj_fetch(0, OID_GLOBAL_ENTITY as u32).await?;
-    let entities_map = serv.entities.get_mut().map_err(AtomicError::from)?;
+    let entities: Vec<Entity> = server.config.obj_fetch(0, OID_GLOBAL_ENTITY as u32).await?;
+    let entities_map = server.entities.get_mut();
     entities.into_iter().for_each(|entity| {
         entities_map.insert(
             match entity {
@@ -70,6 +71,13 @@ impl Entity {
             Entity::None(_) => "~",
             Entity::User(user) => &user.name,
             Entity::Group(group) => &group.name,
+        }
+    }
+
+    pub fn is_none(&self) -> bool {
+        match self {
+            Entity::None(_) => true,
+            _ => false,
         }
     }
 }

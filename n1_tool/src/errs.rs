@@ -29,11 +29,18 @@ pub enum ErrorKind {
 }
 
 impl AtomicError {
-    pub fn push<S: ToString>(self, msg: S) -> Result<()> {
+    pub fn push_result<S: ToString>(self, msg: S) -> Result<()> {
         Err(Error {
             atomic: self,
             context: vec![msg.to_string()],
         })
+    }
+
+    pub fn push<S: ToString>(self, msg: S) -> Error {
+        Error {
+            atomic: self,
+            context: vec![msg.to_string()],
+        }
     }
 }
 

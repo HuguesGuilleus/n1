@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use n1_html::{DirectHTML, H, Html};
-use n1_tool::{AtomicError, Config, mime};
+use n1_tool::{Config, mime};
 
 use crate::{
     OpServer, Result, front,
@@ -8,7 +8,7 @@ use crate::{
 };
 
 pub async fn render_public(server: &OpServer<impl Config>) -> Result<()> {
-    let entities = server.entities.read().map_err(AtomicError::from)?;
+    let entities = server.entities.read().await;
     for (&eid, entity) in entities.iter() {
         let state: State = server
             .config

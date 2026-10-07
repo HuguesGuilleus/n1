@@ -71,11 +71,12 @@ pub fn token_decode(key: &[u8], now: u64, s: &str) -> Result<Token> {
     // Transfert as a slice of u64
     let u64_data = {
         if bytes_data.len() % 8 != 0 {
-            TOKEN_WRONG_LENGTH.push(format!("size: {} is not multiple of 8", bytes_data.len()))?;
+            TOKEN_WRONG_LENGTH
+                .push_result(format!("size: {} is not multiple of 8", bytes_data.len()))?;
         } else if bytes_data.len() < 16 {
-            TOKEN_WRONG_LENGTH.push(format!("size: {} too short (>8)", bytes_data.len()))?;
+            TOKEN_WRONG_LENGTH.push_result(format!("size: {} too short (>8)", bytes_data.len()))?;
         } else if bytes_data.len() / 8 > Token::ACCESS_LEN + 2 {
-            TOKEN_WRONG_LENGTH.push(format!(
+            TOKEN_WRONG_LENGTH.push_result(format!(
                 "size: {} too long 8*(2+{})",
                 bytes_data.len(),
                 Token::ACCESS_LEN

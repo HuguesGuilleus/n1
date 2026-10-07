@@ -1,18 +1,19 @@
 use bytes::Bytes;
-use n1_tool::{AtomicError, Chunk, Config, ConfigMemoryMutex, Result};
+use n1_tool::{Chunk, Config, ConfigMemoryMutex, Result};
 
 use crate::{
     OpServer,
     op::{
-        self, OID_ENTITY_DROPBOX, OID_ENTITY_FS, OID_ENTITY_WIKI, TokenItem,
+        self, OID_ENTITY_BIO, OID_ENTITY_DROPBOX, OID_ENTITY_FS, OID_ENTITY_WIKI, TokenItem,
         dropbox::DropFile,
         user::{Entity, Group, User},
     },
 };
 
 pub async fn init_dev() -> Result<OpServer<n1_tool::ConfigMemoryMutex>> {
+    const NOW: u64 = 1785597192;
     let mut server = OpServer::new(ConfigMemoryMutex::new());
-    let entities_map = server.entities.get_mut().map_err(AtomicError::from)?;
+    let entities_map = server.entities.get_mut();
 
     // Set "eve" user
     entities_map.insert(
@@ -29,6 +30,24 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::ConfigMemoryMutex>> {
             },
         }),
     );
+    server
+        .config
+        .obj_store(
+            101,
+            OID_ENTITY_BIO as u32,
+            op::bio::BioState {
+                last_edit: NOW,
+                content: concat!(
+                    "me+https://github.com/octocat Octocat\n",
+                    "me+https://octocat.github.io Website\n",
+                    "https://github.com/octocat/Hello-World My hello world example\n",
+                    "https://github.blog\n",
+                    "Hello World ...",
+                )
+                .to_string(),
+            },
+        )
+        .await?;
 
     // Set bob user
     entities_map.insert(
@@ -89,7 +108,7 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::ConfigMemoryMutex>> {
         files: vec![DropFile {
             id: 2 ,
             name: "file.txt".to_string() ,
-            upload_secs: 1785597192,
+            upload_secs: NOW ,
             chunks: vec![
                 Chunk{len: 3, oid: 2001},
                 Chunk{len: 4, oid: 2002},
@@ -119,7 +138,7 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::ConfigMemoryMutex>> {
                         oid: 401,
                         slug: "foo".to_string(),
                         title: "Foo article".to_string(),
-                        last_edit: 1785597191,
+                        last_edit: NOW ,
                         content:r#"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat. Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim. Pellentesque congue. Ut in risus volutpat libero pharetra tempor. Cras vestibulum bibendum augue. Praesent egestas leo in pede. Praesent blandit odio eu enim. Pellentesque sed dui ut augue blandit sodales. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Aliquam nibh. Mauris ac mauris sed pede pellentesque fermentum. Maecenas adipiscing ante non diam sodales hendrerit.
 
                         Ut velit mauris, egestas sed, gravida nec, ornare ut, mi. Aenean ut orci vel massa suscipit pulvinar. Nulla sollicitudin. Fusce varius, ligula non tempus aliquam, nunc turpis ullamcorper nibh, in tempus sapien eros vitae ligula. Pellentesque rhoncus nunc et augue. Integer id felis. Curabitur aliquet pellentesque diam. Integer quis metus vitae elit lobortis egestas. Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Morbi vel erat non mauris convallis vehicula. Nulla et sapien. Integer tortor tellus, aliquam faucibus, convallis id, congue eu, quam. Mauris ullamcorper felis vitae erat. Proin feugiat, augue non elementum posuere, metus purus iaculis lectus, et tristique ligula justo vitae magna.

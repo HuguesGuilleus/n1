@@ -1,4 +1,5 @@
 mod auth;
+pub mod bio;
 mod compo;
 pub mod dropbox;
 mod dto;
@@ -11,10 +12,11 @@ pub mod wiki;
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use bytes::Bytes;
 use n1_tool::{Chunk, Chunks, Config};
+use tokio::sync::RwLock;
 
 use crate::Result;
 use crate::op::user::Entity;
@@ -25,12 +27,14 @@ pub use token::*;
 pub const OID_GLOBAL_ENTITY: u16 = 1;
 pub const OID_GLOBAL_HOME: u16 = 3;
 pub const OID_ENTITY_FS: u16 = 1;
+pub const OID_ENTITY_BIO: u16 = 3;
 pub const OID_ENTITY_DROPBOX: u16 = 4;
 pub const OID_ENTITY_WIKI: u16 = 5;
 
 pub struct OpServer<C> {
     pub config: Arc<C>,
     pub entities: RwLock<BTreeMap<u32, Entity>>,
+    // pub entities: RwLock<BTreeMap<u32, Entity>>,
     pub shadow: RwLock<BTreeSet<u32>>,
 }
 
@@ -51,6 +55,7 @@ impl<C: Config> OpServer<C> {
     pub async fn init(mut self) -> Result<Self> {
         user::init(&mut self).await?;
 
+        bio::generate_all_pages(&mut self).await?;
         home::init(&mut self).await?;
         dropbox::render_public(&self).await?;
         wiki::render_pub(&self).await?;

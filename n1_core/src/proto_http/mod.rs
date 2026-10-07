@@ -83,6 +83,8 @@ pub async fn handle<R: AsyncRead + Unpin, C: Config>(
         ":auth.check.access.write" => with_body(s, r, op::auth_check_access_write).await,
         ":auth.check.auth" => with_body(s, r, op::auth_check_auth).await,
         ":auth.check.isadmin" => with_body(s, r, op::auth_check_isadmin).await,
+        ":bio.get" => with_body(s, r, op::bio::get).await,
+        ":bio.set" => with_body(s, r, op::bio::set).await,
         ":dropbox.text.add" => with_body(s, r, op::dropbox::text_add).await,
         ":dropbox.text.rm" => with_body(s, r, op::dropbox::text_rm).await,
         ":fs.mkdir" => with_body(s, r, op::fs::mkdir).await,
