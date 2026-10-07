@@ -18,20 +18,20 @@ use crate::{OpRequest, Result, errs, front};
 use n1_tool::proto_http::{
     HTTPParser, HTTPRequest, Response, ResponseBody, StatusHTTP, write_response,
 };
-use n1_tool::{AtomicError, Config, ErrorKind, mime};
+use n1_tool::{AtomicError, DB, ErrorKind, mime};
 
-pub struct HTTPServer<C: Config> {
+pub struct HTTPServer<C: DB> {
     pub op: OpServer<C>,
     pub key: [u8; 64],
 }
 
-pub async fn run<C: Config + Unpin + 'static>(server: Arc<HTTPServer<C>>) -> io::Result<()> {
+pub async fn run<C: DB + Unpin + 'static>(server: Arc<HTTPServer<C>>) -> io::Result<()> {
     let addr: SocketAddr = ([127, 0, 0, 1], 8000).into();
     let listener = TcpListener::bind(addr).await?;
     run_with_listener(listener, server).await
 }
 
-pub async fn run_with_listener<C: Config + Unpin + 'static>(
+pub async fn run_with_listener<C: DB + Unpin + 'static>(
     listener: TcpListener,
     server: Arc<HTTPServer<C>>,
 ) -> io::Result<()> {
@@ -55,7 +55,7 @@ pub async fn run_with_listener<C: Config + Unpin + 'static>(
     }
 }
 
-pub async fn handle<R: AsyncRead + Unpin, C: Config>(
+pub async fn handle<R: AsyncRead + Unpin, C: DB>(
     s: &HTTPServer<C>,
     r: HTTPRequest<R>,
 ) -> Result<Response<C>> {
@@ -110,7 +110,7 @@ pub async fn handle<R: AsyncRead + Unpin, C: Config>(
     }
 }
 
-fn asset<C: Config>(mime: &'static str, bytes: &'static [u8]) -> Result<Response<C>> {
+fn asset<C: DB>(mime: &'static str, bytes: &'static [u8]) -> Result<Response<C>> {
     Ok(Response {
         status: StatusHTTP::OK,
         mime: mime,
@@ -119,7 +119,7 @@ fn asset<C: Config>(mime: &'static str, bytes: &'static [u8]) -> Result<Response
     })
 }
 
-impl<C: Config, T: Serialize> From<Json<T>> for Response<C> {
+impl<C: DB, T: Serialize> From<Json<T>> for Response<C> {
     fn from(v: Json<T>) -> Self {
         Response {
             status: StatusHTTP::OK,
@@ -131,7 +131,7 @@ impl<C: Config, T: Serialize> From<Json<T>> for Response<C> {
 }
 
 async fn with_url<
-    C: Config,
+    C: DB,
     R: AsyncRead,
     F: AsyncFn(&OpServer<C>, OpRequest<D>) -> Result<O>,
     O: Into<Response<C>>,
@@ -154,7 +154,7 @@ async fn with_url<
 }
 
 async fn with_body<
-    C: Config,
+    C: DB,
     R: AsyncRead + Unpin,
     F: AsyncFn(&OpServer<C>, OpRequest<D>) -> Result<O>,
     O: Into<Response<C>>,
@@ -208,7 +208,7 @@ fn get_token<B: AsyncRead>(key: &[u8], request: &HTTPRequest<B>) -> Token {
 }
 
 async fn make_token<
-    C: Config,
+    C: DB,
     R: AsyncRead + Unpin,
     F: AsyncFn(&OpServer<C>, OpRequest<D>) -> Result<Token>,
     D: DTO,
@@ -256,7 +256,7 @@ async fn make_token<
     })
 }
 
-fn print_error<C: Config>(err: Error, accept_html: bool) -> Response<C> {
+fn print_error<C: DB>(err: Error, accept_html: bool) -> Response<C> {
     let status = match err.atomic.kind {
         ErrorKind::BadRequest => StatusHTTP::BadRequest,
         ErrorKind::Forbidden => StatusHTTP::Forbidden,

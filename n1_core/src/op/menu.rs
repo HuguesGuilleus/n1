@@ -1,11 +1,10 @@
 use crate::{op::user::Entity, *};
 use n1_html::{H, Html};
-use n1_tool::Config;
+use n1_tool::DB;
 
-pub async fn page(server: &OpServer<impl Config>, r: OpRequest<()>) -> Result<String> {
+pub async fn page(server: &OpServer<impl DB>, r: OpRequest<()>) -> Result<String> {
     r.token.check_auth()?;
     let entities = server.entities.read().await;
-    // let entities = server.entities.read().map_err(AtomicError::from)?;
     let entity = entities
         .get(&r.token.uid)
         .ok_or(errs::NOT_FOUND_USER)

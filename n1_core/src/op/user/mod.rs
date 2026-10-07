@@ -1,6 +1,6 @@
 pub mod login;
 
-use n1_tool::{Config, mime};
+use n1_tool::{DB, mime};
 use serde::Deserialize;
 
 use crate::{
@@ -34,14 +34,14 @@ pub struct Group {
     pub users: Vec<TokenItem>,
 }
 
-pub async fn init<C: Config>(server: &mut OpServer<C>) -> Result<()> {
+pub async fn init<C: DB>(server: &mut OpServer<C>) -> Result<()> {
     server
         .config
-        .page_add("/_login", mime::HTML, login::render())
+        .page_set("/_login", mime::HTML, login::render())
         .await?;
 
     // Load entities
-    let entities: Vec<Entity> = server.config.obj_fetch(0, OID_GLOBAL_ENTITY as u32).await?;
+    let entities: Vec<Entity> = server.config.obj_get(0, OID_GLOBAL_ENTITY as u32).await?;
     let entities_map = server.entities.get_mut();
     entities.into_iter().for_each(|entity| {
         entities_map.insert(

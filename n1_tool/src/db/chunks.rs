@@ -3,13 +3,13 @@ use std::{io, sync::Arc};
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
-use super::Config;
+use super::DB;
 use crate::errs;
 
 /** A big file with multiple chunks as content. */
 #[derive(Debug)]
-pub struct Chunks<C: Config> {
-    config: Arc<C>,
+pub struct Chunks<B: DB> {
+    config: Arc<B>,
     eid: u32,
     chunks: Vec<Chunk>,
     position: usize,
@@ -21,8 +21,8 @@ pub struct Chunk {
     pub oid: u32,
 }
 
-impl<C: Config> Chunks<C> {
-    pub fn new(config: Arc<C>, eid: u32, chunks: &[Chunk]) -> Self {
+impl<B: DB> Chunks<B> {
+    pub fn new(config: Arc<B>, eid: u32, chunks: &[Chunk]) -> Self {
         Self {
             config,
             eid,
@@ -79,20 +79,12 @@ pub fn chuncks_len(chunks: &[Chunk]) -> usize {
 
 #[tokio::test]
 async fn chunck() {
-    use super::ConfigMemoryMutex;
-
-    let config = ConfigMemoryMutex::new();
-    config
-        .fs_set(1, 2, Bytes::from_static(b"abc"))
-        .await
-        .unwrap();
-    config
-        .fs_set(1, 3, Bytes::from_static(b"def"))
-        .await
-        .unwrap();
+    let db = super::DBMemoryMutex::new();
+    db.fs_set(1, 2, Bytes::from_static(b"abc")).await.unwrap();
+    db.fs_set(1, 3, Bytes::from_static(b"def")).await.unwrap();
 
     let mut c = Chunks::new(
-        Arc::new(config),
+        Arc::new(db),
         1,
         &[
             Chunk { len: 3, oid: 1 },

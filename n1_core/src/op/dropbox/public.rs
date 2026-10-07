@@ -1,25 +1,25 @@
 use bytes::Bytes;
 use n1_html::{DirectHTML, H, Html};
-use n1_tool::{Config, mime};
+use n1_tool::{DB, mime};
 
 use crate::{
     OpServer, Result, front,
     op::{OID_ENTITY_DROPBOX, compo, dropbox::State},
 };
 
-pub async fn render_public(server: &OpServer<impl Config>) -> Result<()> {
+pub async fn render_public(server: &OpServer<impl DB>) -> Result<()> {
     let entities = server.entities.read().await;
     for (&eid, entity) in entities.iter() {
         let state: State = server
             .config
-            .obj_fetch(eid, OID_ENTITY_DROPBOX as u32)
+            .obj_get(eid, OID_ENTITY_DROPBOX as u32)
             .await?;
         if state.shadow == 0 {
             continue;
         }
         server
             .config
-            .page_add(
+            .page_set(
                 &format!("/.{}", state.shadow),
                 mime::HTML,
                 Bytes::from_owner(render_public_one(eid, entity.name())),

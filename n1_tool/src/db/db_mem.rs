@@ -8,33 +8,33 @@ use bytes::Bytes;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
-use super::Config;
+use super::DB;
 use crate::{AtomicError, Result, errs};
 
 #[derive(Debug)]
-pub struct ConfigMemoryMutex(Mutex<ConfigMemory>);
+pub struct DBMemoryMutex(Mutex<DBMemory>);
 
 #[derive(Debug, Clone)]
-struct ConfigMemory {
+struct DBMemory {
     fs: HashMap<(u32, u32), Bytes>,
     pages: HashMap<String, (&'static str, Bytes)>,
     id_increment: u32,
     now: Option<u64>,
 }
 
-impl ConfigMemoryMutex {
+impl DBMemoryMutex {
     pub fn new() -> Self {
-        Self(Mutex::new(ConfigMemory {
+        Self(Mutex::new(DBMemory {
             fs: HashMap::new(),
             pages: HashMap::new(),
-            id_increment: ConfigMemoryMutex::RESERVED,
+            id_increment: super::DB_RESERVED,
             now: Some(1780998183),
         }))
     }
 }
 
 #[async_trait]
-impl Config for ConfigMemoryMutex {
+impl DB for DBMemoryMutex {
     async fn fs_get(&self, eid: u32, oid: u32) -> Result<Bytes> {
         let mutex = self.0.lock().map_err(AtomicError::from)?;
         mutex
@@ -95,7 +95,7 @@ impl Config for ConfigMemoryMutex {
             .map(|bytes| bytes.len())
     }
 
-    async fn obj_store<T: Serialize + Debug + Send>(
+    async fn obj_set<T: Serialize + Debug + Send>(
         &self,
         eid: u32,
         oid: u32,
@@ -105,7 +105,7 @@ impl Config for ConfigMemoryMutex {
         self.fs_set(eid, oid, Bytes::from_owner(s)).await?;
         Ok(())
     }
-    async fn obj_fetch<T: DeserializeOwned + Default + Debug>(
+    async fn obj_get<T: DeserializeOwned + Default + Debug>(
         &self,
         eid: u32,
         oid: u32,
@@ -118,7 +118,7 @@ impl Config for ConfigMemoryMutex {
         serde_json::from_reader(&file[..]).map_err(|_| errs::DB_DECODE.into())
     }
 
-    async fn page_add(&self, path: &str, mime: &'static str, data: Bytes) -> Result<()> {
+    async fn page_set(&self, path: &str, mime: &'static str, data: Bytes) -> Result<()> {
         let mut mutex = self.0.lock().map_err(AtomicError::from)?;
         mutex.pages.insert(path.to_string(), (mime, data));
         Ok(())

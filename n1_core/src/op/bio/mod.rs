@@ -2,7 +2,7 @@ use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
 use n1_html::{H, Html, Q};
-use n1_tool::{Config, mime};
+use n1_tool::{DB, mime};
 
 use crate::{
     DTO, OpRequest, OpServer, Result, errs, front,
@@ -17,12 +17,9 @@ pub struct BioState {
     pub last_edit: u64,
 }
 
-pub async fn get(server: &OpServer<impl Config>, r: OpRequest<u32>) -> Result<Json<BioState>> {
+pub async fn get(server: &OpServer<impl DB>, r: OpRequest<u32>) -> Result<Json<BioState>> {
     Ok(Json(
-        server
-            .config
-            .obj_fetch(r.dto, OID_ENTITY_BIO as u32)
-            .await?,
+        server.config.obj_get(r.dto, OID_ENTITY_BIO as u32).await?,
     ))
 }
 
@@ -39,7 +36,7 @@ impl DTO for BioSetRequest {
         Ok(())
     }
 }
-pub async fn set(server: &OpServer<impl Config>, r: OpRequest<BioSetRequest>) -> Result<()> {
+pub async fn set(server: &OpServer<impl DB>, r: OpRequest<BioSetRequest>) -> Result<()> {
     r.token.check_access_write(r.dto.oid, OID_ENTITY_BIO)?;
 
     // Check entity
@@ -59,7 +56,7 @@ pub async fn set(server: &OpServer<impl Config>, r: OpRequest<BioSetRequest>) ->
 
     server
         .config
-        .obj_store(r.dto.oid, OID_ENTITY_BIO as u32, &bio)
+        .obj_set(r.dto.oid, OID_ENTITY_BIO as u32, &bio)
         .await?;
 
     // Generate the bio page
@@ -68,7 +65,7 @@ pub async fn set(server: &OpServer<impl Config>, r: OpRequest<BioSetRequest>) ->
     Ok(())
 }
 
-pub async fn generate_all_pages(server: &OpServer<impl Config>) -> Result<()> {
+pub async fn generate_all_pages(server: &OpServer<impl DB>) -> Result<()> {
     let entities = server.entities.read().await;
 
     for entity in entities.values() {
@@ -78,7 +75,7 @@ pub async fn generate_all_pages(server: &OpServer<impl Config>) -> Result<()> {
 
         let bio = server
             .config
-            .obj_fetch(entity.id(), OID_ENTITY_BIO as u32)
+            .obj_get(entity.id(), OID_ENTITY_BIO as u32)
             .await?;
 
         bio_generate_page(server, entity, &bio).await?;
@@ -88,7 +85,7 @@ pub async fn generate_all_pages(server: &OpServer<impl Config>) -> Result<()> {
 }
 
 async fn bio_generate_page(
-    server: &OpServer<impl Config>,
+    server: &OpServer<impl DB>,
     entity: &Entity,
     bio: &BioState,
 ) -> Result<()> {
@@ -134,7 +131,7 @@ async fn bio_generate_page(
 
     server
         .config
-        .page_add(
+        .page_set(
             &format!("/@{}/", entity.name()),
             mime::HTML,
             Bytes::from_owner(h),

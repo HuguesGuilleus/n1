@@ -1,5 +1,5 @@
 use n1_html::{H, Html, Q};
-use n1_tool::{Config, Result};
+use n1_tool::{DB, Result};
 
 use crate::{
     OpRequest, OpServer,
@@ -8,10 +8,7 @@ use crate::{
     op::{EntityAndObjectDTO, OID_ENTITY_WIKI, compo, user::Entity, wiki::State},
 };
 
-pub async fn render_priv_index(
-    server: &OpServer<impl Config>,
-    r: OpRequest<u32>,
-) -> Result<String> {
+pub async fn render_priv_index(server: &OpServer<impl DB>, r: OpRequest<u32>) -> Result<String> {
     r.token.check_access_write(r.dto, OID_ENTITY_WIKI)?;
 
     let owner = {
@@ -22,10 +19,7 @@ pub async fn render_priv_index(
             None => return Err(errs::NOT_FOUND.into()),
         }
     };
-    let wiki: State = server
-        .config
-        .obj_fetch(r.dto, OID_ENTITY_WIKI as u32)
-        .await?;
+    let wiki: State = server.config.obj_get(r.dto, OID_ENTITY_WIKI as u32).await?;
 
     Ok([H - "html lang=fr"
         + [H - "head" + front::HEAD + [H - "title" + "Wiki"]]
@@ -73,7 +67,7 @@ pub async fn render_priv_index(
 }
 
 pub async fn render_priv_page(
-    server: &OpServer<impl Config>,
+    server: &OpServer<impl DB>,
     r: OpRequest<EntityAndObjectDTO>,
 ) -> Result<String> {
     r.token.check_access_write(r.dto.eid, OID_ENTITY_WIKI)?;
@@ -89,7 +83,7 @@ pub async fn render_priv_page(
 
     let wiki: State = server
         .config
-        .obj_fetch(r.dto.eid, OID_ENTITY_WIKI as u32)
+        .obj_get(r.dto.eid, OID_ENTITY_WIKI as u32)
         .await?;
     let page = &wiki.articles[wiki
         .articles
@@ -127,7 +121,7 @@ pub async fn render_priv_page(
     .render_page())
 }
 
-pub async fn render_priv_new(server: &OpServer<impl Config>, r: OpRequest<u32>) -> Result<String> {
+pub async fn render_priv_new(server: &OpServer<impl DB>, r: OpRequest<u32>) -> Result<String> {
     r.token.check_access_write(r.dto, OID_ENTITY_WIKI)?;
 
     let owner = {

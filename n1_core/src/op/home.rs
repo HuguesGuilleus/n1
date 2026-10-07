@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use super::{DTO, OID_GLOBAL_HOME, OpRequest, OpServer, compo};
 use crate::{Result, errs, front};
 use n1_html::{DirectHTML, H, Html, Q};
-use n1_tool::{Config, mime};
+use n1_tool::{DB, mime};
 
 /// The State and DTO for home.
 #[derive(Debug, Deserialize, Serialize, Default)]
@@ -32,10 +32,10 @@ impl DTO for HomeState {
     }
 }
 
-pub async fn init(server: &OpServer<impl Config>) -> Result<()> {
+pub async fn init(server: &OpServer<impl DB>) -> Result<()> {
     let mut state = server
         .config
-        .obj_fetch(0, OID_GLOBAL_HOME as u32)
+        .obj_get(0, OID_GLOBAL_HOME as u32)
         .await
         .unwrap_or_else(|_| HomeState::default());
 
@@ -56,29 +56,29 @@ pub async fn init(server: &OpServer<impl Config>) -> Result<()> {
     if edit {
         server
             .config
-            .obj_store(0, OID_GLOBAL_HOME as u32, &state)
+            .obj_set(0, OID_GLOBAL_HOME as u32, &state)
             .await?;
     }
 
     server
         .config
-        .page_add("/", mime::HTML, render_pub(&state))
+        .page_set("/", mime::HTML, render_pub(&state))
         .await?;
 
     Ok(())
 }
 
-pub async fn json_edit(server: &OpServer<impl Config>, r: OpRequest<HomeState>) -> Result<()> {
+pub async fn json_edit(server: &OpServer<impl DB>, r: OpRequest<HomeState>) -> Result<()> {
     r.token.check_isadmin()?;
 
     server
         .config
-        .page_add("/", mime::HTML, render_pub(&r.dto))
+        .page_set("/", mime::HTML, render_pub(&r.dto))
         .await?;
 
     server
         .config
-        .obj_store(0, OID_GLOBAL_HOME as u32, &r.dto)
+        .obj_set(0, OID_GLOBAL_HOME as u32, &r.dto)
         .await?;
 
     Ok(())
@@ -112,9 +112,9 @@ fn render_pub(home: &HomeState) -> Bytes {
     )
 }
 
-pub async fn page_console(server: &OpServer<impl Config>, r: OpRequest<()>) -> Result<String> {
+pub async fn page_console(server: &OpServer<impl DB>, r: OpRequest<()>) -> Result<String> {
     r.token.check_isadmin()?;
-    let state = server.config.obj_fetch(0, OID_GLOBAL_HOME as u32).await?;
+    let state = server.config.obj_get(0, OID_GLOBAL_HOME as u32).await?;
     Ok(render_console(&state))
 }
 

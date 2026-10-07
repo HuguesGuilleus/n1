@@ -1,21 +1,21 @@
-use crate::{Chunks, Config, mime, proto_http::StatusHTTP};
+use crate::{Chunks, DB, mime, proto_http::StatusHTTP};
 use bytes::Bytes;
 use tokio::io::{AsyncWrite, AsyncWriteExt};
 
-pub struct Response<C: Config> {
+pub struct Response<C: DB> {
     pub status: StatusHTTP,
     pub mime: &'static str,
     pub header: Option<(&'static str, String)>,
     pub body: ResponseBody<C>,
 }
-pub enum ResponseBody<C: Config> {
+pub enum ResponseBody<C: DB> {
     Chunks(Chunks<C>),
     Bytes(Bytes),
 }
 
 pub async fn write_response(
     mut w: impl AsyncWrite + Unpin,
-    r: Response<impl Config>,
+    r: Response<impl DB>,
 ) -> std::io::Result<()> {
     let mut buff = String::new();
     buff.push_str("HTTP/1.1 ");
@@ -55,7 +55,7 @@ pub async fn write_response(
     Ok(())
 }
 
-impl<C: Config> From<()> for Response<C> {
+impl<C: DB> From<()> for Response<C> {
     fn from(_: ()) -> Self {
         Response {
             status: StatusHTTP::OK,
@@ -66,7 +66,7 @@ impl<C: Config> From<()> for Response<C> {
     }
 }
 /// Consider the string as geenrated HTML.
-impl<C: Config> From<String> for Response<C> {
+impl<C: DB> From<String> for Response<C> {
     fn from(body: String) -> Self {
         Response {
             status: StatusHTTP::OK,
@@ -77,7 +77,7 @@ impl<C: Config> From<String> for Response<C> {
     }
 }
 
-impl<C: Config> From<Chunks<C>> for Response<C> {
+impl<C: DB> From<Chunks<C>> for Response<C> {
     fn from(chunks: Chunks<C>) -> Self {
         Response {
             status: StatusHTTP::OK,

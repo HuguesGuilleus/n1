@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use n1_tool::{Chunk, Config, ConfigMemoryMutex, Result};
+use n1_tool::{Chunk, DB, DBMemoryMutex, Result};
 
 use crate::{
     OpServer,
@@ -10,9 +10,9 @@ use crate::{
     },
 };
 
-pub async fn init_dev() -> Result<OpServer<n1_tool::ConfigMemoryMutex>> {
+pub async fn init_dev() -> Result<OpServer<n1_tool::DBMemoryMutex>> {
     const NOW: u64 = 1785597192;
-    let mut server = OpServer::new(ConfigMemoryMutex::new());
+    let mut server = OpServer::new(DBMemoryMutex::new());
     let entities_map = server.entities.get_mut();
 
     // Set "eve" user
@@ -32,7 +32,7 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::ConfigMemoryMutex>> {
     );
     server
         .config
-        .obj_store(
+        .obj_set(
             101,
             OID_ENTITY_BIO as u32,
             op::bio::BioState {
@@ -97,7 +97,7 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::ConfigMemoryMutex>> {
     );
 
     // Set dropbox
-    server.config.obj_store(101 , OID_ENTITY_DROPBOX as u32 , op::dropbox::State{
+    server.config.obj_set(101 , OID_ENTITY_DROPBOX as u32 , op::dropbox::State{
         shadow: 301,
         texts_inc: 3,
         texts: vec![
@@ -127,7 +127,7 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::ConfigMemoryMutex>> {
     // Wiki
     server
         .config
-        .obj_store(
+        .obj_set(
             201,
             OID_ENTITY_WIKI as u32,
             op::wiki::State {

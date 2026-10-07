@@ -15,7 +15,7 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use bytes::Bytes;
-use n1_tool::{Chunk, Chunks, Config};
+use n1_tool::{Chunk, Chunks, DB};
 use tokio::sync::RwLock;
 
 use crate::Result;
@@ -43,7 +43,7 @@ pub struct OpRequest<D: DTO> {
     pub dto: D,
 }
 
-impl<C: Config> OpServer<C> {
+impl<C: DB> OpServer<C> {
     pub fn new(config: C) -> Self {
         OpServer {
             config: Arc::new(config),
@@ -67,7 +67,7 @@ impl<C: Config> OpServer<C> {
 /// Indicate that the return type will be retured in JSON.
 pub struct Json<T>(pub T);
 
-pub async fn big<C: Config>(server: &OpServer<C>, _req: OpRequest<()>) -> Result<Chunks<C>> {
+pub async fn big<C: DB>(server: &OpServer<C>, _req: OpRequest<()>) -> Result<Chunks<C>> {
     let b1 = Bytes::from_static(b"Hello ");
     let b2 = Bytes::from_static(b"World!\r\n");
     server.config.fs_set(42, 1, b1.clone()).await?;

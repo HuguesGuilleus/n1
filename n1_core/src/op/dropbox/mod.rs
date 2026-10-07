@@ -6,7 +6,7 @@ use crate::{
     *,
 };
 use n1_html::{DirectHTML, H, Html};
-use n1_tool::{Chunk, Config, chuncks_len};
+use n1_tool::{Chunk, DB, chuncks_len};
 pub use public::*;
 use serde::{Deserialize, Serialize};
 pub use text::*;
@@ -32,14 +32,14 @@ pub struct DropFile {
     pub chunks: Vec<Chunk>,
 }
 
-pub async fn page(server: &OpServer<impl Config>, r: OpRequest<u32>) -> Result<String> {
+pub async fn page(server: &OpServer<impl DB>, r: OpRequest<u32>) -> Result<String> {
     if r.dto != r.token.uid {
         r.token.check_access_write(r.dto, OID_ENTITY_DROPBOX)?;
     }
 
     let state: State = server
         .config
-        .obj_fetch(r.dto, OID_ENTITY_DROPBOX as u32)
+        .obj_get(r.dto, OID_ENTITY_DROPBOX as u32)
         .await?;
     let entities = server.entities.read().await;
     let owner = entities.get(&r.dto).ok_or(errs::NOT_FOUND_ENTITY)?;

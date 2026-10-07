@@ -1,4 +1,4 @@
-use n1_tool::Config;
+use n1_tool::DB;
 use serde::Deserialize;
 
 use crate::{
@@ -22,12 +22,12 @@ impl DTO for ArticleIdsDTO {
     }
 }
 pub async fn article_get(
-    server: &OpServer<impl Config>,
+    server: &OpServer<impl DB>,
     r: OpRequest<ArticleIdsDTO>,
 ) -> Result<Json<Article>> {
     let article: Article = server
         .config
-        .obj_fetch(r.dto.owner_id, r.dto.article_id)
+        .obj_get(r.dto.owner_id, r.dto.article_id)
         .await?;
 
     if article.oid == 0 {
@@ -56,7 +56,7 @@ impl DTO for NewArticleDTO {
     }
 }
 pub async fn article_new(
-    server: &OpServer<impl Config>,
+    server: &OpServer<impl DB>,
     r: OpRequest<NewArticleDTO>,
 ) -> Result<Json<u32>> {
     r.token
@@ -71,10 +71,7 @@ pub async fn article_new(
         content: "...".to_string(),
     };
 
-    server
-        .config
-        .obj_store(r.dto.owner_id, oid, article)
-        .await?;
+    server.config.obj_set(r.dto.owner_id, oid, article).await?;
 
     // todo: regenerate wiki
 
@@ -100,7 +97,7 @@ impl DTO for ArticleSetTitleDTO {
     }
 }
 pub async fn article_set_title(
-    server: &OpServer<impl Config>,
+    server: &OpServer<impl DB>,
     r: OpRequest<ArticleSetTitleDTO>,
 ) -> Result<()> {
     r.token
@@ -108,13 +105,13 @@ pub async fn article_set_title(
 
     let mut article: Article = server
         .config
-        .obj_fetch(r.dto.owner_id, r.dto.article_id)
+        .obj_get(r.dto.owner_id, r.dto.article_id)
         .await?;
     article.title = r.dto.title;
 
     server
         .config
-        .obj_store(r.dto.owner_id, r.dto.article_id, &article)
+        .obj_set(r.dto.owner_id, r.dto.article_id, &article)
         .await?;
 
     // todo: regenerate wiki
@@ -141,7 +138,7 @@ impl DTO for ArticleSetSlugDTO {
     }
 }
 pub async fn article_set_slug(
-    server: &OpServer<impl Config>,
+    server: &OpServer<impl DB>,
     r: OpRequest<ArticleSetSlugDTO>,
 ) -> Result<()> {
     r.token
@@ -149,13 +146,13 @@ pub async fn article_set_slug(
 
     let mut article: Article = server
         .config
-        .obj_fetch(r.dto.owner_id, r.dto.article_id)
+        .obj_get(r.dto.owner_id, r.dto.article_id)
         .await?;
     article.slug = r.dto.slug;
 
     server
         .config
-        .obj_store(r.dto.owner_id, r.dto.article_id, &article)
+        .obj_set(r.dto.owner_id, r.dto.article_id, &article)
         .await?;
 
     // todo: regenerate wiki
@@ -182,7 +179,7 @@ impl DTO for ArticleSetContentDTO {
     }
 }
 pub async fn article_set_content(
-    server: &OpServer<impl Config>,
+    server: &OpServer<impl DB>,
     r: OpRequest<ArticleSetContentDTO>,
 ) -> Result<()> {
     r.token
@@ -190,19 +187,19 @@ pub async fn article_set_content(
 
     let mut article: Article = server
         .config
-        .obj_fetch(r.dto.owner_id, r.dto.article_id)
+        .obj_get(r.dto.owner_id, r.dto.article_id)
         .await?;
     article.content = r.dto.content;
 
     server
         .config
-        .obj_store(r.dto.owner_id, r.dto.article_id, &article)
+        .obj_set(r.dto.owner_id, r.dto.article_id, &article)
         .await?;
 
     Ok(())
 }
 
-pub async fn article_rm(server: &OpServer<impl Config>, r: OpRequest<ArticleIdsDTO>) -> Result<()> {
+pub async fn article_rm(server: &OpServer<impl DB>, r: OpRequest<ArticleIdsDTO>) -> Result<()> {
     r.token
         .check_access_write(r.dto.owner_id, OID_ENTITY_WIKI)?;
 

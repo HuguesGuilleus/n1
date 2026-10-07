@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use n1_html::{DirectHTML, H, Html};
-use n1_tool::{Config, Result, mime};
+use n1_tool::{DB, Result, mime};
 
 use crate::{
     OpServer, front,
@@ -11,7 +11,7 @@ use crate::{
     },
 };
 
-pub async fn render_pub<C: Config>(server: &OpServer<C>) -> Result<()> {
+pub async fn render_pub<C: DB>(server: &OpServer<C>) -> Result<()> {
     let entities = server.entities.read().await;
     for owner in entities.values() {
         if let Entity::Group(group) = owner {
@@ -25,10 +25,10 @@ pub async fn render_pub<C: Config>(server: &OpServer<C>) -> Result<()> {
     Ok(())
 }
 
-async fn render_pub_one<C: Config>(server: &OpServer<C>, owner: &Group) -> Result<()> {
+async fn render_pub_one<C: DB>(server: &OpServer<C>, owner: &Group) -> Result<()> {
     let state: State = server
         .config
-        .obj_fetch(owner.gid, OID_ENTITY_WIKI as u32)
+        .obj_get(owner.gid, OID_ENTITY_WIKI as u32)
         .await?;
     if state.shadow == 0 {
         return Ok(());
@@ -42,16 +42,12 @@ async fn render_pub_one<C: Config>(server: &OpServer<C>, owner: &Group) -> Resul
     Ok(())
 }
 
-async fn render_pub_index<C: Config>(
-    server: &OpServer<C>,
-    owner: &Group,
-    state: &State,
-) -> Result<()> {
+async fn render_pub_index<C: DB>(server: &OpServer<C>, owner: &Group, state: &State) -> Result<()> {
     let mut pages: Vec<&Article> = state.articles.iter().collect();
     pages.sort_by(|p1, p2| p1.slug.cmp(&p2.slug));
     server
         .config
-        .page_add(
+        .page_set(
             &format!("/.{}/", state.shadow),
             mime::HTML,
             Bytes::from_owner(
@@ -81,7 +77,7 @@ async fn render_pub_index<C: Config>(
     Ok(())
 }
 
-async fn render_pub_page<C: Config>(
+async fn render_pub_page<C: DB>(
     server: &OpServer<C>,
     owner: &Group,
     state: &State,
@@ -92,7 +88,7 @@ async fn render_pub_page<C: Config>(
 
     server
         .config
-        .page_add(
+        .page_set(
             &format!("/.{}/{}-{}", state.shadow, page.oid, page.slug),
             mime::HTML,
             Bytes::from_owner(

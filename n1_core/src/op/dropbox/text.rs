@@ -1,4 +1,4 @@
-use n1_tool::Config;
+use n1_tool::DB;
 use serde::Deserialize;
 
 use crate::{
@@ -22,10 +22,10 @@ impl DTO for IDandString {
         Ok(())
     }
 }
-pub async fn text_add(server: &OpServer<impl Config>, r: OpRequest<IDandString>) -> Result<()> {
+pub async fn text_add(server: &OpServer<impl DB>, r: OpRequest<IDandString>) -> Result<()> {
     let mut state: State = server
         .config
-        .obj_fetch(r.dto.eid, OID_ENTITY_DROPBOX as u32)
+        .obj_get(r.dto.eid, OID_ENTITY_DROPBOX as u32)
         .await?;
 
     state.texts.push((state.texts_inc, r.dto.str));
@@ -33,23 +33,20 @@ pub async fn text_add(server: &OpServer<impl Config>, r: OpRequest<IDandString>)
 
     server
         .config
-        .obj_store(r.dto.eid, OID_ENTITY_DROPBOX as u32, &state)
+        .obj_set(r.dto.eid, OID_ENTITY_DROPBOX as u32, &state)
         .await?;
 
     Ok(())
 }
 
-pub async fn text_rm(
-    server: &OpServer<impl Config>,
-    r: OpRequest<EntityAndObjectDTO>,
-) -> Result<()> {
+pub async fn text_rm(server: &OpServer<impl DB>, r: OpRequest<EntityAndObjectDTO>) -> Result<()> {
     if r.token.uid != r.dto.eid {
         r.token.check_access_write(r.dto.eid, OID_ENTITY_DROPBOX)?;
     }
 
     let mut state: State = server
         .config
-        .obj_fetch(r.dto.eid, OID_ENTITY_DROPBOX as u32)
+        .obj_get(r.dto.eid, OID_ENTITY_DROPBOX as u32)
         .await?;
 
     let index = state
@@ -60,7 +57,7 @@ pub async fn text_rm(
 
     server
         .config
-        .obj_store(r.dto.eid, OID_ENTITY_DROPBOX as u32, &state)
+        .obj_set(r.dto.eid, OID_ENTITY_DROPBOX as u32, &state)
         .await?;
 
     Ok(())

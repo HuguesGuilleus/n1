@@ -1,15 +1,15 @@
-use n1_tool::Config;
+use n1_tool::DB;
 use serde::Deserialize;
 
 use crate::op::Json;
 use crate::{DTO, OpRequest, OpServer, Result, errs};
 
-pub async fn auth_test_id(_server: &OpServer<impl Config>, r: OpRequest<()>) -> Result<Json<u32>> {
+pub async fn auth_test_id(_server: &OpServer<impl DB>, r: OpRequest<()>) -> Result<Json<u32>> {
     Ok(Json(r.token.uid))
 }
 
 pub async fn auth_test_isadmin(
-    _server: &OpServer<impl Config>,
+    _server: &OpServer<impl DB>,
     r: OpRequest<()>,
 ) -> Result<Json<bool>> {
     Ok(Json(r.token.is_admin))
@@ -34,7 +34,7 @@ impl DTO for AccessDTO {
 }
 
 pub async fn auth_test_access_read(
-    _server: &OpServer<impl Config>,
+    _server: &OpServer<impl DB>,
     r: OpRequest<AccessDTO>,
 ) -> Result<Json<bool>> {
     Ok(Json(
@@ -45,7 +45,7 @@ pub async fn auth_test_access_read(
 }
 
 pub async fn auth_test_access_write(
-    _server: &OpServer<impl Config>,
+    _server: &OpServer<impl DB>,
     r: OpRequest<AccessDTO>,
 ) -> Result<Json<bool>> {
     Ok(Json(

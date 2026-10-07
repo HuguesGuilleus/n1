@@ -1,4 +1,4 @@
-use n1_tool::Config;
+use n1_tool::DB;
 use serde::Deserialize;
 
 use crate::op::Json;
@@ -19,6 +19,6 @@ impl DTO for MkdirDTO {
     }
 }
 
-pub async fn mkdir<C: Config>(_server: &OpServer<C>, _r: OpRequest<MkdirDTO>) -> Result<Json<u32>> {
+pub async fn mkdir<C: DB>(_server: &OpServer<C>, _r: OpRequest<MkdirDTO>) -> Result<Json<u32>> {
     Ok(Json(42))
 }
