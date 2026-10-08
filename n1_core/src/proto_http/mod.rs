@@ -99,7 +99,7 @@ pub async fn handle<R: AsyncRead + Unpin, C: DB>(
 
         // Serve generated files
         _ => {
-            let (mime, bytes) = s.op.config.page_get(r.path.as_str()).await?;
+            let (mime, bytes) = s.op.db.page_get(r.path.as_str()).await?;
             Ok(Response {
                 status: StatusHTTP::OK,
                 mime,

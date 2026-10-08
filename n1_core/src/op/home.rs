@@ -34,7 +34,7 @@ impl DTO for HomeState {
 
 pub async fn init(server: &OpServer<impl DB>) -> Result<()> {
     let mut state = server
-        .config
+        .db
         .obj_get(0, OID_GLOBAL_HOME as u32)
         .await
         .unwrap_or_else(|_| HomeState::default());
@@ -54,14 +54,11 @@ pub async fn init(server: &OpServer<impl DB>) -> Result<()> {
     }
 
     if edit {
-        server
-            .config
-            .obj_set(0, OID_GLOBAL_HOME as u32, &state)
-            .await?;
+        server.db.obj_set(0, OID_GLOBAL_HOME as u32, &state).await?;
     }
 
     server
-        .config
+        .db
         .page_set("/", mime::HTML, render_pub(&state))
         .await?;
 
@@ -72,14 +69,11 @@ pub async fn json_edit(server: &OpServer<impl DB>, r: OpRequest<HomeState>) -> R
     r.token.check_isadmin()?;
 
     server
-        .config
+        .db
         .page_set("/", mime::HTML, render_pub(&r.dto))
         .await?;
 
-    server
-        .config
-        .obj_set(0, OID_GLOBAL_HOME as u32, &r.dto)
-        .await?;
+    server.db.obj_set(0, OID_GLOBAL_HOME as u32, &r.dto).await?;
 
     Ok(())
 }
@@ -114,7 +108,7 @@ fn render_pub(home: &HomeState) -> Bytes {
 
 pub async fn page_console(server: &OpServer<impl DB>, r: OpRequest<()>) -> Result<String> {
     r.token.check_isadmin()?;
-    let state = server.config.obj_get(0, OID_GLOBAL_HOME as u32).await?;
+    let state = server.db.obj_get(0, OID_GLOBAL_HOME as u32).await?;
     Ok(render_console(&state))
 }
 

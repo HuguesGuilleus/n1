@@ -10,15 +10,12 @@ use crate::{
 pub async fn render_public(server: &OpServer<impl DB>) -> Result<()> {
     let entities = server.entities.read().await;
     for (&eid, entity) in entities.iter() {
-        let state: State = server
-            .config
-            .obj_get(eid, OID_ENTITY_DROPBOX as u32)
-            .await?;
+        let state: State = server.db.obj_get(eid, OID_ENTITY_DROPBOX as u32).await?;
         if state.shadow == 0 {
             continue;
         }
         server
-            .config
+            .db
             .page_set(
                 &format!("/.{}", state.shadow),
                 mime::HTML,

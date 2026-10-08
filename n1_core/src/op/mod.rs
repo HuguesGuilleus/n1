@@ -32,7 +32,7 @@ pub const OID_ENTITY_DROPBOX: u16 = 4;
 pub const OID_ENTITY_WIKI: u16 = 5;
 
 pub struct OpServer<C> {
-    pub config: Arc<C>,
+    pub db: Arc<C>,
     pub entities: RwLock<BTreeMap<u32, Entity>>,
     // pub entities: RwLock<BTreeMap<u32, Entity>>,
     pub shadow: RwLock<BTreeSet<u32>>,
@@ -46,7 +46,7 @@ pub struct OpRequest<D: DTO> {
 impl<C: DB> OpServer<C> {
     pub fn new(config: C) -> Self {
         OpServer {
-            config: Arc::new(config),
+            db: Arc::new(config),
             entities: RwLock::new(BTreeMap::new()),
             shadow: RwLock::new(BTreeSet::new()),
         }
@@ -70,11 +70,11 @@ pub struct Json<T>(pub T);
 pub async fn big<C: DB>(server: &OpServer<C>, _req: OpRequest<()>) -> Result<Chunks<C>> {
     let b1 = Bytes::from_static(b"Hello ");
     let b2 = Bytes::from_static(b"World!\r\n");
-    server.config.fs_set(42, 1, b1.clone()).await?;
-    server.config.fs_set(42, 2, b2.clone()).await?;
+    server.db.fs_set(42, 1, b1.clone()).await?;
+    server.db.fs_set(42, 2, b2.clone()).await?;
 
     Ok(Chunks::new(
-        server.config.clone(),
+        server.db.clone(),
         42,
         &[
             Chunk {

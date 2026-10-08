@@ -18,9 +18,7 @@ pub struct BioState {
 }
 
 pub async fn get(server: &OpServer<impl DB>, r: OpRequest<u32>) -> Result<Json<BioState>> {
-    Ok(Json(
-        server.config.obj_get(r.dto, OID_ENTITY_BIO as u32).await?,
-    ))
+    Ok(Json(server.db.obj_get(r.dto, OID_ENTITY_BIO as u32).await?))
 }
 
 #[derive(Debug, PartialEq, Deserialize)]
@@ -51,11 +49,11 @@ pub async fn set(server: &OpServer<impl DB>, r: OpRequest<BioSetRequest>) -> Res
     // Save the bio state
     let bio = BioState {
         content: r.dto.content,
-        last_edit: server.config.now()?,
+        last_edit: server.db.now()?,
     };
 
     server
-        .config
+        .db
         .obj_set(r.dto.oid, OID_ENTITY_BIO as u32, &bio)
         .await?;
 
@@ -74,7 +72,7 @@ pub async fn generate_all_pages(server: &OpServer<impl DB>) -> Result<()> {
         }
 
         let bio = server
-            .config
+            .db
             .obj_get(entity.id(), OID_ENTITY_BIO as u32)
             .await?;
 
@@ -130,7 +128,7 @@ async fn bio_generate_page(
     .render_page();
 
     server
-        .config
+        .db
         .page_set(
             &format!("/@{}/", entity.name()),
             mime::HTML,

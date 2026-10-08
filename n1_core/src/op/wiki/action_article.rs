@@ -25,10 +25,7 @@ pub async fn article_get(
     server: &OpServer<impl DB>,
     r: OpRequest<ArticleIdsDTO>,
 ) -> Result<Json<Article>> {
-    let article: Article = server
-        .config
-        .obj_get(r.dto.owner_id, r.dto.article_id)
-        .await?;
+    let article: Article = server.db.obj_get(r.dto.owner_id, r.dto.article_id).await?;
 
     if article.oid == 0 {
         errs::NOT_FOUND.push_result("article not found")?;
@@ -62,16 +59,16 @@ pub async fn article_new(
     r.token
         .check_access_write(r.dto.owner_id, OID_ENTITY_WIKI)?;
 
-    let oid = server.config.fs_new_object(r.dto.owner_id).await?;
+    let oid = server.db.fs_new_object(r.dto.owner_id).await?;
     let article = Article {
         oid,
         slug: r.dto.slug,
         title: r.dto.title,
-        last_edit: server.config.now()?,
+        last_edit: server.db.now()?,
         content: "...".to_string(),
     };
 
-    server.config.obj_set(r.dto.owner_id, oid, article).await?;
+    server.db.obj_set(r.dto.owner_id, oid, article).await?;
 
     // todo: regenerate wiki
 
@@ -103,14 +100,11 @@ pub async fn article_set_title(
     r.token
         .check_access_write(r.dto.owner_id, OID_ENTITY_WIKI)?;
 
-    let mut article: Article = server
-        .config
-        .obj_get(r.dto.owner_id, r.dto.article_id)
-        .await?;
+    let mut article: Article = server.db.obj_get(r.dto.owner_id, r.dto.article_id).await?;
     article.title = r.dto.title;
 
     server
-        .config
+        .db
         .obj_set(r.dto.owner_id, r.dto.article_id, &article)
         .await?;
 
@@ -144,14 +138,11 @@ pub async fn article_set_slug(
     r.token
         .check_access_write(r.dto.owner_id, OID_ENTITY_WIKI)?;
 
-    let mut article: Article = server
-        .config
-        .obj_get(r.dto.owner_id, r.dto.article_id)
-        .await?;
+    let mut article: Article = server.db.obj_get(r.dto.owner_id, r.dto.article_id).await?;
     article.slug = r.dto.slug;
 
     server
-        .config
+        .db
         .obj_set(r.dto.owner_id, r.dto.article_id, &article)
         .await?;
 
@@ -185,14 +176,11 @@ pub async fn article_set_content(
     r.token
         .check_access_write(r.dto.owner_id, OID_ENTITY_WIKI)?;
 
-    let mut article: Article = server
-        .config
-        .obj_get(r.dto.owner_id, r.dto.article_id)
-        .await?;
+    let mut article: Article = server.db.obj_get(r.dto.owner_id, r.dto.article_id).await?;
     article.content = r.dto.content;
 
     server
-        .config
+        .db
         .obj_set(r.dto.owner_id, r.dto.article_id, &article)
         .await?;
 
@@ -204,7 +192,7 @@ pub async fn article_rm(server: &OpServer<impl DB>, r: OpRequest<ArticleIdsDTO>)
         .check_access_write(r.dto.owner_id, OID_ENTITY_WIKI)?;
 
     server
-        .config
+        .db
         .fs_rm_object(r.dto.owner_id, r.dto.article_id)
         .await?;
 

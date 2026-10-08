@@ -26,10 +26,7 @@ pub async fn render_pub<C: DB>(server: &OpServer<C>) -> Result<()> {
 }
 
 async fn render_pub_one<C: DB>(server: &OpServer<C>, owner: &Group) -> Result<()> {
-    let state: State = server
-        .config
-        .obj_get(owner.gid, OID_ENTITY_WIKI as u32)
-        .await?;
+    let state: State = server.db.obj_get(owner.gid, OID_ENTITY_WIKI as u32).await?;
     if state.shadow == 0 {
         return Ok(());
     }
@@ -46,7 +43,7 @@ async fn render_pub_index<C: DB>(server: &OpServer<C>, owner: &Group, state: &St
     let mut pages: Vec<&Article> = state.articles.iter().collect();
     pages.sort_by(|p1, p2| p1.slug.cmp(&p2.slug));
     server
-        .config
+        .db
         .page_set(
             &format!("/.{}/", state.shadow),
             mime::HTML,
@@ -84,10 +81,10 @@ async fn render_pub_page<C: DB>(
     page: &Article,
 ) -> Result<()> {
     let content =
-        String::from_utf8_lossy(&server.config.fs_get(state.eid, page.oid).await?).to_string();
+        String::from_utf8_lossy(&server.db.fs_get(state.eid, page.oid).await?).to_string();
 
     server
-        .config
+        .db
         .page_set(
             &format!("/.{}/{}-{}", state.shadow, page.oid, page.slug),
             mime::HTML,

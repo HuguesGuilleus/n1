@@ -19,7 +19,7 @@ pub async fn render_priv_index(server: &OpServer<impl DB>, r: OpRequest<u32>) ->
             None => return Err(errs::NOT_FOUND.into()),
         }
     };
-    let wiki: State = server.config.obj_get(r.dto, OID_ENTITY_WIKI as u32).await?;
+    let wiki: State = server.db.obj_get(r.dto, OID_ENTITY_WIKI as u32).await?;
 
     Ok([H - "html lang=fr"
         + [H - "head" + front::HEAD + [H - "title" + "Wiki"]]
@@ -81,15 +81,12 @@ pub async fn render_priv_page(
         }
     };
 
-    let wiki: State = server
-        .config
-        .obj_get(r.dto.eid, OID_ENTITY_WIKI as u32)
-        .await?;
+    let wiki: State = server.db.obj_get(r.dto.eid, OID_ENTITY_WIKI as u32).await?;
     let page = &wiki.articles[wiki
         .articles
         .binary_search_by(|page| page.oid.cmp(&r.dto.oid))
         .map_err(|_| errs::NOT_FOUND)?];
-    let content = server.config.fs_get(r.dto.eid, r.dto.oid).await?;
+    let content = server.db.fs_get(r.dto.eid, r.dto.oid).await?;
 
     Ok([H - "html lang=fr"
         + [H - "head" + front::HEAD + [H - "title" + "Wiki " + &page.title]]

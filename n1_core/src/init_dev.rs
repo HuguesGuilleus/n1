@@ -31,7 +31,7 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::DBMemory>> {
         }),
     );
     server
-        .config
+        .db
         .obj_set(
             101,
             OID_ENTITY_BIO as u32,
@@ -97,7 +97,7 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::DBMemory>> {
     );
 
     // Set dropbox
-    server.config.obj_set(101 , OID_ENTITY_DROPBOX as u32 , op::dropbox::State{
+    server.db.obj_set(101 , OID_ENTITY_DROPBOX as u32 , op::dropbox::State{
         shadow: 301,
         texts_inc: 3,
         texts: vec![
@@ -116,17 +116,17 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::DBMemory>> {
         }],
     }).await ?;
     server
-        .config
+        .db
         .fs_set(101, 2001, Bytes::from_static(b"123"))
         .await?;
     server
-        .config
+        .db
         .fs_set(101, 2002, Bytes::from_static(b"456!"))
         .await?;
 
     // Wiki
     server
-        .config
+        .db
         .obj_set(
             201,
             OID_ENTITY_WIKI as u32,
@@ -156,9 +156,9 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::DBMemory>> {
             },
         )
         .await?;
-    server.config.fs_set(201, 401 , Bytes::from_static(b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.\nCras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat. Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim.\nPellentesque congue.\n Ut in risus volutpat libero pharetra tempor. Cras vestibulum bibendum augue. Praesent egestas leo in pede. Praesent blandit odio eu enim. Pellentesque sed dui ut augue blandit sodales. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Aliquam nibh. Mauris ac mauris sed pede pellentesque fermentum. Maecenas adipiscing ante non diam sodales hendrerit.")).await?;
+    server.db.fs_set(201, 401 , Bytes::from_static(b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.\nCras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat. Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim.\nPellentesque congue.\n Ut in risus volutpat libero pharetra tempor. Cras vestibulum bibendum augue. Praesent egestas leo in pede. Praesent blandit odio eu enim. Pellentesque sed dui ut augue blandit sodales. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Aliquam nibh. Mauris ac mauris sed pede pellentesque fermentum. Maecenas adipiscing ante non diam sodales hendrerit.")).await?;
     server
-        .config
+        .db
         .fs_set(201, 402, Bytes::from_static(b"Hello World"))
         .await?;
 

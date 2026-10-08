@@ -24,7 +24,7 @@ impl DTO for IDandString {
 }
 pub async fn text_add(server: &OpServer<impl DB>, r: OpRequest<IDandString>) -> Result<()> {
     let mut state: State = server
-        .config
+        .db
         .obj_get(r.dto.eid, OID_ENTITY_DROPBOX as u32)
         .await?;
 
@@ -32,7 +32,7 @@ pub async fn text_add(server: &OpServer<impl DB>, r: OpRequest<IDandString>) -> 
     state.texts_inc += 1;
 
     server
-        .config
+        .db
         .obj_set(r.dto.eid, OID_ENTITY_DROPBOX as u32, &state)
         .await?;
 
@@ -45,7 +45,7 @@ pub async fn text_rm(server: &OpServer<impl DB>, r: OpRequest<EntityAndObjectDTO
     }
 
     let mut state: State = server
-        .config
+        .db
         .obj_get(r.dto.eid, OID_ENTITY_DROPBOX as u32)
         .await?;
 
@@ -56,7 +56,7 @@ pub async fn text_rm(server: &OpServer<impl DB>, r: OpRequest<EntityAndObjectDTO
     state.texts.remove(index);
 
     server
-        .config
+        .db
         .obj_set(r.dto.eid, OID_ENTITY_DROPBOX as u32, &state)
         .await?;
 

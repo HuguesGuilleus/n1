@@ -37,10 +37,7 @@ pub async fn page(server: &OpServer<impl DB>, r: OpRequest<u32>) -> Result<Strin
         r.token.check_access_write(r.dto, OID_ENTITY_DROPBOX)?;
     }
 
-    let state: State = server
-        .config
-        .obj_get(r.dto, OID_ENTITY_DROPBOX as u32)
-        .await?;
+    let state: State = server.db.obj_get(r.dto, OID_ENTITY_DROPBOX as u32).await?;
     let entities = server.entities.read().await;
     let owner = entities.get(&r.dto).ok_or(errs::NOT_FOUND_ENTITY)?;
 

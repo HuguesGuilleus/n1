@@ -36,12 +36,12 @@ pub struct Group {
 
 pub async fn init<C: DB>(server: &mut OpServer<C>) -> Result<()> {
     server
-        .config
+        .db
         .page_set("/_login", mime::HTML, login::render())
         .await?;
 
     // Load entities
-    let entities: Vec<Entity> = server.config.obj_get(0, OID_GLOBAL_ENTITY as u32).await?;
+    let entities: Vec<Entity> = server.db.obj_get(0, OID_GLOBAL_ENTITY as u32).await?;
     let entities_map = server.entities.get_mut();
     entities.into_iter().for_each(|entity| {
         entities_map.insert(
