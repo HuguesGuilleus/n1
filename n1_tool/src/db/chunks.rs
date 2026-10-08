@@ -79,7 +79,7 @@ pub fn chuncks_len(chunks: &[Chunk]) -> usize {
 
 #[tokio::test]
 async fn chunck() {
-    let db = super::DBMemoryMutex::new();
+    let db = super::DBMemory::new();
     db.fs_set(1, 2, Bytes::from_static(b"abc")).await.unwrap();
     db.fs_set(1, 3, Bytes::from_static(b"def")).await.unwrap();
 

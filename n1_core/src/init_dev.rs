@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use n1_tool::{Chunk, DB, DBMemoryMutex, Result};
+use n1_tool::{Chunk, DB, DBMemory, Result};
 
 use crate::{
     OpServer,
@@ -10,9 +10,9 @@ use crate::{
     },
 };
 
-pub async fn init_dev() -> Result<OpServer<n1_tool::DBMemoryMutex>> {
+pub async fn init_dev() -> Result<OpServer<n1_tool::DBMemory>> {
     const NOW: u64 = 1785597192;
-    let mut server = OpServer::new(DBMemoryMutex::new());
+    let mut server = OpServer::new(DBMemory::new());
     let entities_map = server.entities.get_mut();
 
     // Set "eve" user

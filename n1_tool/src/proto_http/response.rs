@@ -55,7 +55,7 @@ pub async fn write_response(
     Ok(())
 }
 
-impl<C: DB> From<()> for Response<C> {
+impl<B: DB> From<()> for Response<B> {
     fn from(_: ()) -> Self {
         Response {
             status: StatusHTTP::OK,
@@ -66,7 +66,7 @@ impl<C: DB> From<()> for Response<C> {
     }
 }
 /// Consider the string as geenrated HTML.
-impl<C: DB> From<String> for Response<C> {
+impl<B: DB> From<String> for Response<B> {
     fn from(body: String) -> Self {
         Response {
             status: StatusHTTP::OK,
