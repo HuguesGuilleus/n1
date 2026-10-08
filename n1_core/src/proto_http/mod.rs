@@ -7,6 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use bytes::Bytes;
 use n1_html::{H, Html};
 use n1_tool::errs::Error;
+use n1_tool::mime::REDIRECT;
 use serde::Serialize;
 use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::net::TcpListener;
@@ -99,10 +100,20 @@ pub async fn handle<R: AsyncRead + Unpin, C: DB>(
 
         // Serve generated files
         _ => {
-            let (mime, bytes) = s.op.db.page_get(r.path.as_str()).await?;
+            let (m, bytes) = s.op.db.page_get(r.path.as_str()).await?;
+            if m == REDIRECT {
+                let location = String::from_utf8(bytes.to_vec())
+                    .map_err(|_| errs::DB_DECODE.push("Cannot decode URL as UTF-8"))?;
+                return Ok(Response {
+                    status: StatusHTTP::Found,
+                    mime: mime::TEXT,
+                    header: Some(("Location", location)),
+                    body: ResponseBody::Bytes(bytes),
+                });
+            }
             Ok(Response {
                 status: StatusHTTP::OK,
-                mime,
+                mime: m,
                 header: None,
                 body: ResponseBody::Bytes(bytes),
             })

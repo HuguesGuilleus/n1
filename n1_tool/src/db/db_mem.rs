@@ -5,7 +5,10 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use crate::errs::{self, Result};
+use crate::{
+    errs::{self, Result},
+    mime::REDIRECT,
+};
 use bytes::Bytes;
 use tokio::sync::Mutex;
 
@@ -96,7 +99,20 @@ impl DB for DBMemory {
     ) -> impl Future<Output = Result<()>> + Send {
         async move {
             let mut guard = self.page.lock().await;
+            let path_toggle = if path.ends_with("/") {
+                path[..path.len() - 1].to_string()
+            } else {
+                let mut p = path.to_string();
+                p.push('/');
+                p
+            };
+            if data.len() == 0 {
+                guard.remove(path);
+                guard.remove(&path_toggle);
+                return Ok(());
+            }
             guard.insert(path.to_string(), (mime, data));
+            guard.insert(path_toggle, (REDIRECT, Bytes::from_owner(path.to_string())));
             Ok(())
         }
     }

@@ -17,6 +17,7 @@ use super::{DB, DB_RESERVED};
 use crate::{
     Result,
     errs::{self, Error},
+    mime::REDIRECT,
 };
 
 const MAGIC: [u8; 8] = *b"Kventry_";
@@ -249,7 +250,20 @@ impl DB for DBOneFile {
     ) -> impl Future<Output = Result<()>> + Send {
         async move {
             let mut guard = self.page.lock().await;
+            let path_toggle = if path.ends_with("/") {
+                path[..path.len() - 1].to_string()
+            } else {
+                let mut p = path.to_string();
+                p.push('/');
+                p
+            };
+            if data.len() == 0 {
+                guard.remove(path);
+                guard.remove(&path_toggle);
+                return Ok(());
+            }
             guard.insert(path.to_string(), (mime, data));
+            guard.insert(path_toggle, (REDIRECT, Bytes::from_owner(path.to_string())));
             Ok(())
         }
     }

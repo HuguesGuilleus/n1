@@ -34,7 +34,6 @@ pub const OID_ENTITY_WIKI: u16 = 5;
 pub struct OpServer<C> {
     pub db: Arc<C>,
     pub entities: RwLock<BTreeMap<u32, Entity>>,
-    // pub entities: RwLock<BTreeMap<u32, Entity>>,
     pub shadow: RwLock<BTreeSet<u32>>,
 }
 

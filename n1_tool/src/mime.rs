@@ -1,5 +1,7 @@
 pub const HTTP_CONTENT_TYPE: &str = "Content-Type";
 
+pub const REDIRECT: &str = "redirect";
+
 pub const CSS: &str = "text/css";
 pub const HTML: &str = "text/html";
 pub const ICO: &str = "image/vnd.microsoft.icon";
