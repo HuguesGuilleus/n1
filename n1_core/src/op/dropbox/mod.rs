@@ -32,13 +32,13 @@ pub struct DropFile {
     pub chunks: Vec<Chunk>,
 }
 
-pub async fn page(server: &OpServer<impl DB>, r: OpRequest<u32>) -> Result<String> {
+pub async fn page(db: &impl DB, r: OpRequest<u32>) -> Result<String> {
     if r.dto != r.token.uid {
         r.token.check_access_write(r.dto, OID_ENTITY_DROPBOX)?;
     }
 
-    let state: State = server.db.obj_get(r.dto, OID_ENTITY_DROPBOX as u32).await?;
-    let entities = server.entities.read().await;
+    let state: State = db.obj_get(r.dto, OID_ENTITY_DROPBOX as u32).await?;
+    let entities = r.common.entities.read().await;
     let owner = entities.get(&r.dto).ok_or(errs::NOT_FOUND_ENTITY)?;
 
     Ok([H - "html lang=fr"

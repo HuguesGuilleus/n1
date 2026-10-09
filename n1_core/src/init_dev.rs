@@ -2,7 +2,7 @@ use bytes::Bytes;
 use n1_tool::{Chunk, DB, DBMemory, Result};
 
 use crate::{
-    OpServer,
+    Common,
     op::{
         self, OID_ENTITY_BIO, OID_ENTITY_DROPBOX, OID_ENTITY_FS, OID_ENTITY_WIKI, TokenItem,
         dropbox::DropFile,
@@ -10,10 +10,11 @@ use crate::{
     },
 };
 
-pub async fn init_dev() -> Result<OpServer<n1_tool::DBMemory>> {
+pub async fn init_dev() -> Result<(impl DB, Common)> {
     const NOW: u64 = 1785597192;
-    let mut server = OpServer::new(DBMemory::new());
-    let entities_map = server.entities.get_mut();
+    let db = DBMemory::new();
+    let mut common = Common::new();
+    let entities_map = common.entities.get_mut();
 
     // Set "eve" user
     entities_map.insert(
@@ -30,24 +31,22 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::DBMemory>> {
             },
         }),
     );
-    server
-        .db
-        .obj_set(
-            101,
-            OID_ENTITY_BIO as u32,
-            op::bio::BioState {
-                last_edit: NOW,
-                content: concat!(
-                    "me+https://github.com/octocat Octocat\n",
-                    "me+https://octocat.github.io Website\n",
-                    "https://github.com/octocat/Hello-World My hello world example\n",
-                    "https://github.blog\n",
-                    "Hello World ...",
-                )
-                .to_string(),
-            },
-        )
-        .await?;
+    db.obj_set(
+        101,
+        OID_ENTITY_BIO as u32,
+        op::bio::BioState {
+            last_edit: NOW,
+            content: concat!(
+                "me+https://github.com/octocat Octocat\n",
+                "me+https://octocat.github.io Website\n",
+                "https://github.com/octocat/Hello-World My hello world example\n",
+                "https://github.blog\n",
+                "Hello World ...",
+            )
+            .to_string(),
+        },
+    )
+    .await?;
 
     // Set bob user
     entities_map.insert(
@@ -97,7 +96,7 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::DBMemory>> {
     );
 
     // Set dropbox
-    server.db.obj_set(101 , OID_ENTITY_DROPBOX as u32 , op::dropbox::State{
+    db.obj_set(101 , OID_ENTITY_DROPBOX as u32 , op::dropbox::State{
         shadow: 301,
         texts_inc: 3,
         texts: vec![
@@ -115,19 +114,12 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::DBMemory>> {
             ]
         }],
     }).await ?;
-    server
-        .db
-        .fs_set(101, 2001, Bytes::from_static(b"123"))
-        .await?;
-    server
-        .db
-        .fs_set(101, 2002, Bytes::from_static(b"456!"))
-        .await?;
+
+    db.fs_set(101, 2001, Bytes::from_static(b"123")).await?;
+    db.fs_set(101, 2002, Bytes::from_static(b"456!")).await?;
 
     // Wiki
-    server
-        .db
-        .obj_set(
+    db.obj_set(
             201,
             OID_ENTITY_WIKI as u32,
             op::wiki::State {
@@ -156,12 +148,12 @@ pub async fn init_dev() -> Result<OpServer<n1_tool::DBMemory>> {
             },
         )
         .await?;
-    server.db.fs_set(201, 401 , Bytes::from_static(b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.\nCras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat. Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim.\nPellentesque congue.\n Ut in risus volutpat libero pharetra tempor. Cras vestibulum bibendum augue. Praesent egestas leo in pede. Praesent blandit odio eu enim. Pellentesque sed dui ut augue blandit sodales. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Aliquam nibh. Mauris ac mauris sed pede pellentesque fermentum. Maecenas adipiscing ante non diam sodales hendrerit.")).await?;
-    server
-        .db
-        .fs_set(201, 402, Bytes::from_static(b"Hello World"))
+    db.fs_set(201, 401 , Bytes::from_static(b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.\nCras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat. Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim.\nPellentesque congue.\n Ut in risus volutpat libero pharetra tempor. Cras vestibulum bibendum augue. Praesent egestas leo in pede. Praesent blandit odio eu enim. Pellentesque sed dui ut augue blandit sodales. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Aliquam nibh. Mauris ac mauris sed pede pellentesque fermentum. Maecenas adipiscing ante non diam sodales hendrerit.")).await?;
+    db.fs_set(201, 402, Bytes::from_static(b"Hello World"))
         .await?;
 
     // Final init
-    server.init().await
+    common.init(&db).await?;
+
+    Ok((db, common))
 }

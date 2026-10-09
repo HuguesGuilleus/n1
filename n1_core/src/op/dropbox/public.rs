@@ -3,25 +3,23 @@ use n1_html::{DirectHTML, H, Html};
 use n1_tool::{DB, mime};
 
 use crate::{
-    OpServer, Result, front,
+    Common, Result, front,
     op::{OID_ENTITY_DROPBOX, compo, dropbox::State},
 };
 
-pub async fn render_public(server: &OpServer<impl DB>) -> Result<()> {
-    let entities = server.entities.read().await;
+pub async fn render_public(db: &impl DB, common: &Common) -> Result<()> {
+    let entities = common.entities.read().await;
     for (&eid, entity) in entities.iter() {
-        let state: State = server.db.obj_get(eid, OID_ENTITY_DROPBOX as u32).await?;
+        let state: State = db.obj_get(eid, OID_ENTITY_DROPBOX as u32).await?;
         if state.shadow == 0 {
             continue;
         }
-        server
-            .db
-            .page_set(
-                &format!("/.{}", state.shadow),
-                mime::HTML,
-                Bytes::from_owner(render_public_one(eid, entity.name())),
-            )
-            .await?;
+        db.page_set(
+            &format!("/.{}", state.shadow),
+            mime::HTML,
+            Bytes::from_owner(render_public_one(eid, entity.name())),
+        )
+        .await?;
     }
 
     Ok(())

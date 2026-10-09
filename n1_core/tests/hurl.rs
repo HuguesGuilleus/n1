@@ -19,11 +19,15 @@ async fn hurl_tests() {
     for i in 0..key.len() {
         key[i] = i as u8;
     }
-    let op = init_dev()
+    let (db, common) = init_dev()
         .await
         .map_err(|err| io::Error::new(io::ErrorKind::Other, err.atomic.message))
         .unwrap();
-    let server = Arc::new(HTTPServer { op, key });
+    let server = Arc::new(HTTPServer {
+        db: Arc::new(db),
+        common: Arc::new(common),
+        key,
+    });
 
     let addr: SocketAddr = ([127, 0, 0, 1], 8000).into();
     let listener = TcpListener::bind(addr).await.unwrap();

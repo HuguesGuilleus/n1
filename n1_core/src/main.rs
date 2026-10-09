@@ -12,11 +12,15 @@ async fn main() -> io::Result<()> {
         key[i] = i as u8;
     }
 
-    let op = init_dev()
+    let (db, common) = init_dev()
         .await
         .map_err(|err| io::Error::new(io::ErrorKind::Other, err.atomic.message))?;
 
-    let server = Arc::new(HTTPServer { op, key });
+    let server = Arc::new(HTTPServer {
+        db: Arc::new(db),
+        common: Arc::new(common),
+        key,
+    });
 
     proto_http::run(server.clone()).await
 }

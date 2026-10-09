@@ -3,11 +3,8 @@ use n1_html::{DirectHTML, H, Html};
 use n1_tool::DB;
 use serde::Deserialize;
 
-use super::{DTO, OpRequest, OpServer};
-use crate::{
-    Result, errs, front,
-    op::{Token, TokenItem, compo, user::Entity},
-};
+use super::{super::compo, DTO, Entity, OpRequest, Token, TokenItem};
+use crate::{Result, errs, front};
 
 #[derive(Debug, Deserialize)]
 pub struct LoginDTO {
@@ -27,8 +24,8 @@ impl DTO for LoginDTO {
     }
 }
 
-pub async fn login(serv: &OpServer<impl DB>, r: OpRequest<LoginDTO>) -> Result<Token> {
-    let users = serv.entities.read().await;
+pub async fn login(_: &impl DB, r: OpRequest<LoginDTO>) -> Result<Token> {
+    let users = r.common.entities.read().await;
     for (_, entity) in users.iter() {
         if let Entity::User(user) = entity {
             if user.name == r.dto.name {

@@ -2,9 +2,9 @@ use crate::{op::user::Entity, *};
 use n1_html::{H, Html};
 use n1_tool::DB;
 
-pub async fn page(server: &OpServer<impl DB>, r: OpRequest<()>) -> Result<String> {
+pub async fn page(_: &impl DB, r: OpRequest<()>) -> Result<String> {
     r.token.check_auth()?;
-    let entities = server.entities.read().await;
+    let entities = r.common.entities.read().await;
     let entity = entities
         .get(&r.token.uid)
         .ok_or(errs::NOT_FOUND_USER)

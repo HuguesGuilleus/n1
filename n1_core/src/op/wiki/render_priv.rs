@@ -2,24 +2,24 @@ use n1_html::{H, Html, Q};
 use n1_tool::{DB, Result};
 
 use crate::{
-    OpRequest, OpServer,
+    OpRequest,
     errs::{self},
     front,
     op::{EntityAndObjectDTO, OID_ENTITY_WIKI, compo, user::Entity, wiki::State},
 };
 
-pub async fn render_priv_index(server: &OpServer<impl DB>, r: OpRequest<u32>) -> Result<String> {
+pub async fn render_priv_index(db: &impl DB, r: OpRequest<u32>) -> Result<String> {
     r.token.check_access_write(r.dto, OID_ENTITY_WIKI)?;
 
     let owner = {
-        let entities = server.entities.read().await;
+        let entities = r.common.entities.read().await;
         match entities.get(&r.dto) {
             Some(Entity::Group(group)) => group.clone(),
             Some(_) => return Err(errs::FORBIDEN_GROUP.into()),
             None => return Err(errs::NOT_FOUND.into()),
         }
     };
-    let wiki: State = server.db.obj_get(r.dto, OID_ENTITY_WIKI as u32).await?;
+    let wiki: State = db.obj_get(r.dto, OID_ENTITY_WIKI as u32).await?;
 
     Ok([H - "html lang=fr"
         + [H - "head" + front::HEAD + [H - "title" + "Wiki"]]
@@ -66,14 +66,11 @@ pub async fn render_priv_index(server: &OpServer<impl DB>, r: OpRequest<u32>) ->
     .render_page())
 }
 
-pub async fn render_priv_page(
-    server: &OpServer<impl DB>,
-    r: OpRequest<EntityAndObjectDTO>,
-) -> Result<String> {
+pub async fn render_priv_page(db: &impl DB, r: OpRequest<EntityAndObjectDTO>) -> Result<String> {
     r.token.check_access_write(r.dto.eid, OID_ENTITY_WIKI)?;
 
     let owner = {
-        let entities = server.entities.read().await;
+        let entities = r.common.entities.read().await;
         match entities.get(&r.dto.eid) {
             Some(Entity::Group(group)) => group.clone(),
             Some(_) => return Err(errs::FORBIDEN_GROUP.into()),
@@ -81,12 +78,12 @@ pub async fn render_priv_page(
         }
     };
 
-    let wiki: State = server.db.obj_get(r.dto.eid, OID_ENTITY_WIKI as u32).await?;
+    let wiki: State = db.obj_get(r.dto.eid, OID_ENTITY_WIKI as u32).await?;
     let page = &wiki.articles[wiki
         .articles
         .binary_search_by(|page| page.oid.cmp(&r.dto.oid))
         .map_err(|_| errs::NOT_FOUND)?];
-    let content = server.db.fs_get(r.dto.eid, r.dto.oid).await?;
+    let content = db.fs_get(r.dto.eid, r.dto.oid).await?;
 
     Ok([H - "html lang=fr"
         + [H - "head" + front::HEAD + [H - "title" + "Wiki " + &page.title]]
@@ -118,11 +115,11 @@ pub async fn render_priv_page(
     .render_page())
 }
 
-pub async fn render_priv_new(server: &OpServer<impl DB>, r: OpRequest<u32>) -> Result<String> {
+pub async fn render_priv_new(_: &impl DB, r: OpRequest<u32>) -> Result<String> {
     r.token.check_access_write(r.dto, OID_ENTITY_WIKI)?;
 
     let owner = {
-        let entities = server.entities.read().await;
+        let entities = r.common.entities.read().await;
         match entities.get(&r.dto) {
             Some(Entity::Group(group)) => group.clone(),
             Some(_) => return Err(errs::FORBIDEN_GROUP.into()),

@@ -2,7 +2,7 @@ use n1_tool::DB;
 use serde::Deserialize;
 
 use crate::{
-    DTO, OpRequest, OpServer, Result, errs,
+    DTO, OpRequest, Result, errs,
     op::{EntityAndObjectDTO, OID_ENTITY_DROPBOX, dropbox::State},
 };
 
@@ -22,32 +22,24 @@ impl DTO for IDandString {
         Ok(())
     }
 }
-pub async fn text_add(server: &OpServer<impl DB>, r: OpRequest<IDandString>) -> Result<()> {
-    let mut state: State = server
-        .db
-        .obj_get(r.dto.eid, OID_ENTITY_DROPBOX as u32)
-        .await?;
+pub async fn text_add(db: &impl DB, r: OpRequest<IDandString>) -> Result<()> {
+    let mut state: State = db.obj_get(r.dto.eid, OID_ENTITY_DROPBOX as u32).await?;
 
     state.texts.push((state.texts_inc, r.dto.str));
     state.texts_inc += 1;
 
-    server
-        .db
-        .obj_set(r.dto.eid, OID_ENTITY_DROPBOX as u32, &state)
+    db.obj_set(r.dto.eid, OID_ENTITY_DROPBOX as u32, &state)
         .await?;
 
     Ok(())
 }
 
-pub async fn text_rm(server: &OpServer<impl DB>, r: OpRequest<EntityAndObjectDTO>) -> Result<()> {
+pub async fn text_rm(db: &impl DB, r: OpRequest<EntityAndObjectDTO>) -> Result<()> {
     if r.token.uid != r.dto.eid {
         r.token.check_access_write(r.dto.eid, OID_ENTITY_DROPBOX)?;
     }
 
-    let mut state: State = server
-        .db
-        .obj_get(r.dto.eid, OID_ENTITY_DROPBOX as u32)
-        .await?;
+    let mut state: State = db.obj_get(r.dto.eid, OID_ENTITY_DROPBOX as u32).await?;
 
     let index = state
         .texts
@@ -55,9 +47,7 @@ pub async fn text_rm(server: &OpServer<impl DB>, r: OpRequest<EntityAndObjectDTO
         .map_err(|_| errs::NOT_FOUND)?;
     state.texts.remove(index);
 
-    server
-        .db
-        .obj_set(r.dto.eid, OID_ENTITY_DROPBOX as u32, &state)
+    db.obj_set(r.dto.eid, OID_ENTITY_DROPBOX as u32, &state)
         .await?;
 
     Ok(())
@@ -65,11 +55,13 @@ pub async fn text_rm(server: &OpServer<impl DB>, r: OpRequest<EntityAndObjectDTO
 
 #[tokio::test]
 async fn text() -> Result<()> {
-    let server = crate::init_dev().await?;
+    let (db, common) = crate::init_dev().await?;
+    let common = std::sync::Arc::new(common);
 
     text_add(
-        &server,
+        &db,
         OpRequest {
+            common: common.clone(),
             token: crate::op::Token::test_alice(),
             dto: IDandString {
                 eid: 1,
@@ -81,8 +73,9 @@ async fn text() -> Result<()> {
     .unwrap();
 
     text_rm(
-        &server,
+        &db,
         OpRequest {
+            common: common.clone(),
             token: crate::op::Token::test_alice(),
             dto: EntityAndObjectDTO { eid: 1, oid: 0 },
         },

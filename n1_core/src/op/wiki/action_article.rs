@@ -2,7 +2,7 @@ use n1_tool::DB;
 use serde::Deserialize;
 
 use crate::{
-    DTO, OpRequest, OpServer, Result, errs,
+    DTO, OpRequest, Result, errs,
     op::{OID_ENTITY_WIKI, wiki::Article},
 };
 
@@ -21,11 +21,8 @@ impl DTO for ArticleIdsDTO {
         Ok(())
     }
 }
-pub async fn article_get(
-    server: &OpServer<impl DB>,
-    r: OpRequest<ArticleIdsDTO>,
-) -> Result<Article> {
-    let article: Article = server.db.obj_get(r.dto.owner_id, r.dto.article_id).await?;
+pub async fn article_get(db: &impl DB, r: OpRequest<ArticleIdsDTO>) -> Result<Article> {
+    let article: Article = db.obj_get(r.dto.owner_id, r.dto.article_id).await?;
 
     if article.oid == 0 {
         errs::NOT_FOUND.push_result("article not found")?;
@@ -52,20 +49,20 @@ impl DTO for NewArticleDTO {
         Ok(())
     }
 }
-pub async fn article_new(server: &OpServer<impl DB>, r: OpRequest<NewArticleDTO>) -> Result<u32> {
+pub async fn article_new(db: &impl DB, r: OpRequest<NewArticleDTO>) -> Result<u32> {
     r.token
         .check_access_write(r.dto.owner_id, OID_ENTITY_WIKI)?;
 
-    let oid = server.db.fs_new_object(r.dto.owner_id).await?;
+    let oid = db.fs_new_object(r.dto.owner_id).await?;
     let article = Article {
         oid,
         slug: r.dto.slug,
         title: r.dto.title,
-        last_edit: server.db.now()?,
+        last_edit: db.now()?,
         content: "...".to_string(),
     };
 
-    server.db.obj_set(r.dto.owner_id, oid, article).await?;
+    db.obj_set(r.dto.owner_id, oid, article).await?;
 
     // todo: regenerate wiki
 
@@ -90,19 +87,14 @@ impl DTO for ArticleSetTitleDTO {
         Ok(())
     }
 }
-pub async fn article_set_title(
-    server: &OpServer<impl DB>,
-    r: OpRequest<ArticleSetTitleDTO>,
-) -> Result<()> {
+pub async fn article_set_title(db: &impl DB, r: OpRequest<ArticleSetTitleDTO>) -> Result<()> {
     r.token
         .check_access_write(r.dto.owner_id, OID_ENTITY_WIKI)?;
 
-    let mut article: Article = server.db.obj_get(r.dto.owner_id, r.dto.article_id).await?;
+    let mut article: Article = db.obj_get(r.dto.owner_id, r.dto.article_id).await?;
     article.title = r.dto.title;
 
-    server
-        .db
-        .obj_set(r.dto.owner_id, r.dto.article_id, &article)
+    db.obj_set(r.dto.owner_id, r.dto.article_id, &article)
         .await?;
 
     // todo: regenerate wiki
@@ -128,19 +120,14 @@ impl DTO for ArticleSetSlugDTO {
         Ok(())
     }
 }
-pub async fn article_set_slug(
-    server: &OpServer<impl DB>,
-    r: OpRequest<ArticleSetSlugDTO>,
-) -> Result<()> {
+pub async fn article_set_slug(db: &impl DB, r: OpRequest<ArticleSetSlugDTO>) -> Result<()> {
     r.token
         .check_access_write(r.dto.owner_id, OID_ENTITY_WIKI)?;
 
-    let mut article: Article = server.db.obj_get(r.dto.owner_id, r.dto.article_id).await?;
+    let mut article: Article = db.obj_get(r.dto.owner_id, r.dto.article_id).await?;
     article.slug = r.dto.slug;
 
-    server
-        .db
-        .obj_set(r.dto.owner_id, r.dto.article_id, &article)
+    db.obj_set(r.dto.owner_id, r.dto.article_id, &article)
         .await?;
 
     // todo: regenerate wiki
@@ -166,32 +153,24 @@ impl DTO for ArticleSetContentDTO {
         Ok(())
     }
 }
-pub async fn article_set_content(
-    server: &OpServer<impl DB>,
-    r: OpRequest<ArticleSetContentDTO>,
-) -> Result<()> {
+pub async fn article_set_content(db: &impl DB, r: OpRequest<ArticleSetContentDTO>) -> Result<()> {
     r.token
         .check_access_write(r.dto.owner_id, OID_ENTITY_WIKI)?;
 
-    let mut article: Article = server.db.obj_get(r.dto.owner_id, r.dto.article_id).await?;
+    let mut article: Article = db.obj_get(r.dto.owner_id, r.dto.article_id).await?;
     article.content = r.dto.content;
 
-    server
-        .db
-        .obj_set(r.dto.owner_id, r.dto.article_id, &article)
+    db.obj_set(r.dto.owner_id, r.dto.article_id, &article)
         .await?;
 
     Ok(())
 }
 
-pub async fn article_rm(server: &OpServer<impl DB>, r: OpRequest<ArticleIdsDTO>) -> Result<()> {
+pub async fn article_rm(db: &impl DB, r: OpRequest<ArticleIdsDTO>) -> Result<()> {
     r.token
         .check_access_write(r.dto.owner_id, OID_ENTITY_WIKI)?;
 
-    server
-        .db
-        .fs_rm_object(r.dto.owner_id, r.dto.article_id)
-        .await?;
+    db.fs_rm_object(r.dto.owner_id, r.dto.article_id).await?;
 
     Ok(())
 }

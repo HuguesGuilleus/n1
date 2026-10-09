@@ -13,7 +13,7 @@ use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::net::TcpListener;
 use tokio::spawn;
 
-use crate::op::{self, DTO, OpServer, Token, URLDTO};
+use crate::op::{self, Common, DTO, Token, URLDTO};
 use crate::token::{token_decode, token_encode};
 use crate::{OpRequest, Result, errs, front};
 use n1_tool::proto_http::{
@@ -21,18 +21,20 @@ use n1_tool::proto_http::{
 };
 use n1_tool::{AtomicError, DB, ErrorKind, mime};
 
-pub struct HTTPServer<C: DB> {
-    pub op: OpServer<C>,
+#[derive(Clone)]
+pub struct HTTPServer<B: DB> {
+    pub db: Arc<B>,
+    pub common: Arc<Common>,
     pub key: [u8; 64],
 }
 
-pub async fn run<C: DB + Unpin + 'static>(server: Arc<HTTPServer<C>>) -> io::Result<()> {
+pub async fn run<C: DB + 'static>(server: Arc<HTTPServer<C>>) -> io::Result<()> {
     let addr: SocketAddr = ([127, 0, 0, 1], 8000).into();
     let listener = TcpListener::bind(addr).await?;
     run_with_listener(listener, server).await
 }
 
-pub async fn run_with_listener<C: DB + Unpin + 'static>(
+pub async fn run_with_listener<C: DB + 'static>(
     listener: TcpListener,
     server: Arc<HTTPServer<C>>,
 ) -> io::Result<()> {
@@ -65,7 +67,7 @@ pub async fn handle<R: AsyncRead + Unpin, C: DB>(
         "_favicon.webp" => asset(mime::WEBP, front::FAVICON),
         "robots.txt" => asset(mime::TEXT, front::ROBOTSTXT),
 
-        ":io" => with_url(s, r, op::big).await,
+        // ":io" => with_url(s, r, op::big).await,
 
         // Render HTML
         "_" => with_url(s, r, op::menu::page).await,
@@ -100,7 +102,7 @@ pub async fn handle<R: AsyncRead + Unpin, C: DB>(
 
         // Serve generated files
         _ => {
-            let (m, bytes) = s.op.db.page_get(r.path.as_str()).await?;
+            let (m, bytes) = s.db.page_get(r.path.as_str()).await?;
             if m == REDIRECT {
                 let location = String::from_utf8(bytes.to_vec())
                     .map_err(|_| errs::DB_DECODE.push("Cannot decode URL as UTF-8"))?;
@@ -133,7 +135,7 @@ fn asset<C: DB>(mime: &'static str, bytes: &'static [u8]) -> Result<Response<C>>
 async fn with_url<
     C: DB,
     R: AsyncRead,
-    F: AsyncFn(&OpServer<C>, OpRequest<D>) -> Result<O>,
+    F: AsyncFn(&C, OpRequest<D>) -> Result<O>,
     O: Into<Response<C>>,
     D: URLDTO,
 >(
@@ -150,13 +152,22 @@ async fn with_url<
             .unwrap_or(""),
     )?;
 
-    Ok(f(&s.op, OpRequest { token, dto }).await?.into())
+    Ok(f(
+        &s.db,
+        OpRequest {
+            common: s.common.clone(),
+            token,
+            dto,
+        },
+    )
+    .await?
+    .into())
 }
 
 async fn with_body<
     C: DB,
     R: AsyncRead + Unpin,
-    F: AsyncFn(&OpServer<C>, OpRequest<D>) -> Result<O>,
+    F: AsyncFn(&C, OpRequest<D>) -> Result<O>,
     O: Serialize,
     D: DTO,
 >(
@@ -178,7 +189,15 @@ async fn with_body<
     let dto: D = serde_json::from_slice(data).map_err(|_| errs::DECODE_REQUEST)?;
     dto.check()?;
 
-    let out = f(&s.op, OpRequest { token, dto }).await?;
+    let out = f(
+        &s.db,
+        OpRequest {
+            common: s.common.clone(),
+            token,
+            dto,
+        },
+    )
+    .await?;
 
     Ok(Response {
         status: StatusHTTP::OK,
@@ -217,7 +236,7 @@ fn get_token<B: AsyncRead>(key: &[u8], request: &HTTPRequest<B>) -> Token {
 async fn make_token<
     C: DB,
     R: AsyncRead + Unpin,
-    F: AsyncFn(&OpServer<C>, OpRequest<D>) -> Result<Token>,
+    F: AsyncFn(&C, OpRequest<D>) -> Result<Token>,
     D: DTO,
 >(
     s: &HTTPServer<C>,
@@ -236,8 +255,9 @@ async fn make_token<
     let dto = serde_json::from_slice(data).map_err(|_| errs::DECODE_REQUEST)?;
 
     let token: Token = f(
-        &s.op,
+        &s.db,
         OpRequest {
+            common: s.common.clone(),
             token: get_token(&s.key, &r),
             dto,
         },

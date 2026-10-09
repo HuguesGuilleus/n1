@@ -1,7 +1,7 @@
 use n1_tool::DB;
 use serde::Deserialize;
 
-use crate::{DTO, OpRequest, OpServer, Result, errs};
+use crate::{DTO, OpRequest, Result, errs};
 
 #[derive(Debug, Deserialize)]
 pub struct MkdirDTO {
@@ -18,6 +18,6 @@ impl DTO for MkdirDTO {
     }
 }
 
-pub async fn mkdir<C: DB>(_server: &OpServer<C>, _r: OpRequest<MkdirDTO>) -> Result<u32> {
+pub async fn mkdir(_: &impl DB, _r: OpRequest<MkdirDTO>) -> Result<u32> {
     Ok(42)
 }

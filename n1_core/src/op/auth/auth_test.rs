@@ -1,13 +1,13 @@
 use n1_tool::DB;
 use serde::Deserialize;
 
-use crate::{DTO, OpRequest, OpServer, Result, errs};
+use crate::{DTO, OpRequest, Result, errs};
 
-pub async fn auth_test_id(_server: &OpServer<impl DB>, r: OpRequest<()>) -> Result<u32> {
+pub async fn auth_test_id(_: &impl DB, r: OpRequest<()>) -> Result<u32> {
     Ok(r.token.uid)
 }
 
-pub async fn auth_test_isadmin(_server: &OpServer<impl DB>, r: OpRequest<()>) -> Result<bool> {
+pub async fn auth_test_isadmin(_: &impl DB, r: OpRequest<()>) -> Result<bool> {
     Ok(r.token.is_admin)
 }
 
@@ -29,19 +29,13 @@ impl DTO for AccessDTO {
     }
 }
 
-pub async fn auth_test_access_read(
-    _server: &OpServer<impl DB>,
-    r: OpRequest<AccessDTO>,
-) -> Result<bool> {
+pub async fn auth_test_access_read(_db: &impl DB, r: OpRequest<AccessDTO>) -> Result<bool> {
     Ok(r.token
         .check_access_read(r.dto.owner_id, r.dto.app_id)
         .is_ok())
 }
 
-pub async fn auth_test_access_write(
-    _server: &OpServer<impl DB>,
-    r: OpRequest<AccessDTO>,
-) -> Result<bool> {
+pub async fn auth_test_access_write(_: &impl DB, r: OpRequest<AccessDTO>) -> Result<bool> {
     Ok(r.token
         .check_access_write(r.dto.owner_id, r.dto.app_id)
         .is_ok())

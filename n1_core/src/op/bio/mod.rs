@@ -5,7 +5,7 @@ use n1_html::{H, Html, Q};
 use n1_tool::{DB, mime};
 
 use crate::{
-    DTO, OpRequest, OpServer, Result, errs, front,
+    Common, DTO, OpRequest, Result, errs, front,
     op::{OID_ENTITY_BIO, user::Entity},
 };
 
@@ -17,8 +17,8 @@ pub struct BioState {
     pub last_edit: u64,
 }
 
-pub async fn get(server: &OpServer<impl DB>, r: OpRequest<u32>) -> Result<BioState> {
-    Ok(server.db.obj_get(r.dto, OID_ENTITY_BIO as u32).await?)
+pub async fn get(db: &impl DB, r: OpRequest<u32>) -> Result<BioState> {
+    Ok(db.obj_get(r.dto, OID_ENTITY_BIO as u32).await?)
 }
 
 #[derive(Debug, PartialEq, Deserialize)]
@@ -34,11 +34,11 @@ impl DTO for BioSetRequest {
         Ok(())
     }
 }
-pub async fn set(server: &OpServer<impl DB>, r: OpRequest<BioSetRequest>) -> Result<()> {
+pub async fn set(db: &impl DB, r: OpRequest<BioSetRequest>) -> Result<()> {
     r.token.check_access_write(r.dto.oid, OID_ENTITY_BIO)?;
 
     // Check entity
-    let entities = server.entities.read().await;
+    let entities = r.common.entities.read().await;
     let entity = entities
         .get(&r.dto.oid)
         .ok_or(errs::NOT_FOUND.push(format!("Cannot get entity with id={}", r.dto.oid)))?;
@@ -49,44 +49,34 @@ pub async fn set(server: &OpServer<impl DB>, r: OpRequest<BioSetRequest>) -> Res
     // Save the bio state
     let bio = BioState {
         content: r.dto.content,
-        last_edit: server.db.now()?,
+        last_edit: db.now()?,
     };
 
-    server
-        .db
-        .obj_set(r.dto.oid, OID_ENTITY_BIO as u32, &bio)
-        .await?;
+    db.obj_set(r.dto.oid, OID_ENTITY_BIO as u32, &bio).await?;
 
     // Generate the bio page
-    bio_generate_page(server, entity, &bio).await?;
+    bio_generate_page(db, entity, &bio).await?;
 
     Ok(())
 }
 
-pub async fn generate_all_pages(server: &OpServer<impl DB>) -> Result<()> {
-    let entities = server.entities.read().await;
+pub async fn generate_all_pages(db: &impl DB, common: &Common) -> Result<()> {
+    let entities = common.entities.read().await;
 
     for entity in entities.values() {
         if entity.is_none() {
             continue;
         }
 
-        let bio = server
-            .db
-            .obj_get(entity.id(), OID_ENTITY_BIO as u32)
-            .await?;
+        let bio = db.obj_get(entity.id(), OID_ENTITY_BIO as u32).await?;
 
-        bio_generate_page(server, entity, &bio).await?;
+        bio_generate_page(db, entity, &bio).await?;
     }
 
     Ok(())
 }
 
-async fn bio_generate_page(
-    server: &OpServer<impl DB>,
-    entity: &Entity,
-    bio: &BioState,
-) -> Result<()> {
+async fn bio_generate_page(db: &impl DB, entity: &Entity, bio: &BioState) -> Result<()> {
     if entity.is_none() {
         return Ok(());
     }
@@ -127,14 +117,12 @@ async fn bio_generate_page(
         + ""]
     .render_page();
 
-    server
-        .db
-        .page_set(
-            &format!("/@{}/", entity.name()),
-            mime::HTML,
-            Bytes::from_owner(h),
-        )
-        .await?;
+    db.page_set(
+        &format!("/@{}/", entity.name()),
+        mime::HTML,
+        Bytes::from_owner(h),
+    )
+    .await?;
 
     Ok(())
 }

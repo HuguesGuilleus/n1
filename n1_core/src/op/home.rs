@@ -1,7 +1,7 @@
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
-use super::{DTO, OID_GLOBAL_HOME, OpRequest, OpServer, compo};
+use super::{DTO, OID_GLOBAL_HOME, OpRequest, compo};
 use crate::{Result, errs, front};
 use n1_html::{DirectHTML, H, Html, Q};
 use n1_tool::{DB, mime};
@@ -32,9 +32,8 @@ impl DTO for HomeState {
     }
 }
 
-pub async fn init(server: &OpServer<impl DB>) -> Result<()> {
-    let mut state = server
-        .db
+pub async fn init(db: &impl DB) -> Result<()> {
+    let mut state = db
         .obj_get(0, OID_GLOBAL_HOME as u32)
         .await
         .unwrap_or_else(|_| HomeState::default());
@@ -54,26 +53,20 @@ pub async fn init(server: &OpServer<impl DB>) -> Result<()> {
     }
 
     if edit {
-        server.db.obj_set(0, OID_GLOBAL_HOME as u32, &state).await?;
+        db.obj_set(0, OID_GLOBAL_HOME as u32, &state).await?;
     }
 
-    server
-        .db
-        .page_set("/", mime::HTML, render_pub(&state))
-        .await?;
+    db.page_set("/", mime::HTML, render_pub(&state)).await?;
 
     Ok(())
 }
 
-pub async fn json_edit(server: &OpServer<impl DB>, r: OpRequest<HomeState>) -> Result<()> {
+pub async fn json_edit(db: &impl DB, r: OpRequest<HomeState>) -> Result<()> {
     r.token.check_isadmin()?;
 
-    server
-        .db
-        .page_set("/", mime::HTML, render_pub(&r.dto))
-        .await?;
+    db.page_set("/", mime::HTML, render_pub(&r.dto)).await?;
 
-    server.db.obj_set(0, OID_GLOBAL_HOME as u32, &r.dto).await?;
+    db.obj_set(0, OID_GLOBAL_HOME as u32, &r.dto).await?;
 
     Ok(())
 }
@@ -106,9 +99,9 @@ fn render_pub(home: &HomeState) -> Bytes {
     )
 }
 
-pub async fn page_console(server: &OpServer<impl DB>, r: OpRequest<()>) -> Result<String> {
+pub async fn page_console(db: &impl DB, r: OpRequest<()>) -> Result<String> {
     r.token.check_isadmin()?;
-    let state = server.db.obj_get(0, OID_GLOBAL_HOME as u32).await?;
+    let state = db.obj_get(0, OID_GLOBAL_HOME as u32).await?;
     Ok(render_console(&state))
 }
 
