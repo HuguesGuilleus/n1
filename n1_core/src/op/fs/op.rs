@@ -1,7 +1,6 @@
 use n1_tool::DB;
 use serde::Deserialize;
 
-use crate::op::Json;
 use crate::{DTO, OpRequest, OpServer, Result, errs};
 
 #[derive(Debug, Deserialize)]
@@ -19,6 +18,6 @@ impl DTO for MkdirDTO {
     }
 }
 
-pub async fn mkdir<C: DB>(_server: &OpServer<C>, _r: OpRequest<MkdirDTO>) -> Result<Json<u32>> {
-    Ok(Json(42))
+pub async fn mkdir<C: DB>(_server: &OpServer<C>, _r: OpRequest<MkdirDTO>) -> Result<u32> {
+    Ok(42)
 }

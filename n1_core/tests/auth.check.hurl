@@ -19,12 +19,12 @@ cookieBob: cookie "auth"
 PUT http://localhost:8000/:auth.check.auth/
 Cookie: auth={{cookieEve}}
 HTTP 200
-``
+`null`
 
 PUT http://localhost:8000/:auth.check.auth/
 Cookie: auth={{cookieBob}}
 HTTP 200
-``
+`null`
 
 PUT http://localhost:8000/:auth.check.auth/
 HTTP 401
@@ -35,7 +35,7 @@ HTTP 401
 PUT http://localhost:8000/:auth.check.isadmin/
 Cookie: auth={{cookieEve}}
 HTTP 200
-``
+`null`
 
 PUT http://localhost:8000/:auth.check.isadmin/
 Cookie: auth={{cookieBob}}
@@ -51,13 +51,13 @@ PUT http://localhost:8000/:auth.check.access.read/
 Cookie: auth={{cookieEve}}
 {"owner_id":201,"app_id":1}
 HTTP 200
-``
+`null`
 
 PUT http://localhost:8000/:auth.check.access.read/
 Cookie: auth={{cookieBob}}
 {"owner_id":201,"app_id":1}
 HTTP 200
-``
+`null`
 
 PUT http://localhost:8000/:auth.check.access.read/
 {"owner_id":201,"app_id":1}
@@ -70,7 +70,7 @@ PUT http://localhost:8000/:auth.check.access.write/
 Cookie: auth={{cookieEve}}
 {"owner_id":201,"app_id":1}
 HTTP 200
-``
+`null`
 
 PUT http://localhost:8000/:auth.check.access.write/
 Cookie: auth={{cookieBob}}

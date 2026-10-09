@@ -6,7 +6,7 @@ use n1_tool::{DB, mime};
 
 use crate::{
     DTO, OpRequest, OpServer, Result, errs, front,
-    op::{Json, OID_ENTITY_BIO, user::Entity},
+    op::{OID_ENTITY_BIO, user::Entity},
 };
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
@@ -17,8 +17,8 @@ pub struct BioState {
     pub last_edit: u64,
 }
 
-pub async fn get(server: &OpServer<impl DB>, r: OpRequest<u32>) -> Result<Json<BioState>> {
-    Ok(Json(server.db.obj_get(r.dto, OID_ENTITY_BIO as u32).await?))
+pub async fn get(server: &OpServer<impl DB>, r: OpRequest<u32>) -> Result<BioState> {
+    Ok(server.db.obj_get(r.dto, OID_ENTITY_BIO as u32).await?)
 }
 
 #[derive(Debug, PartialEq, Deserialize)]

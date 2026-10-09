@@ -3,12 +3,14 @@ use hurl::{
     util::logger::{LoggerOptionsBuilder, Verbosity},
 };
 use hurl_core::input::Input;
+use tokio::{io, net::TcpListener, spawn};
+
+use std::{fs, net::SocketAddr, sync::Arc};
+
 use n1_core::{
     init_dev,
     proto_http::{HTTPServer, run_with_listener},
 };
-use std::{fs, net::SocketAddr, sync::Arc};
-use tokio::{io, net::TcpListener, spawn};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn hurl_tests() {
@@ -36,7 +38,7 @@ async fn hurl_tests() {
     paths.sort();
 
     for path in paths {
-        let content = fs::read_to_string(&path).unwrap();
+        let content: String = fs::read_to_string(&path).unwrap();
         let result = run(
             &content,
             Some(&Input::new(&path)),

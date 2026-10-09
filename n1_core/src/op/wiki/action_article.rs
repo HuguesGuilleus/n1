@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 use crate::{
     DTO, OpRequest, OpServer, Result, errs,
-    op::{Json, OID_ENTITY_WIKI, wiki::Article},
+    op::{OID_ENTITY_WIKI, wiki::Article},
 };
 
 #[derive(Debug, Deserialize)]
@@ -24,14 +24,14 @@ impl DTO for ArticleIdsDTO {
 pub async fn article_get(
     server: &OpServer<impl DB>,
     r: OpRequest<ArticleIdsDTO>,
-) -> Result<Json<Article>> {
+) -> Result<Article> {
     let article: Article = server.db.obj_get(r.dto.owner_id, r.dto.article_id).await?;
 
     if article.oid == 0 {
         errs::NOT_FOUND.push_result("article not found")?;
     }
 
-    Ok(Json(article))
+    Ok(article)
 }
 
 #[derive(Debug, Deserialize)]
@@ -52,10 +52,7 @@ impl DTO for NewArticleDTO {
         Ok(())
     }
 }
-pub async fn article_new(
-    server: &OpServer<impl DB>,
-    r: OpRequest<NewArticleDTO>,
-) -> Result<Json<u32>> {
+pub async fn article_new(server: &OpServer<impl DB>, r: OpRequest<NewArticleDTO>) -> Result<u32> {
     r.token
         .check_access_write(r.dto.owner_id, OID_ENTITY_WIKI)?;
 
@@ -72,7 +69,7 @@ pub async fn article_new(
 
     // todo: regenerate wiki
 
-    Ok(Json(oid))
+    Ok(oid)
 }
 
 #[derive(Debug, Deserialize)]

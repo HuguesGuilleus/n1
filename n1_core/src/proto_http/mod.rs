@@ -13,7 +13,7 @@ use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::net::TcpListener;
 use tokio::spawn;
 
-use crate::op::{self, DTO, Json, OpServer, Token, URLDTO};
+use crate::op::{self, DTO, OpServer, Token, URLDTO};
 use crate::token::{token_decode, token_encode};
 use crate::{OpRequest, Result, errs, front};
 use n1_tool::proto_http::{
@@ -130,17 +130,6 @@ fn asset<C: DB>(mime: &'static str, bytes: &'static [u8]) -> Result<Response<C>>
     })
 }
 
-impl<C: DB, T: Serialize> From<Json<T>> for Response<C> {
-    fn from(v: Json<T>) -> Self {
-        Response {
-            status: StatusHTTP::OK,
-            mime: mime::JSON,
-            header: None,
-            body: ResponseBody::Bytes(Bytes::from_owner(serde_json::to_vec(&v.0).unwrap())),
-        }
-    }
-}
-
 async fn with_url<
     C: DB,
     R: AsyncRead,
@@ -168,7 +157,7 @@ async fn with_body<
     C: DB,
     R: AsyncRead + Unpin,
     F: AsyncFn(&OpServer<C>, OpRequest<D>) -> Result<O>,
-    O: Into<Response<C>>,
+    O: Serialize,
     D: DTO,
 >(
     s: &HTTPServer<C>,
@@ -189,7 +178,14 @@ async fn with_body<
     let dto: D = serde_json::from_slice(data).map_err(|_| errs::DECODE_REQUEST)?;
     dto.check()?;
 
-    Ok(f(&s.op, OpRequest { token, dto }).await?.into())
+    let out = f(&s.op, OpRequest { token, dto }).await?;
+
+    Ok(Response {
+        status: StatusHTTP::OK,
+        mime: mime::JSON,
+        header: None,
+        body: ResponseBody::Bytes(Bytes::from_owner(serde_json::to_vec(&out).unwrap())),
+    })
 }
 
 fn get_token<B: AsyncRead>(key: &[u8], request: &HTTPRequest<B>) -> Token {

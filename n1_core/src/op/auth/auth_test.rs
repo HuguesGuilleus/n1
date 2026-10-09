@@ -1,18 +1,14 @@
 use n1_tool::DB;
 use serde::Deserialize;
 
-use crate::op::Json;
 use crate::{DTO, OpRequest, OpServer, Result, errs};
 
-pub async fn auth_test_id(_server: &OpServer<impl DB>, r: OpRequest<()>) -> Result<Json<u32>> {
-    Ok(Json(r.token.uid))
+pub async fn auth_test_id(_server: &OpServer<impl DB>, r: OpRequest<()>) -> Result<u32> {
+    Ok(r.token.uid)
 }
 
-pub async fn auth_test_isadmin(
-    _server: &OpServer<impl DB>,
-    r: OpRequest<()>,
-) -> Result<Json<bool>> {
-    Ok(Json(r.token.is_admin))
+pub async fn auth_test_isadmin(_server: &OpServer<impl DB>, r: OpRequest<()>) -> Result<bool> {
+    Ok(r.token.is_admin)
 }
 
 #[derive(Debug, Deserialize)]
@@ -36,21 +32,17 @@ impl DTO for AccessDTO {
 pub async fn auth_test_access_read(
     _server: &OpServer<impl DB>,
     r: OpRequest<AccessDTO>,
-) -> Result<Json<bool>> {
-    Ok(Json(
-        r.token
-            .check_access_read(r.dto.owner_id, r.dto.app_id)
-            .is_ok(),
-    ))
+) -> Result<bool> {
+    Ok(r.token
+        .check_access_read(r.dto.owner_id, r.dto.app_id)
+        .is_ok())
 }
 
 pub async fn auth_test_access_write(
     _server: &OpServer<impl DB>,
     r: OpRequest<AccessDTO>,
-) -> Result<Json<bool>> {
-    Ok(Json(
-        r.token
-            .check_access_write(r.dto.owner_id, r.dto.app_id)
-            .is_ok(),
-    ))
+) -> Result<bool> {
+    Ok(r.token
+        .check_access_write(r.dto.owner_id, r.dto.app_id)
+        .is_ok())
 }

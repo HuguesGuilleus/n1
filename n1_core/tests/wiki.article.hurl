@@ -23,21 +23,21 @@ PUT http://localhost:8000/:wiki.article.setTitle/
 Cookie: auth={{cookie}}
 {"owner_id":201,"article_id":{{article_id}},"title":"Title 2"}
 HTTP 200
-``
+`null`
 
 # Set slug
 PUT http://localhost:8000/:wiki.article.setSlug/
 Cookie: auth={{cookie}}
 {"owner_id":201,"article_id":{{article_id}},"slug":"slug2"}
 HTTP 200
-``
+`null`
 
 # Set content
 PUT http://localhost:8000/:wiki.article.setContent/
 Cookie: auth={{cookie}}
 {"owner_id":201,"article_id":{{article_id}},"content":"Lorem ipsum."}
 HTTP 200
-``
+`null`
 
 # Get edited article
 PUT http://localhost:8000/:wiki.article.get/
@@ -50,7 +50,7 @@ PUT http://localhost:8000/:wiki.article.rm/
 Cookie: auth={{cookie}}
 {"owner_id":201,"article_id":{{article_id}}}
 HTTP 200
-``
+`null`
 
 # Check article is removed
 PUT http://localhost:8000/:wiki.article.get/

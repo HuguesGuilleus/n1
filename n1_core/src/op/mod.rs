@@ -63,9 +63,6 @@ impl<C: DB> OpServer<C> {
     }
 }
 
-/// Indicate that the return type will be retured in JSON.
-pub struct Json<T>(pub T);
-
 pub async fn big<C: DB>(server: &OpServer<C>, _req: OpRequest<()>) -> Result<Chunks<C>> {
     let b1 = Bytes::from_static(b"Hello ");
     let b2 = Bytes::from_static(b"World!\r\n");
