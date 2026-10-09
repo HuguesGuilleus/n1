@@ -1,13 +1,10 @@
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
-use n1_html::{H, Html, Q};
+use n1_html::{DirectHTML, H, Html, Q};
 use n1_tool::{DB, mime};
 
-use crate::{
-    Common, DTO, OpRequest, Result, errs, front,
-    op::{OID_ENTITY_BIO, user::Entity},
-};
+use crate::{Common, DTO, OpRequest, Result, errs, front, op::OID_ENTITY_BIO};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct BioState {
@@ -38,13 +35,7 @@ pub async fn set(db: &impl DB, r: OpRequest<BioSetRequest>) -> Result<()> {
     r.token.check_access_write(r.dto.oid, OID_ENTITY_BIO)?;
 
     // Check entity
-    let entities = r.common.entities.read().await;
-    let entity = entities
-        .get(&r.dto.oid)
-        .ok_or(errs::NOT_FOUND.push(format!("Cannot get entity with id={}", r.dto.oid)))?;
-    if entity.is_none() {
-        return errs::EXPECT_REEL_ENTITY.push_result("entity is none");
-    }
+    let entity_name = r.common.get_entity_name(r.dto.oid).await?;
 
     // Save the bio state
     let bio = BioState {
@@ -55,7 +46,7 @@ pub async fn set(db: &impl DB, r: OpRequest<BioSetRequest>) -> Result<()> {
     db.obj_set(r.dto.oid, OID_ENTITY_BIO as u32, &bio).await?;
 
     // Generate the bio page
-    bio_generate_page(db, entity, &bio).await?;
+    generate_one_page(db, &entity_name, &bio).await?;
 
     Ok(())
 }
@@ -70,21 +61,23 @@ pub async fn generate_all_pages(db: &impl DB, common: &Common) -> Result<()> {
 
         let bio = db.obj_get(entity.id(), OID_ENTITY_BIO as u32).await?;
 
-        bio_generate_page(db, entity, &bio).await?;
+        generate_one_page(db, entity.name(), &bio).await?;
     }
 
     Ok(())
 }
 
-async fn bio_generate_page(db: &impl DB, entity: &Entity, bio: &BioState) -> Result<()> {
-    if entity.is_none() {
+async fn generate_one_page(db: &impl DB, entity_name: &str, bio: &BioState) -> Result<()> {
+    let path = format!("/@{}/", entity_name);
+    if bio.content.is_empty() {
+        db.page_set(&path, "", Bytes::new()).await?;
         return Ok(());
     }
 
     let h = [H - "html lang=fr"
-        + [H - "head" + front::HEAD + [H - "title" + "@" + entity.name()]]
+        + [H - "head" + front::HEAD + [H - "title" + "@" + entity_name]]
         + [H - "body"
-            + [H - "h1.big" + entity.name()]
+            + [H - "h1.big" + "@" + entity_name]
             + [H - "main.w"
                 + [H - "div.fh.mv.gap"
                     + [H + || {
@@ -117,12 +110,45 @@ async fn bio_generate_page(db: &impl DB, entity: &Entity, bio: &BioState) -> Res
         + ""]
     .render_page();
 
-    db.page_set(
-        &format!("/@{}/", entity.name()),
-        mime::HTML,
-        Bytes::from_owner(h),
-    )
-    .await?;
+    db.page_set(&path, mime::HTML, Bytes::from_owner(h)).await?;
 
     Ok(())
+}
+
+pub async fn console(db: &impl DB, r: OpRequest<u32>) -> Result<String> {
+    r.token.check_access_write(r.dto, OID_ENTITY_BIO)?;
+    let entity_name = r.common.get_entity_name(r.dto).await?;
+    let bio: BioState = db.obj_get(r.dto, OID_ENTITY_BIO as u32).await?;
+
+    let h = [H - "html lang=fr"
+        + [H - "head" + front::HEAD + [H - "title" + "!Modifie la page de @" + &entity_name]]
+        + [H - "body"
+            + [H - "header" + [H - "h1.bl" + "!Modifie la page de @" + &entity_name]]
+            + [H - "main.w"
+                + [H - "div.fh.mv"
+                    + [H - "a.bl href=/@" - &entity_name - "/" + "@" + &entity_name]]
+                + [H - "div.bb.act"
+                    + [H - "p"
+                        + "Chaque ligne est analysée séparément: comme un lien (débutant par l'URL), un lien de réseau sociaux (débutant par 'me+https://'), ou simplement un paragraphe."]
+                    + [H - "div hidden id=_oid" + r.dto]
+                    + [H - "pre.bl.act id=_content contenteditable" + bio.content]
+                    + [H - "button.bl.act onclick=send()" + "!Enregistrer"]
+                    + ""]
+                + ""]
+            + [H - "footer" + [H - "a.small href=/ " + "Accueil"]]
+            + [H - "script"
+                + DirectHTML(
+                    r#"const send=()=>{
+                        fetch("/:bio.set/", {
+                            method: "PUT",
+                            body: JSON.stringify({
+                                oid: parseInt(_oid.innerText) ,
+                                content: _content.innerText ,
+                            }),
+                        });
+                    }"#,
+                )]
+            + ""]];
+
+    Ok(h.render_page())
 }

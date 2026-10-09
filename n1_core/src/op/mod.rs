@@ -18,6 +18,7 @@ use n1_tool::DB;
 use tokio::sync::RwLock;
 
 use crate::Result;
+use crate::errs;
 use crate::op::user::Entity;
 pub use auth::*;
 pub use dto::*;
@@ -59,6 +60,17 @@ impl Common {
         wiki::render_pub(db, self).await?;
 
         Ok(())
+    }
+
+    pub async fn get_entity_name(&self, oid: u32) -> Result<String> {
+        let entities = self.entities.read().await;
+        let entity = entities
+            .get(&oid)
+            .ok_or(errs::NOT_FOUND.push(format!("Cannot get entity with id={}", oid)))?;
+        if entity.is_none() {
+            errs::EXPECT_REEL_ENTITY.push_result("entity is none")?;
+        }
+        Ok(entity.name().to_string())
     }
 }
 

@@ -68,6 +68,10 @@ pre {
 	overflow-wrap: break-word;
 }
 
+[contenteditable] {
+	min-height: calc(var(--SP) * 4);
+}
+
 hr {
 	border: solid var(--LINE) var(--c);
 	border-top: 0;

@@ -117,10 +117,10 @@ fn render_console(state: &HomeState) -> String {
                             + [H - "input.bg id=_title value=" - Q(&state.title)]
                         + ""]
                         + [H - "label for=_desc" + "Description:"]
-                        + [H - "div.act.bg contenteditable id=_desc" + &state.desc]
+                        + [H - "div.act.bl contenteditable id=_desc" + &state.desc]
                         + [H - "label for=_content" + "Contenu de la première page, utiliser des lignes vides pour séparer les paragraphes:"]
-                        + [H - "pre.act.bg contenteditable id=_content" +&state.content]
-                        + [H - "button.bl onclick=send()" +"Envoyer"]
+                        + [H - "pre.act.bl contenteditable id=_content" +&state.content]
+                        + [H - "button.bl onclick=send()" +"!Enregistrer"]
                     + ""]
                     +[H - "script" + DirectHTML(r#"const send=()=>{
                         fetch("/:home/", {
@@ -133,6 +133,7 @@ fn render_console(state: &HomeState) -> String {
                         });
                     }"#)]
                 + ""]
+                + [H - "footer" + [H - "a.small href=/ " + "Accueil"]]
             + ""]
         + ""]
     .render_page()

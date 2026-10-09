@@ -71,6 +71,7 @@ pub async fn handle<R: AsyncRead + Unpin, C: DB>(
 
         // Render HTML
         "_" => with_url(s, r, op::menu::page).await,
+        "_bio" => with_url(s, r, op::bio::console).await,
         "_dropbox" => with_url(s, r, op::dropbox::page).await,
         "_home" => with_url(s, r, op::home::page_console).await,
         "_wiki_new" => with_url(s, r, op::wiki::render_priv_new).await,
