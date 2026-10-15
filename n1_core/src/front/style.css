@@ -160,6 +160,7 @@ a {
 .w {
 	margin: 0 auto;
 	max-width: var(--W);
+	width: 100%;
 }
 
 /* flex vertical and horizontal */

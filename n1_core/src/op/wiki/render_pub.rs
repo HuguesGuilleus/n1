@@ -6,61 +6,81 @@ use crate::{
     Common, front,
     op::{
         EntityAndObjectDTO, OID_ENTITY_WIKI, compo,
-        user::{Entity, Group},
+        user::Entity,
         wiki::{Article, State},
     },
 };
 
+/// Render the public wiki pages for groups and users.
 pub async fn render_pub(db: &impl DB, server: &Common) -> Result<()> {
     let entities = server.entities.read().await;
     for owner in entities.values() {
-        if let Entity::Group(group) = owner {
-            render_pub_one(db, group)
-                .await
-                .err()
-                .inspect(|err| eprintln!("in wiki load of {}: {:?}", owner.id(), err));
-        }
+        render_pub_for_entity(db, owner)
+            .await
+            .err()
+            .inspect(|err| eprintln!("in wiki load of {}: {:?}", owner.id(), err));
     }
 
     Ok(())
 }
 
-async fn render_pub_one(db: &impl DB, owner: &Group) -> Result<()> {
-    let state: State = db.obj_get(owner.gid, OID_ENTITY_WIKI as u32).await?;
-    if state.shadow == 0 {
+async fn render_pub_for_entity(db: &impl DB, owner: &Entity) -> Result<()> {
+    if owner.is_none() {
         return Ok(());
     }
 
-    render_pub_index(db, owner, &state).await?;
-    for page in &state.articles {
-        render_pub_page(db, owner, &state, &page).await?;
+    let state: State = db.obj_get(owner.id(), OID_ENTITY_WIKI as u32).await?;
+    if state.owner_id == 0 {
+        return Ok(());
     }
+
+    render_one_wiki(db, owner.name(), &state).await?;
 
     Ok(())
 }
 
-async fn render_pub_index(db: &impl DB, owner: &Group, state: &State) -> Result<()> {
-    let mut pages: Vec<&Article> = state.articles.iter().collect();
-    pages.sort_by(|p1, p2| p1.slug.cmp(&p2.slug));
+pub async fn render_one_wiki(db: &impl DB, owner_name: &str, wiki: &State) -> Result<()> {
+    render_pub_index(db, owner_name, wiki).await?;
+    for article in wiki.articles.values() {
+        render_pub_page(db, owner_name, wiki, article).await?;
+    }
+    Ok(())
+}
+
+async fn render_pub_index(db: &impl DB, owner_name: &str, state: &State) -> Result<()> {
+    let mut articles = state.articles.values().collect::<Vec<_>>();
+    articles.sort_by_key(|article| &article.slug);
+
     db.page_set(
-        &format!("/.{}/", state.shadow),
+        &format!("/@{}/w/", &owner_name),
         mime::HTML,
         Bytes::from_owner(
             [H - "html lang=fr"
-                + [H - "head" + front::HEAD + [H - "title" + "Wiki de " + &owner.name]]
+                + [H - "head" + front::HEAD + [H - "title" + "Wiki de " + owner_name]]
                 + [H - "body"
+                    + [H - "header.fh.gap"
+                        + [H - "div.bl.fh.gap"
+                            + [H - "a.bg href=/@" - owner_name + "@" + owner_name]
+                            + "[wiki]"
+                            + ""]
+                        + [H - "a.mlauto.bl href=/_" + "Menu"]
+                        + ""]
                     + [H - "main.w"
                         + [H - "div.fv.gap"
                             + || {
-                                pages.iter().map(|&page| {
+                                articles.iter().map(|&article| {
                                     [H - "a.bl href="
-                                        - format!("/.{}/{}-{}", state.shadow, page.oid, page.slug)
-                                        + &page.title
+                                        - format!(
+                                            "/@{}/w/{}-{}",
+                                            owner_name, article.article_id, article.slug
+                                        )
+                                        + &article.title
                                         + ""]
                                 })
                             }]]
                     + [H - "script" + compo::LOGIN_JS + compo::TIME_JS]
-                    + ""]]
+                    + ""]
+                + ""]
             .render_page(),
         ),
     )
@@ -69,34 +89,42 @@ async fn render_pub_index(db: &impl DB, owner: &Group, state: &State) -> Result<
     Ok(())
 }
 
-async fn render_pub_page(db: &impl DB, owner: &Group, state: &State, page: &Article) -> Result<()> {
-    let content = String::from_utf8_lossy(&db.fs_get(state.eid, page.oid).await?).to_string();
+async fn render_pub_page(
+    db: &impl DB,
+    owner_name: &str,
+    wiki: &State,
+    article: &Article,
+) -> Result<()> {
+    let content =
+        String::from_utf8_lossy(&db.fs_get(wiki.owner_id, article.article_id).await?).to_string();
 
     db.page_set(
-        &format!("/.{}/{}-{}", state.shadow, page.oid, page.slug),
+        &format!("/@{}/w/{}-{}", owner_name, article.article_id, article.slug),
         mime::HTML,
         Bytes::from_owner(
             [H - "html lang=fr"
-                + [H - "head" + front::HEAD + [H - "title" + &page.title]]
+                + [H - "head" + front::HEAD + [H - "title" + &article.title]]
                 + [H - "body"
-                    + compo::header(
-                        H + [H - "a.bl href=/@" - &owner.name + "@" + &owner.name]
-                            + [H - "a.bl href=./ " + "[wiki]"]
-                            + [H - "div.bl"
-                                + &page.title
-                                + " "
-                                + [H - "a.bg href=/_wiki_page/"
-                                    - EntityAndObjectDTO {
-                                        eid: owner.gid,
-                                        oid: page.oid,
-                                    }
-                                    + "Éditer la page"]
-                                + ""],
-                    )
-                    + compo::header(H - "Wiki" + "@" + &owner.name)
+                    + [H - "header.fh.gap"
+                        + [H - "div.bl.fh.gap"
+                            + [H - "a.bg href=/@" - owner_name + "@" + owner_name]
+                            + [H - "a.bg href=./ " + "[wiki]"]
+                            + [H - "h1" + &article.title + ""]
+                            + [H - "a.bg href=/_wiki_page/"
+                                - EntityAndObjectDTO {
+                                    eid: wiki.owner_id,
+                                    oid: article.article_id,
+                                }
+                                + "Éditer la page"]
+                            + ""]
+                        + [H - "a.mlauto.bl href=/_" + "Menu"]
+                        + ""]
                     + [H - "main.w"
                         + [H - "div"
-                            + [H - "i" + "Modification: " + [H - "time" + page.last_edit] + ""]]
+                            + [H - "i"
+                                + "Dernière modification\u{202F}: "
+                                + [H - "time" + article.last_edit]
+                                + ""]]
                         + [H - "" + || content.lines().map(|line| H - "p" + line)]
                         + ""]
                     + ""]

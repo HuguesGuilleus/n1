@@ -16,7 +16,7 @@ article_id: body
 PUT http://localhost:8000/:wiki.article.get/
 {"owner_id":201,"article_id":{{article_id}}}
 HTTP 200
-{"oid":{{article_id}},"slug":"slug1","title":"Title 1","last_edit":1780998183,"content":"..."}
+{"article_id":{{article_id}},"slug":"slug1","title":"Title 1","last_edit":1780998183,"content":"..."}
 
 # Set title
 PUT http://localhost:8000/:wiki.article.setTitle/
@@ -43,7 +43,7 @@ HTTP 200
 PUT http://localhost:8000/:wiki.article.get/
 {"owner_id":201,"article_id":{{article_id}}}
 HTTP 200
-{"oid":{{article_id}},"slug":"slug2","title":"Title 2","last_edit":1780998183,"content":"Lorem ipsum."}
+{"article_id":{{article_id}},"slug":"slug2","title":"Title 2","last_edit":1780998183,"content":"Lorem ipsum."}
 
 # Check article is removed
 PUT http://localhost:8000/:wiki.article.rm/

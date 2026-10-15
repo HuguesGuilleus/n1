@@ -5,57 +5,36 @@ use crate::{
     OpRequest,
     errs::{self},
     front,
-    op::{EntityAndObjectDTO, OID_ENTITY_WIKI, compo, user::Entity, wiki::State},
+    op::{EntityAndObjectDTO, OID_ENTITY_WIKI, compo, wiki::State},
 };
 
 pub async fn render_priv_index(db: &impl DB, r: OpRequest<u32>) -> Result<String> {
     r.token.check_access_write(r.dto, OID_ENTITY_WIKI)?;
 
-    let owner = {
-        let entities = r.common.entities.read().await;
-        match entities.get(&r.dto) {
-            Some(Entity::Group(group)) => group.clone(),
-            Some(_) => return Err(errs::FORBIDEN_GROUP.into()),
-            None => return Err(errs::NOT_FOUND.into()),
-        }
-    };
+    let owner_id = r.dto;
+    let owner_name = r.common.get_entity_name(owner_id).await?;
     let wiki: State = db.obj_get(r.dto, OID_ENTITY_WIKI as u32).await?;
 
     Ok([H - "html lang=fr"
         + [H - "head" + front::HEAD + [H - "title" + "Wiki"]]
         + [H - "body"
             + compo::header(
-                H + [H - "a.bg href=/_wiki/" - owner.gid + "wiki" + " @" + &owner.name]
+                H + [H - "a.bg href=/_wiki/" - owner_id + "wiki" + " @" + &owner_name]
                     + " "
                     + "Édition du wiki",
             )
             + [H - "main.w.fv.gap"
-                + (wiki.shadow == 0).then(|| {
-                    [H - "div.bl.fv.gap"
-                        + [H - "a.bl href=/@" - &owner.name - "/w/ " + "/@" + &owner.name + "/w/"]
-                        + [H - "div" + [H - "button.bl" + "Rendre caché"]]
-                        + ""]
-                })
-                + (wiki.shadow != 0).then(|| {
-                    [H - "div.bl.fv.gap"
-                        + [H - "a.bl href=/." - wiki.shadow - "/" + "/." + wiki.shadow + "/"]
-                        + [H - "div.fh.gap"
-                            + [H - "button.bl" + "Regénéré le code"]
-                            + [H - "button.bl" + "Rendre caché"]
-                            + ""]
-                        + ""]
-                })
-                + [H - "div.fh" + [H - "a.bl href=/_wiki_new/" - owner.gid + "Nouvelle page"]]
+                + [H - "div.fh" + [H - "a.bl href=/_wiki_new/" - owner_id + "Nouvelle page"]]
                 + (|| {
-                    wiki.articles.iter().map(|page| {
+                    wiki.articles.values().map(|article| {
                         H - "a.bl href=/_wiki_page/"
                             - EntityAndObjectDTO {
-                                eid: owner.gid,
-                                oid: page.oid,
+                                eid: owner_id,
+                                oid: article.article_id,
                             }
-                            + [H - "div" + [H - "b" + &page.title]]
-                            + [H - "div" + ".../" + page.oid + "-" + &page.slug]
-                            + [H - "time" + page.last_edit]
+                            + [H - "div" + [H - "b" + &article.title]]
+                            + [H - "div" + ".../" + article.article_id + "-" + &article.slug]
+                            + [H - "time" + article.last_edit]
                     })
                 })
                 + ""]
@@ -69,38 +48,31 @@ pub async fn render_priv_index(db: &impl DB, r: OpRequest<u32>) -> Result<String
 pub async fn render_priv_page(db: &impl DB, r: OpRequest<EntityAndObjectDTO>) -> Result<String> {
     r.token.check_access_write(r.dto.eid, OID_ENTITY_WIKI)?;
 
-    let owner = {
-        let entities = r.common.entities.read().await;
-        match entities.get(&r.dto.eid) {
-            Some(Entity::Group(group)) => group.clone(),
-            Some(_) => return Err(errs::FORBIDEN_GROUP.into()),
-            None => return Err(errs::NOT_FOUND.into()),
-        }
-    };
-
+    let owner_id = r.dto.eid;
+    let owner_name = r.common.get_entity_name(owner_id).await?;
     let wiki: State = db.obj_get(r.dto.eid, OID_ENTITY_WIKI as u32).await?;
-    let page = &wiki.articles[wiki
+    let article = wiki
         .articles
-        .binary_search_by(|page| page.oid.cmp(&r.dto.oid))
-        .map_err(|_| errs::NOT_FOUND)?];
+        .get(&r.dto.oid)
+        .ok_or_else(|| errs::NOT_FOUND.push(format!("Article {} not found", r.dto.oid)))?;
     let content = db.fs_get(r.dto.eid, r.dto.oid).await?;
 
     Ok([H - "html lang=fr"
-        + [H - "head" + front::HEAD + [H - "title" + "Wiki " + &page.title]]
+        + [H - "head" + front::HEAD + [H - "title" + "Wiki " + &article.title]]
         + [H - "body"
             + compo::header(H +
-                [H - "a.bg href=/_wiki/" - owner.gid + "wiki"+ " @" + &owner.name ]
+                [H - "a.bg href=/_wiki/" - owner_id + "wiki"+ " @" + &owner_name ]
                 + " " + "Modification d'une page")
             + [H - "main.w.fv.gap"
-                + [H - "i" + "Modification: " + [H - "time" + page.last_edit]]
+                + [H - "i" + "Modification: " + [H - "time" + article.last_edit]]
                 + [H - "div.bl.fv.gap"
-                    + [H - "div" + [H - "input.bl placeholder=Titre value=" - Q(&page.title)]]
+                    + [H - "div" + [H - "input.bl placeholder=Titre value=" - Q(&article.title)]]
                     + [H - "div" + [H - "button.bl" + "Modifier le titre"]]
                     + ""]
                 + [H - "div.bl.fv.gap"
                     + [H - "p"
                         + "Détermine la fin de l'URL de la page. Vous pouver vous inspirer du titre. Ne sont pas acceptés les espaces et les majuscules."]
-                    + [H - "div" + [H - "input.bl placeholder=Slug value=" - Q(&page.slug)]]
+                    + [H - "div" + [H - "input.bl placeholder=Slug value=" - Q(&article.slug)]]
                     + [H - "div" + [H - "button.bl" + "Modifier le slug"]]]
                 + [H - "div.bl.fv.gap"
                     + [H - "div.bl.act contenteditable=plaintext-only"
@@ -118,20 +90,14 @@ pub async fn render_priv_page(db: &impl DB, r: OpRequest<EntityAndObjectDTO>) ->
 pub async fn render_priv_new(_: &impl DB, r: OpRequest<u32>) -> Result<String> {
     r.token.check_access_write(r.dto, OID_ENTITY_WIKI)?;
 
-    let owner = {
-        let entities = r.common.entities.read().await;
-        match entities.get(&r.dto) {
-            Some(Entity::Group(group)) => group.clone(),
-            Some(_) => return Err(errs::FORBIDEN_GROUP.into()),
-            None => return Err(errs::NOT_FOUND.into()),
-        }
-    };
+    let owner_id = r.dto;
+    let owner_name = r.common.get_entity_name(r.dto).await?;
 
     Ok([H - "html lang=fr"
         + [H - "head" + front::HEAD + [H - "title" + "Nouvelle page du wiki"]]
         + [H - "body"
             + compo::header(
-                H + [H - "a.bg href=/_wiki/" - owner.gid + "wiki" + " @" + &owner.name]
+                H + [H - "a.bg href=/_wiki/" - owner_id + "wiki" + " @" + &owner_name]
                     + " "
                     + "Nouvelle d'une page",
             )

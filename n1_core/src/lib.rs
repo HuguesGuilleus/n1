@@ -7,4 +7,4 @@ mod token;
 
 pub use errs::{AtomicError, Result};
 pub use init_dev::init_dev;
-pub use op::{DTO, OpRequest, Common};
+pub use op::{Common, DTO, OpRequest};

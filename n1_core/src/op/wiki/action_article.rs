@@ -1,9 +1,13 @@
+use bytes::Bytes;
 use n1_tool::DB;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     DTO, OpRequest, Result, errs,
-    op::{OID_ENTITY_WIKI, wiki::Article},
+    op::{
+        OID_ENTITY_WIKI,
+        wiki::{Article, State},
+    },
 };
 
 #[derive(Debug, Deserialize)]
@@ -21,14 +25,43 @@ impl DTO for ArticleIdsDTO {
         Ok(())
     }
 }
-pub async fn article_get(db: &impl DB, r: OpRequest<ArticleIdsDTO>) -> Result<Article> {
-    let article: Article = db.obj_get(r.dto.owner_id, r.dto.article_id).await?;
-
-    if article.oid == 0 {
-        errs::NOT_FOUND.push_result("article not found")?;
+#[derive(Debug, Serialize, Default, Clone)]
+pub struct ArticleOutDTO {
+    // Page id
+    pub article_id: u32,
+    // page end path. Do not contain spaces.
+    pub slug: String,
+    // Display title
+    pub title: String,
+    /// Last edition, in second since Epoch.
+    pub last_edit: u64,
+    /// The page content.
+    pub content: String,
+}
+pub async fn article_get(db: &impl DB, r: OpRequest<ArticleIdsDTO>) -> Result<ArticleOutDTO> {
+    let wiki: State = db.obj_get(r.dto.owner_id, OID_ENTITY_WIKI as u32).await?;
+    if wiki.owner_id == 0 {
+        errs::NOT_FOUND.push_result("wiki not initialize")?;
     }
 
-    Ok(article)
+    let article = wiki
+        .articles
+        .get(&r.dto.article_id)
+        .ok_or_else(|| errs::NOT_FOUND.push(format!("Article {} not found", r.dto.article_id)))?;
+
+    let content = db.fs_get(r.dto.owner_id, article.article_id).await?;
+    let content = String::from_utf8(content.to_vec())
+        .map_err(|_| errs::DB_DECODE.push("article UTF-8 content"))?;
+
+    Ok({
+        ArticleOutDTO {
+            article_id: article.article_id,
+            slug: article.slug.to_string(),
+            title: article.title.to_string(),
+            last_edit: article.last_edit,
+            content: content,
+        }
+    })
 }
 
 #[derive(Debug, Deserialize)]
@@ -53,20 +86,25 @@ pub async fn article_new(db: &impl DB, r: OpRequest<NewArticleDTO>) -> Result<u3
     r.token
         .check_access_write(r.dto.owner_id, OID_ENTITY_WIKI)?;
 
-    let oid = db.fs_new_object(r.dto.owner_id).await?;
-    let article = Article {
-        oid,
-        slug: r.dto.slug,
-        title: r.dto.title,
-        last_edit: db.now()?,
-        content: "...".to_string(),
-    };
-
-    db.obj_set(r.dto.owner_id, oid, article).await?;
+    let article_id = db.fs_new_object(r.dto.owner_id).await?;
+    let mut wiki: State = db.obj_get(r.dto.owner_id, OID_ENTITY_WIKI as u32).await?;
+    wiki.articles.insert(
+        article_id,
+        Article {
+            article_id,
+            slug: r.dto.slug,
+            title: r.dto.title,
+            last_edit: db.now()?,
+        },
+    );
+    db.obj_set(r.dto.owner_id, OID_ENTITY_WIKI as u32, &wiki)
+        .await?;
+    db.fs_set(r.dto.owner_id, article_id, Bytes::from("..."))
+        .await?;
 
     // todo: regenerate wiki
 
-    Ok(oid)
+    Ok(article_id)
 }
 
 #[derive(Debug, Deserialize)]
@@ -91,10 +129,13 @@ pub async fn article_set_title(db: &impl DB, r: OpRequest<ArticleSetTitleDTO>) -
     r.token
         .check_access_write(r.dto.owner_id, OID_ENTITY_WIKI)?;
 
-    let mut article: Article = db.obj_get(r.dto.owner_id, r.dto.article_id).await?;
+    let mut wiki: State = db.obj_get(r.dto.owner_id, OID_ENTITY_WIKI as u32).await?;
+    let article = wiki
+        .articles
+        .get_mut(&r.dto.article_id)
+        .ok_or_else(|| errs::NOT_FOUND.push(format!("Article {} not found", r.dto.article_id)))?;
     article.title = r.dto.title;
-
-    db.obj_set(r.dto.owner_id, r.dto.article_id, &article)
+    db.obj_set(r.dto.owner_id, OID_ENTITY_WIKI as u32, &wiki)
         .await?;
 
     // todo: regenerate wiki
@@ -124,10 +165,14 @@ pub async fn article_set_slug(db: &impl DB, r: OpRequest<ArticleSetSlugDTO>) -> 
     r.token
         .check_access_write(r.dto.owner_id, OID_ENTITY_WIKI)?;
 
-    let mut article: Article = db.obj_get(r.dto.owner_id, r.dto.article_id).await?;
+    let mut wiki: State = db.obj_get(r.dto.owner_id, OID_ENTITY_WIKI as u32).await?;
+    let article = wiki
+        .articles
+        .get_mut(&r.dto.article_id)
+        .ok_or_else(|| errs::NOT_FOUND.push(format!("Article {} not found", r.dto.article_id)))?;
     article.slug = r.dto.slug;
 
-    db.obj_set(r.dto.owner_id, r.dto.article_id, &article)
+    db.obj_set(r.dto.owner_id, OID_ENTITY_WIKI as u32, &wiki)
         .await?;
 
     // todo: regenerate wiki
@@ -157,11 +202,21 @@ pub async fn article_set_content(db: &impl DB, r: OpRequest<ArticleSetContentDTO
     r.token
         .check_access_write(r.dto.owner_id, OID_ENTITY_WIKI)?;
 
-    let mut article: Article = db.obj_get(r.dto.owner_id, r.dto.article_id).await?;
-    article.content = r.dto.content;
-
-    db.obj_set(r.dto.owner_id, r.dto.article_id, &article)
+    let mut wiki: State = db.obj_get(r.dto.owner_id, OID_ENTITY_WIKI as u32).await?;
+    let article = wiki
+        .articles
+        .get_mut(&r.dto.article_id)
+        .ok_or_else(|| errs::NOT_FOUND.push(format!("Article {} not found", r.dto.article_id)))?;
+    article.last_edit = db.now()?;
+    db.obj_set(r.dto.owner_id, OID_ENTITY_WIKI as u32, &wiki)
         .await?;
+
+    db.fs_set(
+        r.dto.owner_id,
+        r.dto.article_id,
+        Bytes::from_owner(r.dto.content),
+    )
+    .await?;
 
     Ok(())
 }
@@ -171,6 +226,16 @@ pub async fn article_rm(db: &impl DB, r: OpRequest<ArticleIdsDTO>) -> Result<()>
         .check_access_write(r.dto.owner_id, OID_ENTITY_WIKI)?;
 
     db.fs_rm_object(r.dto.owner_id, r.dto.article_id).await?;
+
+    let mut wiki: State = db.obj_get(r.dto.owner_id, OID_ENTITY_WIKI as u32).await?;
+
+    if let Some(_) = wiki.articles.remove(&r.dto.article_id) {
+        db.obj_set(r.dto.owner_id, OID_ENTITY_WIKI as u32, &wiki)
+            .await?;
+        db.fs_rm_object(r.dto.owner_id, r.dto.article_id).await?;
+    }
+
+    // wiki regenerate
 
     Ok(())
 }
