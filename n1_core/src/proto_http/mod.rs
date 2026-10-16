@@ -298,13 +298,17 @@ fn print_error<C: DB>(err: Error, accept_html: bool) -> Response<C> {
         let body = ResponseBody::Bytes(Bytes::from_owner(
             [H - "html lang=en"
                 + [H - "head" + front::HEAD]
-                + [H - "body.m"
+                + [H - "body"
                     + "\r\n"
-                    + [H - "h1" + status.as_str()]
-                    + [H - "div.mv" + err.atomic.message]
-                    + [|| err.context.iter().map(|s| [H - "div" + s + "\n"])]
+                    + [H - "header" + [H - "h1.bl" + status.as_str()]]
                     + "\r\n"
-                    + [H - "div.fh.gap"
+                    + [H - "main"
+                        + "\r\n"
+                        + [H - "div" + err.atomic.message]
+                        + "\r\n"
+                        + [|| err.context.iter().map(|s| [H + [H - "div" + s] + "\r\n"])]]
+                    + "\r\n"
+                    + [H - "div.fh.gap.m"
                         + [H - "a.bl href=/ " + "///"]
                         + [H - "a.bl href=/_login" + "Login"]
                         + ""]
@@ -312,7 +316,6 @@ fn print_error<C: DB>(err: Error, accept_html: bool) -> Response<C> {
                 + ""]
             .render_page(),
         ));
-
         Response {
             status,
             mime: mime::HTML,
