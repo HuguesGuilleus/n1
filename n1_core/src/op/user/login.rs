@@ -73,7 +73,7 @@ pub fn render() -> Bytes {
                                 name: _name.value,
                                 password: _password.value,
                             }),
-                        }).then(r=>r.ok && (location="/_"));
+                        }).then(r=>r.ok && [!localStorage.setItem("auth", "1")] && s(location="/_"));
                     }"#,
                 )]
             + ""]

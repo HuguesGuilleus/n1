@@ -1,10 +1,19 @@
+//! A presentation page of the entity (group or user).
+
 use bytes::Bytes;
+use n1_js::js;
 use serde::{Deserialize, Serialize};
 
 use n1_html::{DirectHTML, H, Html, Q};
 use n1_tool::{DB, mime};
 
-use crate::{Common, DTO, OpRequest, Result, errs, front, op::OID_ENTITY_BIO};
+use crate::{
+    Common, DTO, OpRequest, Result, errs, front,
+    op::{
+        OID_ENTITY_BIO,
+        compo::{self, FETCHER_JS, LOGIN_JS, TIME_JS},
+    },
+};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct BioState {
@@ -42,42 +51,45 @@ pub async fn set(db: &impl DB, r: OpRequest<BioSetRequest>) -> Result<()> {
         content: r.dto.content,
         last_edit: db.now()?,
     };
-
     db.obj_set(r.dto.oid, OID_ENTITY_BIO as u32, &bio).await?;
 
     // Generate the bio page
-    generate_one_page(db, &entity_name, &bio).await?;
+    generate_one_page(db, &r.common, &entity_name, &bio).await?;
 
     Ok(())
 }
 
 pub async fn generate_all_pages(db: &impl DB, common: &Common) -> Result<()> {
     let entities = common.entities.read().await;
-
     for entity in entities.values() {
         if entity.is_none() {
             continue;
         }
-
         let bio = db.obj_get(entity.id(), OID_ENTITY_BIO as u32).await?;
-
-        generate_one_page(db, entity.name(), &bio).await?;
+        generate_one_page(db, common, entity.name(), &bio).await?;
     }
-
     Ok(())
 }
 
-async fn generate_one_page(db: &impl DB, entity_name: &str, bio: &BioState) -> Result<()> {
+async fn generate_one_page(
+    db: &impl DB,
+    common: &Common,
+    entity_name: &str,
+    bio: &BioState,
+) -> Result<()> {
     let path = format!("/@{}/", entity_name);
     if bio.content.is_empty() {
         db.page_set(&path, "", Bytes::new()).await?;
         return Ok(());
     }
 
-    let h = [H - "html lang=fr"
+    let h = [H - "html lang=" - common.lang.code
         + [H - "head" + front::HEAD + [H - "title" + "@" + entity_name]]
         + [H - "body"
-            + [H - "h1.big" + "@" + entity_name]
+            + [H - "header.fh"
+                + [H - "h1.bl" + "@" + entity_name]
+                + compo::header_menu(&common.lang)
+                + ""]
             + [H - "main.w"
                 + [H - "div.fh.mv.gap"
                     + [H + || {
@@ -105,8 +117,12 @@ async fn generate_one_page(db: &impl DB, entity_name: &str, bio: &BioState) -> R
                         })
                 }]
                 + ""]
-            + [H - "footer" + [H - "a.small href=/ " + "Accueil"]]
+            + [H - "footer"
+                + [H - "div" + common.lang.common_lastedit + [H - "time" + bio.last_edit]]
+                + compo::footer_home(common.lang)
+                + ""]
             + ""]
+        + [H - "script" + compo::LOGIN_JS + compo::TIME_JS]
         + ""]
     .render_page();
 
@@ -117,37 +133,52 @@ async fn generate_one_page(db: &impl DB, entity_name: &str, bio: &BioState) -> R
 
 pub async fn console(db: &impl DB, r: OpRequest<u32>) -> Result<String> {
     r.token.check_access_write(r.dto, OID_ENTITY_BIO)?;
+
     let entity_name = r.common.get_entity_name(r.dto).await?;
     let bio: BioState = db.obj_get(r.dto, OID_ENTITY_BIO as u32).await?;
 
-    let h = [H - "html lang=fr"
-        + [H - "head" + front::HEAD + [H - "title" + "!Modifie la page de @" + &entity_name]]
+    let lang = r.common.lang;
+    let h = [H - "html lang=" - lang.code
+        + [H - "head" + front::HEAD + [H - "title" + lang.bio_edit_page + &entity_name]]
         + [H - "body"
-            + [H - "header" + [H - "h1.bl" + "!Modifie la page de @" + &entity_name]]
+            + [H - "header.fh"
+                + [H - "h1.bl" + lang.bio_edit_page + &entity_name]
+                + compo::header_menu(lang)
+                + ""]
             + [H - "main.w"
-                + [H - "div.fh.mv"
-                    + [H - "a.bl href=/@" - &entity_name - "/" + "@" + &entity_name]]
-                + [H - "div.bb.act"
-                    + [H - "p"
-                        + "Chaque ligne est analysée séparément: comme un lien (débutant par l'URL), un lien de réseau sociaux (débutant par 'me+https://'), ou simplement un paragraphe."]
-                    + [H - "div hidden id=_oid" + r.dto]
-                    + [H - "pre.bl.act id=_content contenteditable" + bio.content]
-                    + [H - "button.bl.act onclick=send()" + "!Enregistrer"]
+                + [H + || {
+                    lang.bio_edit_format_info
+                        .iter()
+                        .map(|&line| [H - "p.nospace" + line])
+                }]
+                + [H - "pre.bl.act id=content contenteditable" + bio.content]
+                + [H - "div.fh.mv.gap"
+                    + [H - "button.bl.act onclick=send()"
+                        + lang.common_save
+                        + " "
+                        + [H - "span id=out"]]
+                    + [H - "a.bl href=/@" - &entity_name - "/ " + "@" + &entity_name]
                     + ""]
                 + ""]
-            + [H - "footer" + [H - "a.small href=/ " + "Accueil"]]
+            + [H - "footer"
+                + [H - "p.nospace" + lang.common_lastedit + [H - "time" + bio.last_edit]]
+                + [H - "a.small href=/ " + "Accueil"]
+                + ""]
             + [H - "script"
-                + DirectHTML(
-                    r#"const send=()=>{
-                        fetch("/:bio.set/", {
-                            method: "PUT",
-                            body: JSON.stringify({
-                                oid: parseInt(_oid.innerText) ,
-                                content: _content.innerText ,
-                            }),
-                        });
-                    }"#,
-                )]
+                + LOGIN_JS
+                + TIME_JS
+                + [H + "const oid=" + r.dto + ","]
+                + [H + FETCHER_JS + ","]
+                + DirectHTML(js!(
+                    send = () => fetcher(fetch("/:bio.set/", {
+                        method: "PUT",
+                        body: JSON.stringify({
+                            oid,
+                            content: content.innerText,
+                        }),
+                    }), out);
+                ))
+                + ""]
             + ""]];
 
     Ok(h.render_page())

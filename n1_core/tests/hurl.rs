@@ -3,7 +3,7 @@ use hurl::{
     util::logger::{LoggerOptionsBuilder, Verbosity},
 };
 use hurl_core::input::Input;
-use tokio::{io, net::TcpListener, spawn};
+use tokio::{net::TcpListener, spawn};
 
 use std::{fs, net::SocketAddr, sync::Arc};
 
@@ -19,10 +19,7 @@ async fn hurl_tests() {
     for i in 0..key.len() {
         key[i] = i as u8;
     }
-    let (db, common) = init_dev()
-        .await
-        .map_err(|err| io::Error::new(io::ErrorKind::Other, err.atomic.message))
-        .unwrap();
+    let (db, common) = init_dev().await.unwrap();
     let server = Arc::new(HTTPServer {
         db: Arc::new(db),
         common: Arc::new(common),

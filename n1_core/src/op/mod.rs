@@ -5,6 +5,7 @@ pub mod dropbox;
 mod dto;
 pub mod fs;
 pub mod home;
+mod lang;
 pub mod menu;
 mod token;
 pub mod user;
@@ -22,6 +23,7 @@ use crate::errs;
 use crate::op::user::Entity;
 pub use auth::*;
 pub use dto::*;
+pub use lang::*;
 pub use token::*;
 
 pub const OID_GLOBAL_ENTITY: u16 = 1;
@@ -41,6 +43,7 @@ pub struct OpRequest<D: DTO> {
 pub struct Common {
     pub entities: RwLock<BTreeMap<u32, Entity>>,
     pub shadow: RwLock<BTreeSet<u32>>,
+    pub lang: &'static Lang,
 }
 
 impl Common {
@@ -48,6 +51,7 @@ impl Common {
         Common {
             entities: RwLock::new(BTreeMap::new()),
             shadow: RwLock::new(BTreeSet::new()),
+            lang: &LANG_EN,
         }
     }
 

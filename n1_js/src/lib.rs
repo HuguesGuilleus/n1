@@ -34,11 +34,14 @@ fn add(out: &mut String, names: &mut BTreeMap<String, usize>, stream: TokenStrea
                 };
                 out.push_str(begin);
                 add(out, names, group.stream());
+                if out.ends_with(',') || out.ends_with(';') {
+                    out.pop();
+                }
                 out.push_str(end);
             }
             TokenTree::Ident(ident) => match ident.to_string().as_str() {
                 s @ ("async" | "await" | "const" | "let" | "var" | "new" | "in" | "of"
-                | "return" | "continue" | "break") => {
+                | "return" | "continue" | "break" | "throw") => {
                     out.push_str(s);
                     out.push(' ');
                 }

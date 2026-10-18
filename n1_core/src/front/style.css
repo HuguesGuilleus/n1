@@ -10,6 +10,14 @@
 	display: none !important;
 }
 
+[data-auth="false"] .needAuth {
+	display: none;
+}
+
+[data-auth="true"] .needNoAuth {
+	display: none;
+}
+
 /* PAGE BIG ELEMENT */
 
 body {
@@ -45,6 +53,12 @@ p {
 	text-indent: calc(var(--SP)*3);
 	text-align: justify;
 	max-width: var(--W);
+}
+
+p.nospace {
+	margin: 0;
+	text-indent: 0;
+	text-align: left;
 }
 
 button,
