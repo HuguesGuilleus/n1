@@ -39,7 +39,7 @@ pub async fn render_priv_index(db: &impl DB, r: OpRequest<u32>) -> Result<String
                 })
                 + ""]
             + ""]
-        + [H - "script" + compo::LOGIN_JS + compo::TIME_JS]
+        + [H - "script" + compo::TIME_JS]
         + [H - ""]
         + ""]
     .render_page())
@@ -82,7 +82,7 @@ pub async fn render_priv_page(db: &impl DB, r: OpRequest<EntityAndObjectDTO>) ->
                 + [H - "div" + [H - "button.bl" + "Supprimer"]]
                 + ""]
             + ""]
-        + [H - "script" + compo::LOGIN_JS + compo::TIME_JS]
+        + [H - "script" + compo::TIME_JS]
         + ""]
     .render_page())
 }
@@ -109,7 +109,7 @@ pub async fn render_priv_new(_: &impl DB, r: OpRequest<u32>) -> Result<String> {
                     + ""]
                 + ""]
             + ""]
-        + [H - "script" + compo::LOGIN_JS + compo::TIME_JS]
+        + [H - "script" + compo::TIME_JS]
         + ""]
     .render_page())
 }

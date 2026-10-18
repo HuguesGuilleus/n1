@@ -1,0 +1,11 @@
+[package]
+name = "n1_js"
+version.workspace = true
+authors.workspace = true
+edition = "2024"
+description = "Generate JS from a Rust macro"
+
+[lib]
+proc-macro = true
+
+[dependencies]

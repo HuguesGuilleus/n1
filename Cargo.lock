@@ -841,6 +841,7 @@ dependencies = [
  "hurl",
  "hurl_core",
  "n1_html",
+ "n1_js",
  "n1_tool",
  "rust-crypto",
  "serde",
@@ -850,6 +851,10 @@ dependencies = [
 
 [[package]]
 name = "n1_html"
+version = "0.1.0"
+
+[[package]]
+name = "n1_js"
 version = "0.1.0"
 
 [[package]]

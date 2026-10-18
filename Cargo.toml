@@ -1,5 +1,5 @@
 [workspace]
-members = ["n1_core", "n1_tool", "n1_html"]
+members = ["n1_core", "n1_tool", "n1_html", "n1_js"]
 resolver = "3"
 
 [workspace.package]

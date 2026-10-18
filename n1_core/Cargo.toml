@@ -9,6 +9,7 @@ description = "The operations of this cloud."
 base64 = { workspace = true }
 bytes = { workspace = true }
 n1_html = { path = "../n1_html" }
+n1_js = { path = "../n1_js" }
 n1_tool = { path = "../n1_tool" }
 rust-crypto = { workspace = true }
 serde = { workspace = true }
