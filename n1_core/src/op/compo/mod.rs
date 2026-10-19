@@ -5,6 +5,10 @@ use n1_js::js;
 
 use crate::op::Lang;
 
+pub fn goto_main(lang: &Lang) -> impl Html {
+    [H - "a.bl href=#main" + lang.common_gotomain]
+}
+
 pub fn header(inside: impl n1_html::Html) -> impl Html {
     [H - "header.fh" + [H - "h1.bl" + inside] + [H - "a.bl.mlauto href=/_" + "Menu"] + ""]
 }

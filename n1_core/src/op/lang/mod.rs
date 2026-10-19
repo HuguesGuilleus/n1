@@ -22,6 +22,8 @@ pub struct Lang {
     pub common_home: &'static str,
     /// Last edit label text.
     pub common_lastedit: &'static str,
+    /// Anchor to the main block.
+    pub common_gotomain: &'static str,
 
     /// Edit bio page title text.
     pub bio_edit_page: &'static str,

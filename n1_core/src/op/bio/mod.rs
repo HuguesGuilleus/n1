@@ -94,14 +94,16 @@ async fn generate_one_page(
         return Ok(());
     }
 
-    let h = [H - "html lang=" - common.lang.code
+    let lang = common.lang;
+    let h = [H - "html lang=" - lang.code
         + [H - "head" + front::HEAD + [H - "title" + "@" + entity_name]]
         + [H - "body"
+            + compo::goto_main(lang)
             + [H - "header.fh"
                 + [H - "h1.bl" + "@" + entity_name]
-                + compo::header_menu(&common.lang)
+                + compo::header_menu(&lang)
                 + ""]
-            + [H - "main.w"
+            + [H - "main.w id=main"
                 + [H - "div.fh.mv.gap"
                     + [H + || {
                         bio.content
@@ -129,8 +131,8 @@ async fn generate_one_page(
                 }]
                 + ""]
             + [H - "footer"
-                + [H - "div" + common.lang.common_lastedit + [H - "time" + bio.last_edit]]
-                + compo::footer_home(common.lang)
+                + [H - "div" + lang.common_lastedit + [H - "time" + bio.last_edit]]
+                + compo::footer_home(lang)
                 + ""]
             + ""]
         + [H - "script" + compo::LOGIN_JS + compo::TIME_JS]
@@ -154,11 +156,12 @@ pub async fn console(db: &impl DB, r: OpRequest<u32>) -> Result<String> {
     let h = [H - "html lang=" - lang.code
         + [H - "head" + front::HEAD + [H - "title" + lang.bio_edit_page + &entity_name]]
         + [H - "body"
+            + compo::goto_main(lang)
             + [H - "header.fh"
                 + [H - "h1.bl" + lang.bio_edit_page + &entity_name]
                 + compo::header_menu(lang)
                 + ""]
-            + [H - "main.w"
+            + [H - "main.w id=main"
                 + [H + || {
                     lang.bio_edit_format_info
                         .iter()

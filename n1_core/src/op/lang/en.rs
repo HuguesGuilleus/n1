@@ -9,6 +9,7 @@ pub const LANG_EN: Lang = Lang {
     common_home: "Home",
     common_save: "Save",
     common_lastedit: "Last edit: ",
+    common_gotomain: "Go to main content",
 
     bio_edit_page: "Edit bio page of @",
     bio_edit_format_info: &[
