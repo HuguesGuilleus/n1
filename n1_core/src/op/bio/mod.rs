@@ -1,4 +1,6 @@
 //! A presentation page of the entity (group or user).
+//!
+//! HURL tst file: <https://github.com/HuguesGuilleus/n1/blob/main/n1_core/tests/bio.hurl>
 
 use bytes::Bytes;
 use n1_js::js;
@@ -15,6 +17,7 @@ use crate::{
     },
 };
 
+/// Information stored for on entity.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct BioState {
     /// The content of the bio.
@@ -23,16 +26,18 @@ pub struct BioState {
     pub last_edit: u64,
 }
 
+/// JSON API to get information about a entity's bio.
+/// Path: `/:bio.get/`
 pub async fn get(db: &impl DB, r: OpRequest<u32>) -> Result<BioState> {
     Ok(db.obj_get(r.dto, OID_ENTITY_BIO as u32).await?)
 }
 
 #[derive(Debug, PartialEq, Deserialize)]
-pub struct BioSetRequest {
-    oid: u32,
-    content: String,
+pub struct BioSetDTO {
+    pub oid: u32,
+    pub content: String,
 }
-impl DTO for BioSetRequest {
+impl DTO for BioSetDTO {
     fn check(&self) -> Result<()> {
         if self.oid == 0 {
             errs::FIELD_ID_ZERO.push_result("field `oid`")?;
@@ -40,7 +45,9 @@ impl DTO for BioSetRequest {
         Ok(())
     }
 }
-pub async fn set(db: &impl DB, r: OpRequest<BioSetRequest>) -> Result<()> {
+/// JSON API to set information about a entity's bio.
+/// Path: `/:bio.set/`
+pub async fn set(db: &impl DB, r: OpRequest<BioSetDTO>) -> Result<()> {
     r.token.check_access_write(r.dto.oid, OID_ENTITY_BIO)?;
 
     // Check entity
@@ -59,6 +66,8 @@ pub async fn set(db: &impl DB, r: OpRequest<BioSetRequest>) -> Result<()> {
     Ok(())
 }
 
+/// Generate page for all entities.
+/// Use it at launch or when common headline or footer change.
 pub async fn generate_all_pages(db: &impl DB, common: &Common) -> Result<()> {
     let entities = common.entities.read().await;
     for entity in entities.values() {
@@ -71,6 +80,8 @@ pub async fn generate_all_pages(db: &impl DB, common: &Common) -> Result<()> {
     Ok(())
 }
 
+/// Generate the bio page for a single entity.
+/// Path: `/@{entity_name}/`
 async fn generate_one_page(
     db: &impl DB,
     common: &Common,
@@ -131,6 +142,8 @@ async fn generate_one_page(
     Ok(())
 }
 
+/// Page to edit a bio.
+/// Path: `/_bio/{entity_id}`
 pub async fn console(db: &impl DB, r: OpRequest<u32>) -> Result<String> {
     r.token.check_access_write(r.dto, OID_ENTITY_BIO)?;
 

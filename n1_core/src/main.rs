@@ -12,11 +12,9 @@ async fn main() -> io::Result<()> {
         key[i] = i as u8;
     }
 
-    let (db, mut  common) = init_dev()
+    let (db, common) = init_dev()
         .await
         .map_err(|err| io::Error::new(io::ErrorKind::Other, err.atomic.message))?;
-
-common.lang = &n1_core::op::LANG_FR;
 
     let server = Arc::new(HTTPServer {
         db: Arc::new(db),

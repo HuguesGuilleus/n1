@@ -18,7 +18,7 @@ pub async fn init_dev() -> Result<(impl DB, Common)> {
     let mut common = Common::new();
     let entities_map = common.entities.get_mut();
 
-    // common.lang = &crate::op::LANG_FR;
+    common.lang = &crate::op::LANG_FR;
 
     // Set "eve" user
     entities_map.insert(
