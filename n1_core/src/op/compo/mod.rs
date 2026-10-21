@@ -17,8 +17,8 @@ pub fn header(inside: impl n1_html::Html) -> impl Html {
 /// Use with [`LOGIN_JS`] JS script.
 pub fn header_menu(lang: &Lang) -> impl Html {
     [
-        H + [H - "a.bl.mlauto.needNoAuth href=/_login" + lang.common_login]
-            + [H - "a.bl.mlauto.mr.needAuth href=/_logout" + lang.common_logout]
+        H + [H - "a.bl.mlauto.needNoAuth href=/_user_login" + lang.login_title]
+            + [H - "a.bl.mlauto.mr.needAuth href=/_user_logout" + lang.logout_title]
             + [H - "a.bl.needAuth href=/_" + lang.common_menu],
     ]
 }
@@ -39,20 +39,26 @@ pub const TIME_JS: DirectHTML = DirectHTML(js!(
     });
 ));
 
+/// Add to js to manage user authentication state.
 pub const LOGIN_JS: DirectHTML = DirectHTML(js!(
     document.body.dataset.auth=!!localStorage.getItem("auth");
     new BroadcastChannel("auth").onmessage = _ => location.reload();
 ));
 
+/// Add JS to mange login/logout event.
+pub const LOGIN_JS_CONNECTED: DirectHTML = DirectHTML(js!(
+    new BroadcastChannel("auth").onmessage = _ => location.reload();
+));
+
 pub const FETCHER_JS: DirectHTML = DirectHTML(js!(
-    fetcher = (_promise, _out) => {
-        _out.innerText = "[...]";
-        _promise.then(_response => {
-            if (!_response.ok ) throw _response.text();
+    fetcher = (_promise, _out) => (
+        _out.innerText = "[...]",
+        _promise.then(async _response => {
+            if (!_response.ok ) throw await _response.text();
             _out.innerText = "[OK]";
         }).catch(_err => {
-            console.error(_err);
-            _out.innerText = "[!!!]";
-        });
-    }
+            _out.innerText = "[!!!] " + _err;
+            throw _err;
+        }),
+    )
 ));

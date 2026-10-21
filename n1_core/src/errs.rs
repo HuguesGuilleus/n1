@@ -9,9 +9,10 @@ macro_rules! E {
     };
 }
 
+E!(ALREADY_CONNECTED, Forbidden, "already connected");
 E!(DECODE_REQUEST, BadRequest, "cannot decode request data");
-E!(EXPECT_USER, BadRequest, "expected a user");
 E!(EXPECT_REEL_ENTITY, BadRequest, "expected a user of a group");
+E!(EXPECT_USER, BadRequest, "expected a user");
 E!(FIELD_CONTENT, BadRequest, "empty 'content' field");
 E!(FIELD_DESC, BadRequest, "empty 'desc' field");
 E!(FIELD_EMPTY, BadRequest, "empty field");

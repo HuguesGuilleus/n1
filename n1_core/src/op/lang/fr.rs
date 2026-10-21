@@ -4,8 +4,6 @@ pub const LANG_FR: Lang = Lang {
     code: "fr",
 
     common_menu: "Menu",
-    common_login: "Connexion",
-    common_logout: "Déconnexion",
     common_home: "Accueil",
     common_save: "Enregistrer",
     common_lastedit: "Dernière modification\u{202F}: ",
@@ -19,4 +17,12 @@ pub const LANG_FR: Lang = Lang {
         "- comme un simple paragraphe\u{00A0};",
         "Si le contenu de la bio est vide, aucune page n'est générée.",
     ],
+
+    login_title: "Connexion",
+    login_account: "Compte ou pseudo",
+    login_password: "Mot de passe",
+    login_send: "Se connecter",
+
+    logout_title: "Déconnexion",
+    logout_info: "Vous avez été déconnecté.",
 };

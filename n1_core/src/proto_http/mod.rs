@@ -13,6 +13,7 @@ use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::net::TcpListener;
 use tokio::spawn;
 
+use crate::op::user::login::logout_console;
 use crate::op::{self, Common, DTO, Token, URLDTO};
 use crate::token::{token_decode, token_encode};
 use crate::{OpRequest, Result, errs, front};
@@ -74,9 +75,17 @@ pub async fn handle<R: AsyncRead + Unpin, C: DB>(
         "_bio" => with_url(s, r, op::bio::console).await,
         "_dropbox" => with_url(s, r, op::dropbox::page).await,
         "_home" => with_url(s, r, op::home::page_console).await,
+        "_user_login" => with_url(s, r, op::user::login::login_console).await,
         "_wiki_new" => with_url(s, r, op::wiki::render_priv_new).await,
         "_wiki_page" => with_url(s, r, op::wiki::render_priv_page).await,
         "_wiki" => with_url(s, r, op::wiki::render_priv_index).await,
+
+        "_user_logout" => Ok(Response {
+            status: StatusHTTP::OK,
+            mime: mime::HTML,
+            header: Some(("Set-Cookie", "auth=; Max-Age=0; Path=/".to_string())),
+            body: ResponseBody::Bytes(Bytes::from_owner(logout_console(s.common.lang))),
+        }),
 
         // Actions with no return
         ":auth.test.access.read" => with_body(s, r, op::auth_test_access_read).await,
@@ -93,7 +102,7 @@ pub async fn handle<R: AsyncRead + Unpin, C: DB>(
         ":dropbox.text.rm" => with_body(s, r, op::dropbox::text_rm).await,
         ":fs.mkdir" => with_body(s, r, op::fs::mkdir).await,
         ":home" => with_body(s, r, op::home::json_edit).await,
-        ":login" => make_token(s, r, op::user::login::login).await,
+        ":user.login" => make_token(s, r, op::user::login::action).await,
         ":wiki.article.get" => with_body(s, r, op::wiki::article_get).await,
         ":wiki.article.new" => with_body(s, r, op::wiki::article_new).await,
         ":wiki.article.rm" => with_body(s, r, op::wiki::article_rm).await,
@@ -310,7 +319,8 @@ fn print_error<C: DB>(err: Error, accept_html: bool) -> Response<C> {
                     + "\r\n"
                     + [H - "div.fh.gap.m"
                         + [H - "a.bl href=/ " + "///"]
-                        + [H - "a.bl href=/_login" + "Login"]
+                        + [H - "a.bl href=/_user_login" + "Login"]
+                        + [H - "a.bl href=/_user_logout" + "Logout"]
                         + ""]
                     + "\r\n"]
                 + ""]

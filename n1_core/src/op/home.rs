@@ -135,6 +135,7 @@ fn render_console(state: &HomeState) -> String {
                 + ""]
                 + [H - "footer" + [H - "a.small href=/ " + "Accueil"]]
             + ""]
+            + [H - "script" + compo::LOGIN_JS]
         + ""]
     .render_page()
 }

@@ -1,4 +1,7 @@
-use crate::{op::user::Entity, *};
+use crate::{
+    op::{compo, user::Entity},
+    *,
+};
 use n1_html::{H, Html};
 use n1_tool::DB;
 
@@ -63,6 +66,7 @@ pub async fn page(_: &impl DB, r: OpRequest<()>) -> Result<String> {
                     + ""]
                 + ""]
             + ""]
+        + [H - "script" + compo::LOGIN_JS_CONNECTED]
         + ""]
     .render_page())
 }

@@ -12,10 +12,6 @@ pub struct Lang {
 
     /// Save anchor text.
     pub common_menu: &'static str,
-    /// Login anchor text.
-    pub common_login: &'static str,
-    /// Logout anchor text.
-    pub common_logout: &'static str,
     /// Save button text.
     pub common_save: &'static str,
     /// Home anchor text.
@@ -29,4 +25,18 @@ pub struct Lang {
     pub bio_edit_page: &'static str,
     /// Instruction of the bio text format.
     pub bio_edit_format_info: &'static [&'static str],
+
+    /// Title for login page.
+    pub login_title: &'static str,
+    /// Account name label text.
+    pub login_account: &'static str,
+    /// Account password label text.
+    pub login_password: &'static str,
+    /// Login send button text.
+    pub login_send: &'static str,
+
+    /// Title for logout page.
+    pub logout_title: &'static str,
+    /// Tell the user they have been logged out.
+    pub logout_info: &'static str,
 }

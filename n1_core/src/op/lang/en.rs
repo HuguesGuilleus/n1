@@ -4,8 +4,6 @@ pub const LANG_EN: Lang = Lang {
     code: "en",
 
     common_menu: "Menu",
-    common_login: "Login",
-    common_logout: "Logout",
     common_home: "Home",
     common_save: "Save",
     common_lastedit: "Last edit: ",
@@ -19,4 +17,12 @@ pub const LANG_EN: Lang = Lang {
         "- as a simple paragraph;",
         "If the bio content is empty, no page are generated.",
     ],
+
+    login_title: "Login",
+    login_account: "Account or username",
+    login_password: "Password",
+    login_send: "Sign in",
+
+    logout_title: "Logout",
+    logout_info: "You have been logged out.",
 };

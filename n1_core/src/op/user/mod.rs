@@ -1,6 +1,6 @@
 pub mod login;
 
-use n1_tool::{DB, mime};
+use n1_tool::DB;
 use serde::Deserialize;
 
 use crate::{
@@ -35,8 +35,6 @@ pub struct Group {
 }
 
 pub async fn init(db: &impl DB, common: &mut Common) -> Result<()> {
-    db.page_set("/_login", mime::HTML, login::render()).await?;
-
     // Load entities
     let entities: Vec<Entity> = db.obj_get(0, OID_GLOBAL_ENTITY as u32).await?;
     let entities_map = common.entities.get_mut();
