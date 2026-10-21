@@ -1,4 +1,4 @@
-PUT http://localhost:8000/:login/
+PUT http://localhost:8000/:user.login/
 {"name":"eve","password":"56"}
 HTTP 200
 [Captures]

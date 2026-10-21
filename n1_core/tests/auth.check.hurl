@@ -1,13 +1,13 @@
 # Login
 
-PUT http://localhost:8000/:login/
+PUT http://localhost:8000/:user.login/
 {"name":"eve","password":"56"}
 HTTP 200
 [Captures]
 cookieEve: cookie "auth"
 ``
 
-PUT http://localhost:8000/:login/
+PUT http://localhost:8000/:user.login/
 {"name":"bob","password":"42"}
 HTTP 200
 [Captures]
