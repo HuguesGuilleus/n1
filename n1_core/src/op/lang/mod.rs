@@ -5,38 +5,39 @@ mod fr;
 
 pub use en::LANG_EN;
 pub use fr::LANG_FR;
+use n1_html::DirectHTML;
 
 pub struct Lang {
     /// The language code, used in HTML root lang attribute.
     pub code: &'static str,
 
     /// Save anchor text.
-    pub common_menu: &'static str,
+    pub common_menu: DirectHTML<'static>,
     /// Save button text.
-    pub common_save: &'static str,
+    pub common_save: DirectHTML<'static>,
     /// Home anchor text.
-    pub common_home: &'static str,
+    pub common_home: DirectHTML<'static>,
     /// Last edit label text.
-    pub common_lastedit: &'static str,
+    pub common_lastedit: DirectHTML<'static>,
     /// Anchor to the main block.
-    pub common_gotomain: &'static str,
+    pub common_gotomain: DirectHTML<'static>,
 
     /// Edit bio page title text.
-    pub bio_edit_page: &'static str,
+    pub bio_edit_page: DirectHTML<'static>,
     /// Instruction of the bio text format.
-    pub bio_edit_format_info: &'static [&'static str],
+    pub bio_edit_format_info: &'static [DirectHTML<'static>],
 
     /// Title for login page.
-    pub login_title: &'static str,
+    pub login_title: DirectHTML<'static>,
     /// Account name label text.
-    pub login_account: &'static str,
+    pub login_account: DirectHTML<'static>,
     /// Account password label text.
-    pub login_password: &'static str,
+    pub login_password: DirectHTML<'static>,
     /// Login send button text.
     pub login_send: &'static str,
 
     /// Title for logout page.
-    pub logout_title: &'static str,
+    pub logout_title: DirectHTML<'static>,
     /// Tell the user they have been logged out.
-    pub logout_info: &'static str,
+    pub logout_info: DirectHTML<'static>,
 }

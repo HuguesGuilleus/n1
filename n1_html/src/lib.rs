@@ -62,6 +62,7 @@ impl Html for &str {
 }
 
 /// HTML block direct injected in the output without escape.
+#[derive(Debug, Clone, Copy)]
 pub struct DirectHTML<'a>(pub &'a str);
 impl<'a> Html for DirectHTML<'a> {
     fn render(&self, buf: &mut String) {
