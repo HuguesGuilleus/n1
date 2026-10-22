@@ -10,6 +10,8 @@ macro_rules! E {
 }
 
 E!(ALREADY_CONNECTED, Forbidden, "already connected");
+E!(ALREADY_EXIST, BadRequest, "already exist");
+E!(DATA_INCOERENT, Internal, "data are incoherent");
 E!(DECODE_REQUEST, BadRequest, "cannot decode request data");
 E!(EXPECT_REEL_ENTITY, BadRequest, "expected a user of a group");
 E!(EXPECT_USER, BadRequest, "expected a user");
@@ -35,3 +37,4 @@ E!(TOKEN_PREFIX, BadRequest, "unknown token prefix");
 E!(TOKEN_SIGNATURE, BadRequest, "wrong token signature");
 E!(TOKEN_WRONG_LENGTH, BadRequest, "token wrong lenght");
 E!(WRONG_LOGIN, BadRequest, "wrong login information");
+E!(WRONG_PATH, BadRequest, "wrong path format");

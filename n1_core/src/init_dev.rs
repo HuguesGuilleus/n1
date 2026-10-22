@@ -29,10 +29,6 @@ pub async fn init_dev() -> Result<(impl DB, Common)> {
             password: "56".to_string(),
             is_admin: true,
             access: vec![],
-            fs: op::fs::FsysState {
-                dirs: vec![],
-                dirs_increment: 0,
-            },
         }),
     );
     db.obj_set(
@@ -72,10 +68,6 @@ pub async fn init_dev() -> Result<(impl DB, Common)> {
                     can_write: true,
                 },
             ],
-            fs: op::fs::FsysState {
-                dirs: vec![],
-                dirs_increment: 0,
-            },
         }),
     );
 

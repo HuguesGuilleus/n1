@@ -16,6 +16,7 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use n1_tool::DB;
+use tokio::sync::Mutex;
 use tokio::sync::RwLock;
 
 use crate::Result;
@@ -43,7 +44,25 @@ pub struct OpRequest<D: DTO> {
 pub struct Common {
     pub entities: RwLock<BTreeMap<u32, Entity>>,
     pub shadow: RwLock<BTreeSet<u32>>,
+    pub fs: LockMap<fs::FSState>,
     pub lang: &'static Lang,
+}
+
+pub struct LockMap<T>(Mutex<BTreeMap<u32, Arc<RwLock<T>>>>);
+
+impl<T: Default> LockMap<T> {
+    pub async fn get(&self, owner: u32) -> Result<Arc<RwLock<T>>> {
+        let mut guard = self.0.lock().await;
+        let arc = match guard.get(&owner) {
+            Some(arc) => arc.clone(),
+            None => {
+                let arc = Arc::new(RwLock::new(T::default()));
+                guard.insert(owner, arc.clone());
+                arc
+            }
+        };
+        Ok(arc)
+    }
 }
 
 impl Common {
@@ -51,6 +70,7 @@ impl Common {
         Common {
             entities: RwLock::new(BTreeMap::new()),
             shadow: RwLock::new(BTreeSet::new()),
+            fs: LockMap(Mutex::new(BTreeMap::new())),
             lang: &LANG_EN,
         }
     }

@@ -100,7 +100,7 @@ pub async fn handle<R: AsyncRead + Unpin, C: DB>(
         ":bio.set" => with_body(s, r, op::bio::set).await,
         ":dropbox.text.add" => with_body(s, r, op::dropbox::text_add).await,
         ":dropbox.text.rm" => with_body(s, r, op::dropbox::text_rm).await,
-        ":fs.mkdir" => with_body(s, r, op::fs::mkdir).await,
+        ":fs.direct.mkdir" => with_body(s, r, op::fs::mkdir).await,
         ":home" => with_body(s, r, op::home::json_edit).await,
         ":user.login" => make_token(s, r, op::user::login::action).await,
         ":wiki.article.get" => with_body(s, r, op::wiki::article_get).await,

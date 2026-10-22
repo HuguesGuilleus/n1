@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 use crate::{
     Common, DTO, OpRequest, Result,
-    op::{OID_GLOBAL_ENTITY, Token, TokenItem, fs::FsysState},
+    op::{OID_GLOBAL_ENTITY, Token, TokenItem},
 };
 
 #[derive(Debug, PartialEq, Deserialize, Clone)]
@@ -23,8 +23,6 @@ pub struct User {
     pub is_admin: bool,
     /// Access for this group
     pub access: Vec<TokenItem>,
-
-    pub fs: FsysState,
 }
 
 #[derive(Debug, PartialEq, Deserialize, Clone)]
