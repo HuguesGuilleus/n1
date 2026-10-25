@@ -17,3 +17,10 @@ Cookie: auth={{cookie}}
 HTTP 200
 [Asserts]
 body == {{dirID}}
+
+PUT http://localhost:8000/:fs.direct.mkfile/
+Cookie: auth={{cookie}}
+{"owner":101,"path":"/dir/sub/file.txt"}
+HTTP 200
+[Captures]
+fileID: body
