@@ -34,12 +34,12 @@ pub async fn get(db: &impl DB, r: OpRequest<u32>) -> Result<BioState> {
 
 #[derive(Debug, PartialEq, Deserialize)]
 pub struct BioSetDTO {
-    pub oid: u32,
+    pub owner: u32,
     pub content: String,
 }
 impl DTO for BioSetDTO {
     fn check(&self) -> Result<()> {
-        if self.oid == 0 {
+        if self.owner == 0 {
             errs::FIELD_ID_ZERO.push_result("field `oid`")?;
         }
         Ok(())
@@ -48,17 +48,17 @@ impl DTO for BioSetDTO {
 /// JSON API to set information about a entity's bio.
 /// Path: `/:bio.set/`
 pub async fn set(db: &impl DB, r: OpRequest<BioSetDTO>) -> Result<()> {
-    r.token.check_access_write(r.dto.oid, OID_ENTITY_BIO)?;
+    r.token.check_access_write(r.dto.owner, OID_ENTITY_BIO)?;
 
     // Check entity
-    let entity_name = r.common.get_entity_name(r.dto.oid).await?;
+    let entity_name = r.common.get_entity_name(r.dto.owner).await?;
 
     // Save the bio state
     let bio = BioState {
         content: r.dto.content,
         last_edit: db.now()?,
     };
-    db.obj_set(r.dto.oid, OID_ENTITY_BIO as u32, &bio).await?;
+    db.obj_set(r.dto.owner, OID_ENTITY_BIO as u32, &bio).await?;
 
     // Generate the bio page
     generate_one_page(db, &r.common, &entity_name, &bio).await?;
@@ -183,13 +183,13 @@ pub async fn console(db: &impl DB, r: OpRequest<u32>) -> Result<String> {
             + [H - "script"
                 + LOGIN_JS
                 + TIME_JS
-                + [H + "const oid=" + r.dto + ","]
+                + [H + "const owner=" + r.dto + ","]
                 + [H + FETCHER_JS + ","]
                 + DirectHTML(js!(
                     send = () => fetcher(fetch("/:bio.set/", {
                         method: "PUT",
                         body: JSON.stringify({
-                            oid,
+                            owner,
                             content: content.innerText,
                         }),
                     }), out);

@@ -112,8 +112,8 @@ async fn render_pub_page(
                             + [H - "h1" + &article.title + ""]
                             + [H - "a.bg href=/_wiki_page/"
                                 - EntityAndObjectDTO {
-                                    eid: wiki.owner_id,
-                                    oid: article.article_id,
+                                    owner: wiki.owner_id,
+                                    object: article.article_id,
                                 }
                                 + "Éditer la page"]
                             + ""]

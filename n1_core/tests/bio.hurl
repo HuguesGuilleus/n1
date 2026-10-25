@@ -7,7 +7,7 @@ cookie: cookie "auth"
 # New page
 PUT http://localhost:8000/:bio.set/
 Cookie: auth={{cookie}}
-{"oid":101,"content":"https://github.blog/ My blog"}
+{"owner":101,"content":"https://github.blog/ My blog"}
 HTTP 200
 `null`
 

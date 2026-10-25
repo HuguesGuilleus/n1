@@ -35,19 +35,20 @@ pub async fn text_add(db: &impl DB, r: OpRequest<IDandString>) -> Result<()> {
 }
 
 pub async fn text_rm(db: &impl DB, r: OpRequest<EntityAndObjectDTO>) -> Result<()> {
-    if r.token.uid != r.dto.eid {
-        r.token.check_access_write(r.dto.eid, OID_ENTITY_DROPBOX)?;
+    if r.token.uid != r.dto.owner {
+        r.token
+            .check_access_write(r.dto.owner, OID_ENTITY_DROPBOX)?;
     }
 
-    let mut state: State = db.obj_get(r.dto.eid, OID_ENTITY_DROPBOX as u32).await?;
+    let mut state: State = db.obj_get(r.dto.owner, OID_ENTITY_DROPBOX as u32).await?;
 
     let index = state
         .texts
-        .binary_search_by(|(id, _)| (*id).cmp(&r.dto.oid))
+        .binary_search_by(|(id, _)| (*id).cmp(&r.dto.object))
         .map_err(|_| errs::NOT_FOUND)?;
     state.texts.remove(index);
 
-    db.obj_set(r.dto.eid, OID_ENTITY_DROPBOX as u32, &state)
+    db.obj_set(r.dto.owner, OID_ENTITY_DROPBOX as u32, &state)
         .await?;
 
     Ok(())
@@ -77,7 +78,10 @@ async fn text() -> Result<()> {
         OpRequest {
             common: common.clone(),
             token: crate::op::Token::test_alice(),
-            dto: EntityAndObjectDTO { eid: 1, oid: 0 },
+            dto: EntityAndObjectDTO {
+                owner: 1,
+                object: 0,
+            },
         },
     )
     .await

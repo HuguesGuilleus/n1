@@ -29,8 +29,8 @@ pub async fn render_priv_index(db: &impl DB, r: OpRequest<u32>) -> Result<String
                     wiki.articles.values().map(|article| {
                         H - "a.bl href=/_wiki_page/"
                             - EntityAndObjectDTO {
-                                eid: owner_id,
-                                oid: article.article_id,
+                                owner: owner_id,
+                                object: article.article_id,
                             }
                             + [H - "div" + [H - "b" + &article.title]]
                             + [H - "div" + ".../" + article.article_id + "-" + &article.slug]
@@ -46,16 +46,16 @@ pub async fn render_priv_index(db: &impl DB, r: OpRequest<u32>) -> Result<String
 }
 
 pub async fn render_priv_page(db: &impl DB, r: OpRequest<EntityAndObjectDTO>) -> Result<String> {
-    r.token.check_access_write(r.dto.eid, OID_ENTITY_WIKI)?;
+    r.token.check_access_write(r.dto.owner, OID_ENTITY_WIKI)?;
 
-    let owner_id = r.dto.eid;
+    let owner_id = r.dto.owner;
     let owner_name = r.common.get_entity_name(owner_id).await?;
-    let wiki: State = db.obj_get(r.dto.eid, OID_ENTITY_WIKI as u32).await?;
+    let wiki: State = db.obj_get(r.dto.owner, OID_ENTITY_WIKI as u32).await?;
     let article = wiki
         .articles
-        .get(&r.dto.oid)
-        .ok_or_else(|| errs::NOT_FOUND.push(format!("Article {} not found", r.dto.oid)))?;
-    let content = db.fs_get(r.dto.eid, r.dto.oid).await?;
+        .get(&r.dto.object)
+        .ok_or_else(|| errs::NOT_FOUND.push(format!("Article {} not found", r.dto.object)))?;
+    let content = db.fs_get(r.dto.owner, r.dto.object).await?;
 
     Ok([H - "html lang=fr"
         + [H - "head" + front::HEAD + [H - "title" + "Wiki " + &article.title]]
