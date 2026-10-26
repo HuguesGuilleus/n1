@@ -159,3 +159,25 @@ pub async fn fs_direct_set(
 
     Ok((0, Vec::new()))
 }
+
+pub async fn fs_direct_get(
+    _: &impl DB,
+    r: OpRequest<EntityAndObjectDTO>,
+    _: impl AsyncRead + Unpin + Send,
+) -> Result<(u32, Vec<Chunk>)> {
+    r.token.check_access_read(r.dto.owner, OID_ENTITY_FS)?;
+
+    let fs_guard = r.common.fs.get(r.dto.owner).await?;
+    let fs = fs_guard.read().await;
+
+    Ok((
+        r.dto.owner,
+        fs.files
+            .get(&r.dto.object)
+            .ok_or_else(|| {
+                errs::NOT_FOUND.push(format!("File {} for owner {}", r.dto.object, r.dto.owner))
+            })?
+            .1
+            .clone(),
+    ))
+}

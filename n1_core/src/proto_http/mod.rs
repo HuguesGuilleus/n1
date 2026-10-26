@@ -115,6 +115,9 @@ pub async fn handle<R: AsyncRead + Unpin + Send, C: DB>(
         ";fs.direct.set" => {
             with_reader(s, r, async |db, r, c| op::fs::fs_direct_set(db, r, c).await).await
         }
+        ";fs.direct.get" => {
+            with_reader(s, r, async |db, r, c| op::fs::fs_direct_get(db, r, c).await).await
+        }
 
         // Serve generated files
         _ => {
