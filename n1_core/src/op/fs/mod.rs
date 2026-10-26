@@ -6,6 +6,8 @@ use n1_tool::Chunk;
 pub use op_direct::*;
 use serde::{Deserialize, Serialize};
 
+const CHUNK_LEN: usize = 65536;
+
 /// A file system of on user or group.
 ///
 /// The data must be a tree.

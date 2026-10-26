@@ -2,9 +2,10 @@ use std::{io, sync::Arc};
 
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
+use tokio::io::{AsyncRead, AsyncReadExt};
 
 use super::DB;
-use crate::errs;
+use crate::{Result, errs};
 
 /** A big file with multiple chunks as content. */
 #[derive(Debug)]
@@ -22,7 +23,7 @@ pub struct Chunk {
 }
 
 impl<B: DB> Chunks<B> {
-    pub fn new(config: Arc<B>, eid: u32, chunks: &[Chunk]) -> Self {
+    pub fn new(config: Arc<B>, eid: u32, chunks: Vec<Chunk>) -> Self {
         Self {
             config,
             eid,
@@ -86,7 +87,7 @@ async fn chunck() {
     let mut c = Chunks::new(
         Arc::new(db),
         1,
-        &[
+        vec![
             Chunk { len: 3, oid: 1 },
             Chunk { len: 3, oid: 2 },
             Chunk { len: 3, oid: 3 },
@@ -101,4 +102,57 @@ async fn chunck() {
     assert_eq!(c.next().await.unwrap(), Some(Bytes::from_static(b"def")));
     assert_eq!(c.next().await.unwrap(), None);
     assert_eq!(c.next().await.unwrap(), None);
+}
+
+pub async fn read_to_chunks<const L: usize>(
+    db: &impl DB,
+    eid: u32,
+    mut reader: impl AsyncRead + Unpin,
+) -> Result<Vec<Chunk>> {
+    let mut buff = [0u8; L];
+    let mut w = 0;
+    let mut chunks = Vec::new();
+    loop {
+        let n = reader
+            .read(&mut buff[w..])
+            .await
+            .map_err(|e| errs::IO_ERROR.push(e.to_string()))?;
+        w += n;
+        if w == L || (n == 0 && w != 0) {
+            let oid = db.fs_new_object(eid).await?;
+            db.fs_set(eid, oid, Bytes::copy_from_slice(&buff[..w]))
+                .await?;
+            chunks.push(Chunk { len: w, oid });
+            w = 0;
+        }
+        if n == 0 {
+            return Ok(chunks);
+        }
+    }
+}
+#[tokio::test]
+async fn test_read_to_chunks() {
+    let db = super::DBMemory::new();
+    assert_eq!(
+        vec![
+            Chunk { len: 3, oid: 1024 },
+            Chunk { len: 3, oid: 1025 },
+            Chunk { len: 2, oid: 1026 }
+        ],
+        read_to_chunks::<3>(&db, 36, &b"12345678"[..])
+            .await
+            .unwrap()
+    );
+
+    let db = super::DBMemory::new();
+    assert_eq!(
+        vec![
+            Chunk { len: 3, oid: 1024 },
+            Chunk { len: 3, oid: 1025 },
+            Chunk { len: 3, oid: 1026 }
+        ],
+        read_to_chunks::<3>(&db, 36, &b"123456789"[..])
+            .await
+            .unwrap()
+    );
 }

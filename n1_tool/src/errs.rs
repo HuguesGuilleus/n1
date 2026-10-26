@@ -95,7 +95,7 @@ macro_rules! E {
 }
 
 E!(NOT_FOUND, NotFound, "not found");
-E!(IO_ERROR, NotFound, "io operation fail");
+E!(IO_ERROR, SubIO, "io operation fail");
 E!(IO_MAGIC_NUMBER, NotFound, "invalid magic number");
 E!(MUTEX_POISONING, Internal, "mutex is poisoning");
 E!(EOF, Internal, "end of file");

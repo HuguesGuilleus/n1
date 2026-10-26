@@ -1,13 +1,14 @@
 use std::ops::Deref;
 
-use n1_tool::DB;
+use n1_tool::{Chunk, DB, read_to_chunks};
 use serde::Deserialize;
+use tokio::io::AsyncRead;
 
 use crate::{
     DTO, OpRequest, Result, errs,
     op::{
-        OID_ENTITY_FS,
-        fs::{Entry, FSState},
+        EntityAndObjectDTO, OID_ENTITY_FS,
+        fs::{CHUNK_LEN, Entry, FSState},
     },
 };
 
@@ -133,4 +134,28 @@ async fn make(db: &impl DB, r: OpRequest<MakeDTO>, is_dir: bool) -> Result<u32> 
         .await?;
 
     Ok(id)
+}
+
+pub async fn fs_direct_set(
+    db: &impl DB,
+    r: OpRequest<EntityAndObjectDTO>,
+    content: impl AsyncRead + Unpin + Send,
+) -> Result<(u32, Vec<Chunk>)> {
+    r.token.check_access_write(r.dto.owner, OID_ENTITY_FS)?;
+
+    let chunks = read_to_chunks::<CHUNK_LEN>(db, r.dto.owner, content).await?;
+
+    let fs_guard = r.common.fs.get(r.dto.owner).await?;
+    let mut fs = fs_guard.write().await;
+
+    let file = fs
+        .files
+        .get_mut(&r.dto.object)
+        .ok_or_else(|| errs::NOT_FOUND.push(format!("file {}", r.dto.object)))?;
+    file.1 = chunks;
+
+    db.obj_set(r.dto.owner, OID_ENTITY_FS as u32, fs.deref())
+        .await?;
+
+    Ok((0, Vec::new()))
 }

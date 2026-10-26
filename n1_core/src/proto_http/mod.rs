@@ -20,7 +20,7 @@ use crate::{OpRequest, Result, errs, front};
 use n1_tool::proto_http::{
     HTTPParser, HTTPRequest, Response, ResponseBody, StatusHTTP, write_response,
 };
-use n1_tool::{AtomicError, DB, ErrorKind, mime};
+use n1_tool::{AtomicError, Chunk, Chunks, DB, ErrorKind, mime};
 
 #[derive(Clone)]
 pub struct HTTPServer<B: DB> {
@@ -59,7 +59,7 @@ pub async fn run_with_listener<C: DB + 'static>(
     }
 }
 
-pub async fn handle<R: AsyncRead + Unpin, C: DB>(
+pub async fn handle<R: AsyncRead + Unpin + Send, C: DB>(
     s: &HTTPServer<C>,
     r: HTTPRequest<R>,
 ) -> Result<Response<C>> {
@@ -87,7 +87,7 @@ pub async fn handle<R: AsyncRead + Unpin, C: DB>(
             body: ResponseBody::Bytes(Bytes::from_owner(logout_console(s.common.lang))),
         }),
 
-        // Actions with no return
+        // Actions API
         ":auth.test.access.read" => with_body(s, r, op::auth_test_access_read).await,
         ":auth.test.access.write" => with_body(s, r, op::auth_test_access_write).await,
         ":auth.test.id" => with_body(s, r, op::auth_test_id).await,
@@ -101,7 +101,7 @@ pub async fn handle<R: AsyncRead + Unpin, C: DB>(
         ":dropbox.text.add" => with_body(s, r, op::dropbox::text_add).await,
         ":dropbox.text.rm" => with_body(s, r, op::dropbox::text_rm).await,
         ":fs.direct.mkdir" => with_body(s, r, op::fs::mkdir).await,
-        ":fs.direct.mkfile" => with_body(s, r, op::fs::mkdir).await,
+        ":fs.direct.mkfile" => with_body(s, r, op::fs::mkfile).await,
         ":home" => with_body(s, r, op::home::json_edit).await,
         ":user.login" => make_token(s, r, op::user::login::action).await,
         ":wiki.article.get" => with_body(s, r, op::wiki::article_get).await,
@@ -110,6 +110,11 @@ pub async fn handle<R: AsyncRead + Unpin, C: DB>(
         ":wiki.article.setContent" => with_body(s, r, op::wiki::article_set_content).await,
         ":wiki.article.setSlug" => with_body(s, r, op::wiki::article_set_slug).await,
         ":wiki.article.setTitle" => with_body(s, r, op::wiki::article_set_title).await,
+
+        // Actions with request reader body or return body
+        ";fs.direct.set" => {
+            with_reader(s, r, async |db, r, c| op::fs::fs_direct_set(db, r, c).await).await
+        }
 
         // Serve generated files
         _ => {
@@ -156,12 +161,13 @@ async fn with_url<
 ) -> Result<Response<C>> {
     let token = get_token(&s.key, &r);
 
-    let dto = URLDTO::url_decode(
+    let dto: D = URLDTO::url_decode(
         r.path[1..]
             .split_once('/')
             .map(|(_, data)| data)
             .unwrap_or(""),
     )?;
+    dto.check()?;
 
     Ok(f(
         &s.db,
@@ -176,16 +182,16 @@ async fn with_url<
 }
 
 async fn with_body<
-    C: DB,
+    B: DB,
     R: AsyncRead + Unpin,
-    F: AsyncFn(&C, OpRequest<D>) -> Result<O>,
+    F: AsyncFn(&B, OpRequest<D>) -> Result<O>,
     O: Serialize,
     D: DTO,
 >(
-    s: &HTTPServer<C>,
+    s: &HTTPServer<B>,
     mut r: HTTPRequest<R>,
     f: F,
-) -> Result<Response<C>> {
+) -> Result<Response<B>> {
     let token = get_token(&s.key, &r);
 
     let mut buf = Vec::new();
@@ -215,6 +221,45 @@ async fn with_body<
         mime: mime::JSON,
         header: None,
         body: ResponseBody::Bytes(Bytes::from_owner(serde_json::to_vec(&out).unwrap())),
+    })
+}
+
+async fn with_reader<
+    B: DB,
+    F: AsyncFn(&B, OpRequest<D>, R) -> Result<(u32, Vec<Chunk>)>,
+    D: URLDTO,
+    R: AsyncRead + Unpin + Send,
+>(
+    s: &HTTPServer<B>,
+    r: HTTPRequest<R>,
+    f: F,
+) -> Result<Response<B>> {
+    let token = get_token(&s.key, &r);
+
+    let dto: D = URLDTO::url_decode(
+        r.path[1..]
+            .split_once('/')
+            .map(|(_, data)| data)
+            .unwrap_or(""),
+    )?;
+    dto.check()?;
+
+    let (eid, chunks) = f(
+        &s.db,
+        OpRequest {
+            common: s.common.clone(),
+            token,
+            dto,
+        },
+        r.body,
+    )
+    .await?;
+
+    Ok(Response {
+        status: StatusHTTP::OK,
+        mime: mime::OCTET_STREAM,
+        header: None,
+        body: ResponseBody::Chunks(Chunks::new(s.db.clone(), eid, chunks)),
     })
 }
 

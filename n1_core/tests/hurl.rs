@@ -1,11 +1,14 @@
 use hurl::{
-    runner::{RunnerOptions, VariableSet, run},
-    util::logger::{LoggerOptionsBuilder, Verbosity},
+    runner::{RunnerOptionsBuilder, VariableSet, run},
+    util::{
+        logger::{LoggerOptionsBuilder, Verbosity},
+        path::ContextDir,
+    },
 };
 use hurl_core::input::Input;
 use tokio::{net::TcpListener, spawn};
 
-use std::{fs, net::SocketAddr, sync::Arc};
+use std::{fs, net::SocketAddr, path::Path, sync::Arc};
 
 use n1_core::{
     init_dev,
@@ -30,7 +33,7 @@ async fn hurl_tests() {
     let listener = TcpListener::bind(addr).await.unwrap();
     spawn(run_with_listener(listener, server));
 
-    // Run HURL tests
+    // Index hurl files
     let mut paths: Vec<_> = std::fs::read_dir("tests")
         .unwrap()
         .map(|entry| format!("tests/{}", entry.unwrap().file_name().to_str().unwrap()))
@@ -38,12 +41,15 @@ async fn hurl_tests() {
         .collect();
     paths.sort();
 
+    // Run HURL tests
     for path in paths {
         let content: String = fs::read_to_string(&path).unwrap();
         let result = run(
             &content,
             Some(&Input::new(&path)),
-            &RunnerOptions::default(),
+            &RunnerOptionsBuilder::new()
+                .context_dir(&ContextDir::new(Path::new(""), Path::new("tests")))
+                .build(),
             &VariableSet::new(),
             &LoggerOptionsBuilder::new()
                 .verbosity(Some(Verbosity::Verbose))
