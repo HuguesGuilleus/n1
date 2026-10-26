@@ -39,6 +39,7 @@ impl DTO for MakeDTO {
         Ok(())
     }
 }
+
 /// Make a new directory. Path: `:fs.direct.mkdir`
 ///
 /// If can recursive create parent directories.
@@ -180,4 +181,53 @@ pub async fn fs_direct_get(
             .1
             .clone(),
     ))
+}
+
+pub async fn fs_direct_rm(db: &impl DB, r: OpRequest<EntityAndObjectDTO>) -> Result<()> {
+    r.token.check_access_write(r.dto.owner, OID_ENTITY_FS)?;
+
+    let fs_guard = r.common.fs.get(r.dto.owner).await?;
+    let mut fs = fs_guard.write().await;
+
+    /// Remove item (file or directory) and return parent ID.
+    /// This function do not remove link to th parent.
+    async fn rm(db: &impl DB, fs: &mut FSState, owner: u32, id: u32) -> Result<u32> {
+        if let Some((parent, chunks)) = fs.files.remove(&id) {
+            for chunk in chunks {
+                db.fs_rm_object(owner, chunk.oid).await?;
+            }
+            Ok(parent)
+        } else {
+            let (parent, entries) = fs.dirs.remove(&id).ok_or_else(|| {
+                errs::DATA_INCOERENT.push(format!("cannot find directory {}", id))
+            })?;
+            for entry in entries {
+                Box::pin(rm(db, fs, owner, entry.id)).await?;
+            }
+            Ok(parent)
+        }
+    }
+    let parent = rm(db, &mut fs, r.dto.owner, r.dto.object).await?;
+
+    // remove parent link
+    let (_, dir) = fs.dirs.get_mut(&parent).ok_or_else(|| {
+        errs::DATA_INCOERENT.push(format!("parent directory {} do not exist", parent))
+    })?;
+    let (i, _) = dir
+        .iter()
+        .enumerate()
+        .filter(|(_, entry)| entry.id == r.dto.object)
+        .next()
+        .ok_or_else(|| {
+            errs::DATA_INCOERENT.push(format!(
+                "in parent {} do not find file {}",
+                parent, r.dto.object
+            ))
+        })?;
+    dir.swap_remove(i);
+
+    db.obj_set(r.dto.owner, OID_ENTITY_FS as u32, fs.deref())
+        .await?;
+
+    Ok(())
 }

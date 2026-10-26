@@ -25,7 +25,7 @@ HTTP 200
 [Captures]
 fileID: body
 
-PUT http://localhost:8000/;fs.direct.get/101,{{fileID}}
+GET http://localhost:8000/;fs.direct.get/101,{{fileID}}
 Cookie: auth={{cookie}}
 HTTP 200
 ``
@@ -36,7 +36,13 @@ file,data.txt;
 HTTP 200
 ``
 
-PUT http://localhost:8000/;fs.direct.get/101,{{fileID}}
+GET http://localhost:8000/;fs.direct.get/101,{{fileID}}
 Cookie: auth={{cookie}}
 HTTP 200
 file,data.txt;
+
+PUT http://localhost:8000/:fs.direct.rm/
+Cookie: auth={{cookie}}
+{"owner":101,"object":{{dirID}}}
+HTTP 200
+`null`

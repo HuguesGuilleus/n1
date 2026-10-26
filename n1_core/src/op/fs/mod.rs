@@ -16,6 +16,7 @@ const CHUNK_LEN: usize = 65536;
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct FSState {
     /// Parent id and directory content.
+    /// The entries are not sorted.
     pub dirs: BTreeMap<u32, (u32, Vec<Entry>)>,
     /// Parent id and file content.
     pub files: BTreeMap<u32, (u32, Vec<Chunk>)>,
