@@ -23,6 +23,16 @@ pub fn header_menu(lang: &Lang) -> impl Html {
     ]
 }
 
+/// Anchors for the header menu (at right).
+/// Assume that user is logged.
+/// No need additional script.
+pub fn header_menu_logged(lang: &Lang) -> impl Html {
+    [
+        H + [H - "a.bl.mlauto.mr href=/_user_logout" + lang.logout_title]
+            + [H - "a.bl.needAuth href=/_" + lang.common_menu],
+    ]
+}
+
 pub fn footer_home(lang: &Lang) -> impl Html {
     [H - "div.mv.fh" + [H - "a.bl href=/ " + lang.common_home]]
 }

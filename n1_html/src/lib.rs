@@ -61,6 +61,20 @@ impl Html for &str {
     }
 }
 
+impl Html for bool {
+    fn render(&self, buf: &mut String) {
+        if *self {
+            buf.push_str("true");
+        } else {
+            buf.push_str("false");
+        }
+    }
+
+    fn size(&self) -> usize {
+        if *self { "true".len() } else { "false".len() }
+    }
+}
+
 /// HTML block direct injected in the output without escape.
 #[derive(Debug, Clone, Copy)]
 pub struct DirectHTML<'a>(pub &'a str);
@@ -302,9 +316,9 @@ fn html_test() {
 
 /// Add quote and escape content.
 /// Use it for markup attribute.
-pub struct Q<'a>(pub &'a str);
+pub struct Q<H: Html>(pub H);
 
-impl<'a> Html for Q<'a> {
+impl<H: Html> Html for Q<H> {
     fn render(&self, buf: &mut String) {
         buf.push('"');
         self.0.render(buf);

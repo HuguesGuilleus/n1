@@ -11,7 +11,7 @@ macro_rules! E {
 
 E!(ALREADY_CONNECTED, Forbidden, "already connected");
 E!(ALREADY_EXIST, BadRequest, "already exist");
-E!(DATA_INCOERENT, Internal, "data are incoherent");
+E!(DATA_INCOHERENT, Internal, "data are incoherent");
 E!(DECODE_REQUEST, BadRequest, "cannot decode request data");
 E!(EXPECT_REEL_ENTITY, BadRequest, "expected a user of a group");
 E!(EXPECT_USER, BadRequest, "expected a user");
@@ -27,7 +27,7 @@ E!(FIELD_PASSWORD, BadRequest, "empty 'password' field");
 E!(FIELD_STR, BadRequest, "empty 'str' field");
 E!(FIELD_TITLE, BadRequest, "empty 'title' field");
 E!(FORBIDEN_GLOBAL, Forbidden, "no access this global item");
-E!(FORBIDEN_GROUP, Forbidden, "no access this group");
+E!(FORBIDEN, Forbidden, "access forbidden");
 E!(NO_AUTH, NoAuth, "No authentification token");
 E!(NOT_FOUND_ENTITY, NotFound, "not found entity");
 E!(NOT_FOUND_USER, NotFound, "not found user");

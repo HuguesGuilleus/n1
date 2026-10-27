@@ -10,6 +10,7 @@ pub const LANG_EN: Lang = Lang {
     common_save: DirectHTML("Save"),
     common_lastedit: DirectHTML("Last edit: "),
     common_gotomain: DirectHTML("Go to main content"),
+    common_download: DirectHTML("Download"),
 
     bio_edit_page: DirectHTML("Edit bio page of @"),
     bio_edit_format_info: &[
@@ -19,6 +20,8 @@ pub const LANG_EN: Lang = Lang {
         DirectHTML("- as a simple paragraph;"),
         DirectHTML("If the bio content is empty, no page are generated."),
     ],
+
+    fs_remove: DirectHTML("Remove"),
 
     login_title: DirectHTML("Login"),
     login_account: DirectHTML("Account or username"),

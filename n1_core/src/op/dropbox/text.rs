@@ -57,7 +57,7 @@ pub async fn text_rm(db: &impl DB, r: OpRequest<EntityAndObjectDTO>) -> Result<(
 #[tokio::test]
 async fn text() -> Result<()> {
     let (db, common) = crate::init_dev().await?;
-    let common = std::sync::Arc::new(common);
+    let common = common;
 
     text_add(
         &db,

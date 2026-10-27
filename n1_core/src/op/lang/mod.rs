@@ -21,11 +21,16 @@ pub struct Lang {
     pub common_lastedit: DirectHTML<'static>,
     /// Anchor to the main block.
     pub common_gotomain: DirectHTML<'static>,
+    /// Help text of download button.
+    pub common_download: DirectHTML<'static>,
 
     /// Edit bio page title text.
     pub bio_edit_page: DirectHTML<'static>,
     /// Instruction of the bio text format.
     pub bio_edit_format_info: &'static [DirectHTML<'static>],
+
+    /// Help text to remove a file or a directory.
+    pub fs_remove: DirectHTML<'static>,
 
     /// Title for login page.
     pub login_title: DirectHTML<'static>,

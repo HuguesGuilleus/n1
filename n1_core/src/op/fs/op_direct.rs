@@ -44,7 +44,7 @@ impl DTO for MakeDTO {
 ///
 /// If can recursive create parent directories.
 /// If directory already exist, do nothing and return last directory id.
-pub async fn mkdir(db: &impl DB, r: OpRequest<MakeDTO>) -> Result<u32> {
+pub async fn fs_direct_mkdir(db: &impl DB, r: OpRequest<MakeDTO>) -> Result<u32> {
     make(db, r, true).await
 }
 
@@ -52,7 +52,7 @@ pub async fn mkdir(db: &impl DB, r: OpRequest<MakeDTO>) -> Result<u32> {
 ///
 /// If file already exist, do nothing.
 /// Create recursive parent directory if it do not exist.
-pub async fn mkfile(db: &impl DB, r: OpRequest<MakeDTO>) -> Result<u32> {
+pub async fn fs_direct_mkfile(db: &impl DB, r: OpRequest<MakeDTO>) -> Result<u32> {
     make(db, r, false).await
 }
 
@@ -63,7 +63,7 @@ async fn make(db: &impl DB, r: OpRequest<MakeDTO>, is_dir: bool) -> Result<u32> 
         let (_, dir) = fs
             .dirs
             .get_mut(&id)
-            .ok_or_else(|| errs::DATA_INCOERENT.push(format!("not found {} directory", id)))?;
+            .ok_or_else(|| errs::DATA_INCOHERENT.push(format!("not found {} directory", id)))?;
         match dir.iter().filter(|&entry| entry.name == part).next() {
             Some(entry) if entry.is_dir => {
                 *id = entry.id;
@@ -109,7 +109,7 @@ async fn make(db: &impl DB, r: OpRequest<MakeDTO>, is_dir: bool) -> Result<u32> 
         let (_, dir) = fs
             .dirs
             .get_mut(&id)
-            .ok_or_else(|| errs::DATA_INCOERENT.push(format!("not found {} directory", id)))?;
+            .ok_or_else(|| errs::DATA_INCOHERENT.push(format!("not found {} directory", id)))?;
         match dir.iter().filter(|&entry| entry.name == last).next() {
             Some(entry) if !entry.is_dir => {
                 id = entry.id;
@@ -199,7 +199,7 @@ pub async fn fs_direct_rm(db: &impl DB, r: OpRequest<EntityAndObjectDTO>) -> Res
             Ok(parent)
         } else {
             let (parent, entries) = fs.dirs.remove(&id).ok_or_else(|| {
-                errs::DATA_INCOERENT.push(format!("cannot find directory {}", id))
+                errs::DATA_INCOHERENT.push(format!("cannot find directory {}", id))
             })?;
             for entry in entries {
                 Box::pin(rm(db, fs, owner, entry.id)).await?;
@@ -211,7 +211,7 @@ pub async fn fs_direct_rm(db: &impl DB, r: OpRequest<EntityAndObjectDTO>) -> Res
 
     // remove parent link
     let (_, dir) = fs.dirs.get_mut(&parent).ok_or_else(|| {
-        errs::DATA_INCOERENT.push(format!("parent directory {} do not exist", parent))
+        errs::DATA_INCOHERENT.push(format!("parent directory {} do not exist", parent))
     })?;
     let (i, _) = dir
         .iter()
@@ -219,7 +219,7 @@ pub async fn fs_direct_rm(db: &impl DB, r: OpRequest<EntityAndObjectDTO>) -> Res
         .filter(|(_, entry)| entry.id == r.dto.object)
         .next()
         .ok_or_else(|| {
-            errs::DATA_INCOERENT.push(format!(
+            errs::DATA_INCOHERENT.push(format!(
                 "in parent {} do not find file {}",
                 parent, r.dto.object
             ))

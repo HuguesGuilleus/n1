@@ -18,7 +18,7 @@ async fn main() -> io::Result<()> {
 
     let server = Arc::new(HTTPServer {
         db: Arc::new(db),
-        common: Arc::new(common),
+        common,
         key,
     });
 

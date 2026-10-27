@@ -178,7 +178,7 @@ pub async fn console(db: &impl DB, r: OpRequest<u32>) -> Result<String> {
                 + ""]
             + [H - "footer"
                 + [H - "p.nospace" + lang.common_lastedit + [H - "time" + bio.last_edit]]
-                + [H - "a.small href=/ " + "Accueil"]
+                + compo::footer_home(lang)
                 + ""]
             + [H - "script"
                 + LOGIN_JS

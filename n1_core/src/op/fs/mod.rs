@@ -1,7 +1,9 @@
+mod console_direct;
 mod op_direct;
 
 use std::collections::BTreeMap;
 
+pub use console_direct::*;
 use n1_tool::Chunk;
 pub use op_direct::*;
 use serde::{Deserialize, Serialize};

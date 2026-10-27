@@ -25,7 +25,7 @@ async fn hurl_tests() {
     let (db, common) = init_dev().await.unwrap();
     let server = Arc::new(HTTPServer {
         db: Arc::new(db),
-        common: Arc::new(common),
+        common: common,
         key,
     });
 

@@ -73,3 +73,32 @@ impl n1_html::Html for EntityAndObjectDTO {
         write!(buf, "{},{}", self.owner, self.object).unwrap()
     }
 }
+
+#[derive(Debug, PartialEq, Deserialize)]
+pub struct EntityAndObjectNullDTO {
+    pub owner: u32,
+    pub object: u32,
+}
+impl DTO for EntityAndObjectNullDTO {
+    fn check(&self) -> Result<()> {
+        if self.owner == 0 {
+            return Err(errs::FIELD_ENTITY.into());
+        }
+        Ok(())
+    }
+}
+impl URLDTO for EntityAndObjectNullDTO {
+    fn url_decode(url: &str) -> Result<Self> {
+        let (a, b) = url.split_once(',').ok_or(errs::DECODE_REQUEST)?;
+        Ok(Self {
+            owner: a.parse::<u32>().map_err(|_| errs::DECODE_REQUEST)?,
+            object: b.parse::<u32>().map_err(|_| errs::DECODE_REQUEST)?,
+        })
+    }
+}
+impl n1_html::Html for EntityAndObjectNullDTO {
+    fn render(&self, buf: &mut String) {
+        use std::fmt::Write;
+        write!(buf, "{},{}", self.owner, self.object).unwrap()
+    }
+}

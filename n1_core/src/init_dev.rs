@@ -1,26 +1,29 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, sync::Arc};
 
 use bytes::Bytes;
 use n1_tool::{Chunk, DB, DBMemory, Result};
 
 use crate::{
-    Common,
+    Common, OpRequest,
     op::{
-        self, OID_ENTITY_BIO, OID_ENTITY_DROPBOX, OID_ENTITY_FS, OID_ENTITY_WIKI, TokenItem,
+        self, EntityAndObjectDTO, OID_ENTITY_BIO, OID_ENTITY_DROPBOX, OID_ENTITY_FS,
+        OID_ENTITY_WIKI, OID_GLOBAL_ENTITY, OID_GLOBAL_HOME, Token, TokenItem,
         dropbox::DropFile,
+        fs::{MakeDTO, fs_direct_mkdir, fs_direct_mkfile, fs_direct_set},
         user::{Entity, Group, User},
     },
 };
 
-pub async fn init_dev() -> Result<(impl DB, Common)> {
-    const NOW: u64 = 1785597192;
+const NOW: u64 = 1785597192;
+
+pub async fn init_dev() -> Result<(impl DB, Arc<Common>)> {
     let db = DBMemory::new();
     let mut common = Common::new();
-    let entities_map = common.entities.get_mut();
 
     common.lang = &crate::op::LANG_FR;
 
     // Set "eve" user
+    let entities_map = common.entities.get_mut();
     entities_map.insert(
         101,
         Entity::User(User {
@@ -156,5 +159,96 @@ liquam convallis sollicitudin purus. Praesent aliquam, enim at fermentum mollis,
     // Final init
     common.init(&db).await?;
 
+    let common = Arc::new(common);
+    init_sarah_data(&db, common.clone()).await;
+
     Ok((db, common))
+}
+
+async fn init_sarah_data(db: &impl DB, common: Arc<Common>) {
+    let uid = 103;
+    common.entities.write().await.insert(
+        uid,
+        Entity::User(User {
+            uid,
+            name: "sarah".to_string(),
+            password: "21".to_string(),
+            is_admin: false,
+            access: vec![
+                TokenItem {
+                    id: uid,
+                    app: OID_ENTITY_FS,
+                    can_write: true,
+                },
+                TokenItem {
+                    id: uid,
+                    app: OID_ENTITY_BIO,
+                    can_write: true,
+                },
+                TokenItem {
+                    id: uid,
+                    app: OID_ENTITY_WIKI,
+                    can_write: true,
+                },
+            ],
+        }),
+    );
+
+    let token = Token {
+        uid,
+        is_admin: false,
+        access: {
+            let mut access = [TokenItem::default(); Token::ACCESS_LEN];
+            access[0] = TokenItem::new_write(uid, OID_GLOBAL_ENTITY);
+            access[1] = TokenItem::new_write(uid, OID_GLOBAL_HOME);
+            access[2] = TokenItem::new_write(uid, OID_ENTITY_FS);
+            access[3] = TokenItem::new_write(uid, OID_ENTITY_BIO);
+            access[4] = TokenItem::new_write(uid, OID_ENTITY_DROPBOX);
+            access[5] = TokenItem::new_write(uid, OID_ENTITY_WIKI);
+            access
+        },
+    };
+
+    fs_direct_mkdir(
+        db,
+        OpRequest {
+            common: common.clone(),
+            token: token.clone(),
+            dto: MakeDTO {
+                owner: uid,
+                path: "dir/sub/".to_string(),
+            },
+        },
+    )
+    .await
+    .unwrap();
+
+    let hello_id = fs_direct_mkfile(
+        db,
+        OpRequest {
+            common: common.clone(),
+            token: token.clone(),
+            dto: MakeDTO {
+                owner: uid,
+                path: "dir/sub/hello.txt".to_string(),
+            },
+        },
+    )
+    .await
+    .unwrap();
+
+    fs_direct_set(
+        db,
+        OpRequest {
+            common: common.clone(),
+            token: token.clone(),
+            dto: EntityAndObjectDTO {
+                owner: uid,
+                object: hello_id,
+            },
+        },
+        &b"Hello World\r\n"[..],
+    )
+    .await
+    .unwrap();
 }

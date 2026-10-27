@@ -71,7 +71,10 @@ impl Token {
                 return Ok(());
             }
         }
-        Err(errs::FORBIDEN_GROUP.into())
+        Err(errs::FORBIDEN.push(format!(
+            "forbiden read access for entity {} to app {}",
+            id, app_id
+        )))
     }
 
     /// Check if the token has read access to a specific group and app.
@@ -85,7 +88,10 @@ impl Token {
                 return Ok(());
             }
         }
-        Err(errs::FORBIDEN_GROUP.into())
+        Err(errs::FORBIDEN.push(format!(
+            "forbiden write access for entity {} to app {}",
+            id, app_id
+        )))
     }
 
     pub fn names<'a>(
@@ -137,6 +143,23 @@ impl Default for Token {
             uid: 0,
             is_admin: false,
             access: [TokenItem::default(); Token::ACCESS_LEN],
+        }
+    }
+}
+
+impl TokenItem {
+    pub fn new_read(id: u32, app: u16) -> Self {
+        Self {
+            id,
+            app,
+            can_write: false,
+        }
+    }
+    pub fn new_write(id: u32, app: u16) -> Self {
+        Self {
+            id,
+            app,
+            can_write: true,
         }
     }
 }
