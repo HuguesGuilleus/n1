@@ -48,10 +48,12 @@ pub async fn run_with_listener<C: DB + 'static>(
             let (r, mut w) = stream.split();
             let mut parser = HTTPParser::new(r);
             while let Ok(request) = parser.next().await {
+                let path = request.path.clone();
                 let accept_html = accept_html(&request.headers);
                 let response = handle(&server, request)
                     .await
                     .unwrap_or_else(|err| print_error(err, accept_html));
+                println!("{:?} <= {:?}", response.status, &path);
                 write_response(&mut w, response).await?;
             }
             Ok(())
