@@ -70,6 +70,7 @@ pub async fn menu_console(_: &impl DB, r: OpRequest<()>) -> Result<String> {
                 })
                 + ""]
             + ""]
+        + [H - "script" + compo::LOGIN_JS_CONNECTED]
         + ""]
     .render_page())
 }

@@ -1,8 +1,9 @@
 use bytes::Bytes;
+use n1_js::js;
 use serde::{Deserialize, Serialize};
 
 use super::{DTO, OID_GLOBAL_HOME, OpRequest, compo};
-use crate::{Result, errs, front};
+use crate::{Common, Result, errs, front, op::Lang};
 use n1_html::{DirectHTML, H, Html, Q};
 use n1_tool::{DB, mime};
 
@@ -32,7 +33,7 @@ impl DTO for HomeState {
     }
 }
 
-pub async fn init(db: &impl DB) -> Result<()> {
+pub async fn init(db: &impl DB, common: &Common) -> Result<()> {
     let mut state = db
         .obj_get(0, OID_GLOBAL_HOME as u32)
         .await
@@ -56,22 +57,21 @@ pub async fn init(db: &impl DB) -> Result<()> {
         db.obj_set(0, OID_GLOBAL_HOME as u32, &state).await?;
     }
 
-    db.page_set("/", mime::HTML, render_pub(&state)).await?;
+    db.page_set("/", mime::HTML, render_pub(common.lang, &state))
+        .await?;
 
     Ok(())
 }
 
 pub async fn json_edit(db: &impl DB, r: OpRequest<HomeState>) -> Result<()> {
     r.token.check_isadmin()?;
-
-    db.page_set("/", mime::HTML, render_pub(&r.dto)).await?;
-
     db.obj_set(0, OID_GLOBAL_HOME as u32, &r.dto).await?;
-
+    db.page_set("/", mime::HTML, render_pub(r.common.lang, &r.dto))
+        .await?;
     Ok(())
 }
 
-fn render_pub(home: &HomeState) -> Bytes {
+fn render_pub(lang: &Lang, home: &HomeState) -> Bytes {
     Bytes::from_owner(
         [H - "html lang=fr"
             + [H - "head"
@@ -83,9 +83,8 @@ fn render_pub(home: &HomeState) -> Bytes {
                     - DirectHTML("\"")]
                 + ""]
             + [H - "body"
-                + compo::header("Accueil")
+                + [H - "header.fh" + [H - "h1.bl" + &home.title] + compo::header_menu(lang)]
                 + [H - "main.w"
-                    + [H - "h1" + &home.title]
                     + (|| {
                         home.content
                             .lines()
@@ -94,48 +93,57 @@ fn render_pub(home: &HomeState) -> Bytes {
                     })
                     + ""]
                 + ""]
+            + [H - "script" + compo::LOGIN_JS]
             + ""]
         .render_page(),
     )
 }
 
-pub async fn page_console(db: &impl DB, r: OpRequest<()>) -> Result<String> {
+pub async fn home_console(db: &impl DB, r: OpRequest<()>) -> Result<String> {
     r.token.check_isadmin()?;
-    let state = db.obj_get(0, OID_GLOBAL_HOME as u32).await?;
-    Ok(render_console(&state))
-}
+    let state: HomeState = db.obj_get(0, OID_GLOBAL_HOME as u32).await?;
 
-fn render_console(state: &HomeState) -> String {
-    [H - "html lang=fr"
-        + [H - "head" + front::HEAD + [H - "title" + "Modification de l'accueil"]]
-         + [H - "body"
-            + compo::header("Modification de l'accueil" )
+    let lang = r.common.lang;
+    Ok([H - "html lang=fr"
+        + [H - "head" + front::HEAD + [H - "title" + lang.home_title]]
+        + [H - "body"
+            + [H - "header.fh"
+                + [H - "h1.bl" + lang.home_title]
+                + compo::header_menu_logged(lang)]
             + [H - "main.w"
-                    + [H - "div.act.bb.fv.gap"
-                        + [H - "div.g2.gap"
-                            + [H - "label for=_title" + "Titre:"]
-                            + [H - "input.bg id=_title value=" - Q(&state.title)]
+                + [H - "div.act.fv.gap"
+                    + [H - "div.g2.gap"
+                        + [H - "label for=title" + lang.home_edite_title]
+                        + [H - "input.bl id=title value=" - Q(&state.title)]
                         + ""]
-                        + [H - "label for=_desc" + "Description:"]
-                        + [H - "div.act.bl contenteditable id=_desc" + &state.desc]
-                        + [H - "label for=_content" + "Contenu de la première page, utiliser des lignes vides pour séparer les paragraphes:"]
-                        + [H - "pre.act.bl contenteditable id=_content" +&state.content]
-                        + [H - "button.bl onclick=send()" +"!Enregistrer"]
+                    + [H - "label for=desc" + lang.home_edite_description]
+                    + [H - "div.act.bl contenteditable id=desc" + &state.desc]
+                    + [H - "label for=content" + lang.home_page_content]
+                    + [H - "pre.act.bl contenteditable id=content" + &state.content]
+                    + [H - "div.fh.gap"
+                        + [H - "button.bl onclick=send()" + lang.common_save]
+                        + [H - "a.bl href=/ " + lang.home]]
+                    + [H - "div id=out"]
                     + ""]
-                    +[H - "script" + DirectHTML(r#"const send=()=>{
-                        fetch("/:home/", {
+                + [H - "script"
+                    + "const "
+                    + compo::FETCHER_JS
+                    + ","
+                    + DirectHTML(js!(
+                        send = _ => fetcher(fetch("/:home/", {
                             method: "PUT",
                             body: JSON.stringify({
-                                title: _title.value,
-                                desc: _desc.innerText ,
-                                content: _content.innerText ,
+                                title: title.value,
+                                desc: desc .innerText,
+                                content: content.innerText,
                             }),
-                        });
-                    }"#)]
+                        }), out);
+                    ))
+                    + compo::LOGIN_JS_CONNECTED
+                    + ""]
                 + ""]
-                + [H - "footer" + [H - "a.small href=/ " + "Accueil"]]
             + ""]
-            + [H - "script" + compo::LOGIN_JS]
+        + [H - "script" + compo::LOGIN_JS]
         + ""]
-    .render_page()
+    .render_page())
 }

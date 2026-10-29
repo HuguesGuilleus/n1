@@ -40,6 +40,17 @@ pub struct Lang {
     /// Label text to remove a file or a directory.
     pub fs_upload: DirectHTML<'static>,
 
+    /// Home anchor.
+    pub home: DirectHTML<'static>,
+    /// Home console title.
+    pub home_title: DirectHTML<'static>,
+    /// Label edit the home title.
+    pub home_edite_title: DirectHTML<'static>,
+    /// Label edit the home dscription.
+    pub home_edite_description: DirectHTML<'static>,
+    /// Label edit the page content.
+    pub home_page_content: DirectHTML<'static>,
+
     /// Title for login page.
     pub login_title: DirectHTML<'static>,
     /// Account name label text.

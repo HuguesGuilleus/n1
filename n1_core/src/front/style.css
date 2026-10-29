@@ -197,6 +197,7 @@ a {
 	&>* {
 		margin: 0;
 		width: auto;
+		align-items: center;
 	}
 }
 
