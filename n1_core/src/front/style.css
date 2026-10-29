@@ -240,6 +240,11 @@ a {
 	margin-left: auto;
 }
 
+/* No padding */
+.p0 {
+	padding: 0;
+}
+
 /* Display in columns with sub block */
 .cols {
 	column-width: 30rem;

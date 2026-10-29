@@ -22,6 +22,7 @@ pub const LANG_EN: Lang = Lang {
     ],
 
     fs_remove: DirectHTML("Remove"),
+    fs_upload: DirectHTML("Upload"),
 
     login_title: DirectHTML("Login"),
     login_account: DirectHTML("Account or username"),

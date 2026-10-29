@@ -63,12 +63,15 @@ pub async fn fs_direct_index(_: &impl DB, r: OpRequest<EntityAndObjectNullDTO>) 
                 + compo::header_menu_logged(lang)
                 + ""]
             + [H - "main id=main"
-                + "$$upload + drop"
-                + [H - "div id=out"]
-                + [H - "ul"
+                + [H - "div.fh.gap.mv"
+                    + [H -"label.act.bl for=filesInput" + lang.fs_upload  ]
+                    + [H -"input id=filesInput onchange=upload(event.target.files) type=file multiple hidden"  ]
+                + ""]
+                + [H - "pre id=out"]
+                + [H - "ul.p0"
                     + [H + || {
                         dir.iter().map(|entry| {
-                            [H - "li.fh.gap data-id=" - entry.id
+                            [H - "li.fh.gap data-id=" - entry.id - " data-name=" - Q(&entry.name)
                                 + [H - "a.bg href="
                                     - entry.is_dir.then_some("/_fs_index/").unwrap_or("/fs_file/")
                                     - EntityAndObjectNullDTO {
@@ -104,17 +107,77 @@ pub async fn fs_direct_index(_: &impl DB, r: OpRequest<EntityAndObjectNullDTO>) 
             + "const owner="
             + r.dto.owner
             + ","
-            + compo::FETCHER_JS
+            + "path="
+            + Q([H + || ancestors.iter().flat_map(|(_, name)| [*name,"/"])])
             + ","
             + DirectHTML(js!(
+                _newElement = (type, _obj, ..._children)=> {
+                    const [_tagName, ..._classNames] = type.split(r#"regexp/\.(\w+)/"#),
+                        _element = document.createElement(_tagName || "div");
+                    _element.classList.add(..._classNames.filter(x => x));
+                    _element.append(..._children);
+                    Object.assign(_element, _obj || {});
+                    return _element;
+                },
+                upload = async _files => {
+                    for (const _file of _files) {
+                        const _out = _newElement("", 0, "+ ", _file.name, " ... ");
+                        out.append(_out);
+                        const _response1 = await fetch("/:fs.direct.mkfile", {
+                            method: "PUT",
+                            body: JSON.stringify({
+                                owner,
+                                path: path + _file.name.replace(r#"regexp/^\//"#, ""),
+                            }),
+                        });
+                        if (!_response1.ok) return _out.innerText += "!!! " + await _response1.text();
+                        const _id = await _response1.json();
+                        _out.innerText += "#" + _id + " ... ";
+                        const _response2 = await fetch("/;fs.direct.set/" + owner + "," + _id, {
+                            method: "PUT",
+                            body: _file,
+                        });
+                        _out.innerText += _response2.ok ? "OK" : "!!! " + await _response2.text();
+                    }
+                },
                 rm = _event => {
-                    fetcher(fetch("/:fs.direct.rm", {
+                    const
+                        _data = _event.target.parentElement.dataset,
+                        _out = _newElement("", 0, "- ", _data.name, " ... ");
+                    out.append(_out);
+                    fetch("/:fs.direct.rm", {
                         method: "PUT",
                         body: JSON.stringify({
                             owner,
-                            object: parseInt(_event.target.parentElement.dataset.id),
+                            object: parseInt(_data.id),
                         }),
-                    }).then(_event.target.parentElement.remove()), out)
+                    }).then(r => r.ok ? "OK" : r.text())
+                    .catch(_err => "!!! " + _err)
+                    .then(r => _out.textContent += r);
+                },
+                _body = document.body;
+
+                _body.ondragover = _event => _event.preventDefault();
+                _body.ondrop = _event => {
+                    _event.preventDefault();
+                    const _upload_file = async _entry => {
+                        if (_entry.isFile) {
+                            upload([
+                                new File([
+                                    await new Promise(_resolve => _entry.file(_resolve))
+                                ], _entry.fullPath)
+                            ]);
+                        } else {
+                            (await new Promise(
+                                _resolve => _entry.webkitGetAsEntry().createReader().readEntries(_resolve)
+                            )).forEach(_upload_file);
+                        }
+                    };
+                    [..._event.dataTransfer.items].forEach(_item => _item.kind == "string"
+                        ? new Promise(_resolve => _item.getAsString(_resolve))
+                            .then(_data => upload([new File([_data], "drop_"+new Date().toJSON()+".txt")]))
+                        : _upload_file(_item)
+                    );
                 };
             ))
             + ""]]

@@ -22,6 +22,7 @@ pub const LANG_FR: Lang = Lang {
     ],
 
     fs_remove: DirectHTML("Supprimer"),
+    fs_upload: DirectHTML("Téléverser"),
 
     login_title: DirectHTML("Connexion"),
     login_account: DirectHTML("Compte ou pseudo"),

@@ -31,6 +31,8 @@ pub struct Lang {
 
     /// Help text to remove a file or a directory.
     pub fs_remove: DirectHTML<'static>,
+    /// Label text to remove a file or a directory.
+    pub fs_upload: DirectHTML<'static>,
 
     /// Title for login page.
     pub login_title: DirectHTML<'static>,
