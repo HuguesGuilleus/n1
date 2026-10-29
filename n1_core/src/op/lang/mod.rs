@@ -23,12 +23,18 @@ pub struct Lang {
     pub common_gotomain: DirectHTML<'static>,
     /// Help text of download button.
     pub common_download: DirectHTML<'static>,
+    /// Slug of administrator.
+    pub common_administor: DirectHTML<'static>,
 
+    /// Bio console name.
+    pub bio: DirectHTML<'static>,
     /// Edit bio page title text.
     pub bio_edit_page: DirectHTML<'static>,
     /// Instruction of the bio text format.
     pub bio_edit_format_info: &'static [DirectHTML<'static>],
 
+    /// File system name.
+    pub fs: DirectHTML<'static>,
     /// Help text to remove a file or a directory.
     pub fs_remove: DirectHTML<'static>,
     /// Label text to remove a file or a directory.
@@ -47,4 +53,6 @@ pub struct Lang {
     pub logout_title: DirectHTML<'static>,
     /// Tell the user they have been logged out.
     pub logout_info: DirectHTML<'static>,
+
+    pub wiki: DirectHTML<'static>,
 }

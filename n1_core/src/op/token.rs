@@ -1,10 +1,8 @@
-use std::{collections::BTreeMap, iter::once};
-
 use serde::Deserialize;
 
 use crate::{
     Result, errs,
-    op::{OID_ENTITY_DROPBOX, OID_ENTITY_WIKI, OID_GLOBAL_ENTITY, OID_GLOBAL_HOME, user::Entity},
+    op::{OID_ENTITY_DROPBOX, OID_ENTITY_WIKI, OID_GLOBAL_ENTITY, OID_GLOBAL_HOME},
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -60,6 +58,23 @@ impl Token {
         Ok(())
     }
 
+    /// Return if user have write access to the specified owner and app.
+    /// None <=> no auth.
+    pub fn access_info(&self, id: u32, app_id: u16) -> Option<bool> {
+        if self.check_auth().is_err() {
+            return None;
+        }
+        if self.is_admin {
+            return Some(true);
+        }
+        for item in self.access.iter() {
+            if item.id == id && item.app == app_id {
+                return Some(item.can_write);
+            }
+        }
+        None
+    }
+
     /// Check if the token has read access to a specific group and app.
     pub fn check_access_read(&self, id: u32, app_id: u16) -> Result<()> {
         self.check_auth()?;
@@ -92,19 +107,6 @@ impl Token {
             "forbiden write access for entity {} to app {}",
             id, app_id
         )))
-    }
-
-    pub fn names<'a>(
-        &self,
-        entities: &'a BTreeMap<u32, Entity>,
-    ) -> impl Iterator<Item = (TokenItem, &'a str)> {
-        once(TokenItem {
-            id: self.uid,
-            app: 0,
-            can_write: self.is_admin,
-        })
-        .chain(self.access.iter().take_while(|item| item.id != 0).copied())
-        .map(move |item| (item, entities.get(&item.id).map(Entity::name).unwrap_or("")))
     }
 
     pub fn test_alice() -> Self {

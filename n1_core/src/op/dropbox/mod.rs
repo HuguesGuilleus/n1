@@ -47,11 +47,12 @@ pub async fn page(db: &impl DB, r: OpRequest<u32>) -> Result<String> {
             + compo::header( H - "" + "Dropbox @" + owner.name())
             + [H - "main.w"
                 + [H - "div.fh.gap"
-                    + || {
-                        r.token
-                        .names(&entities)
-                            .map(|(item , name)| H - "a.bl href=/_dropbox/" - item.id +"@"+ name)
-                    }]
+                    // + || {
+                    //     r.token
+                    //     .names(&entities)
+                    //         .map(|(item , name)| H - "a.bl href=/_dropbox/" - item.id +"@"+ name)
+                    // }
+                ]
                 + (!state.texts.is_empty()).then(|| [H - "h2" + "Textes"])
                 + [H + || {
                     state.texts.iter().map(|(id, text)| {

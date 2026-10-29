@@ -11,7 +11,9 @@ pub const LANG_FR: Lang = Lang {
     common_lastedit: DirectHTML("Dernière modification\u{202F}: "),
     common_gotomain: DirectHTML("Aller au contenu"),
     common_download: DirectHTML("Télécharger"),
+    common_administor: DirectHTML("Administrateur"),
 
+    bio: DirectHTML("Bio"),
     bio_edit_page: DirectHTML("Modifier la page de bio de @"),
     bio_edit_format_info: &[
         DirectHTML("Chaque ligne est analysée séparément\u{202F}:"),
@@ -21,6 +23,7 @@ pub const LANG_FR: Lang = Lang {
         DirectHTML("Si le contenu de la bio est vide, aucune page n'est générée."),
     ],
 
+    fs: DirectHTML("Fichiers"),
     fs_remove: DirectHTML("Supprimer"),
     fs_upload: DirectHTML("Téléverser"),
 
@@ -31,4 +34,6 @@ pub const LANG_FR: Lang = Lang {
 
     logout_title: DirectHTML("Déconnexion"),
     logout_info: DirectHTML("Vous avez été déconnecté."),
+
+    wiki: DirectHTML("Wiki"),
 };

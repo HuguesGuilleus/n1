@@ -73,7 +73,7 @@ pub async fn handle<R: AsyncRead + Unpin + Send, C: DB>(
         // ":io" => with_url(s, r, op::big).await,
 
         // Render HTML
-        "_" => with_url(s, r, op::menu::page).await,
+        "_" => with_url(s, r, op::menu::menu_console).await,
         "_bio" => with_url(s, r, op::bio::console).await,
         "_dropbox" => with_url(s, r, op::dropbox::page).await,
         "_fs_index" => with_url(s, r, op::fs::fs_direct_index).await,
