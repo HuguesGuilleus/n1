@@ -17,8 +17,8 @@ pub fn header(inside: impl n1_html::Html) -> impl Html {
 /// Use with [`LOGIN_JS`] JS script.
 pub fn header_menu(lang: &Lang) -> impl Html {
     [
-        H + [H - "a.bl.mlauto.needNoAuth href=/_user_login" + lang.login_title]
-            + [H - "a.bl.mlauto.mr.needAuth href=/_user_logout" + lang.logout_title]
+        H + [H - "a.bl.mlauto.needNoAuth href=/_auth_login" + lang.login_title]
+            + [H - "a.bl.mlauto.mr.needAuth href=/_auth_logout" + lang.logout_title]
             + [H - "a.bl.needAuth href=/_" + lang.common_menu],
     ]
 }
@@ -28,7 +28,7 @@ pub fn header_menu(lang: &Lang) -> impl Html {
 /// No need additional script.
 pub fn header_menu_logged(lang: &Lang) -> impl Html {
     [
-        H + [H - "a.bl.mlauto.mr href=/_user_logout" + lang.logout_title]
+        H + [H - "a.bl.mlauto.mr href=/_auth_logout" + lang.logout_title]
             + [H - "a.bl.needAuth href=/_" + lang.common_menu],
     ]
 }

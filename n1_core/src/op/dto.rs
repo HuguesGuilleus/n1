@@ -22,7 +22,7 @@ impl DTO for () {
 impl URLDTO for () {
     fn url_decode(url: &str) -> Result<Self> {
         if url != "" {
-            return Err(errs::FIELD_NOT_EMPTY.into());
+            return Err(errs::FIELD_EMPTY.into());
         }
         Ok(())
     }
@@ -39,6 +39,15 @@ impl DTO for u32 {
 impl URLDTO for u32 {
     fn url_decode(url: &str) -> Result<Self> {
         url.parse::<u32>().map_err(|_| errs::DECODE_REQUEST.into())
+    }
+}
+
+impl DTO for String {
+    fn check(&self) -> Result<()> {
+        if self.is_empty() {
+            return Err(errs::FIELD_EMPTY.into());
+        }
+        Ok(())
     }
 }
 

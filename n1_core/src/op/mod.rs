@@ -1,4 +1,4 @@
-mod auth;
+pub mod auth;
 pub mod bio;
 mod compo;
 pub mod dropbox;
@@ -8,7 +8,6 @@ pub mod home;
 mod lang;
 pub mod menu;
 mod token;
-pub mod user;
 pub mod wiki;
 
 use std::collections::BTreeMap;
@@ -21,7 +20,6 @@ use tokio::sync::RwLock;
 
 use crate::Result;
 use crate::errs;
-use crate::op::user::Entity;
 pub use auth::*;
 pub use dto::*;
 pub use lang::*;
@@ -76,7 +74,7 @@ impl Common {
     }
 
     pub async fn init(&mut self, db: &impl DB) -> Result<()> {
-        user::init(db, self).await?;
+        auth::init(db, self).await?;
 
         bio::generate_all_pages(db, self).await?;
         home::init(db, self).await?;
@@ -97,25 +95,3 @@ impl Common {
         Ok(entity.name().to_string())
     }
 }
-
-// pub async fn big<B: DB>(db: &B, _: OpRequest<()>) -> Result<Chunks<B>> {
-//     let b1 = Bytes::from_static(b"Hello ");
-//     let b2 = Bytes::from_static(b"World!\r\n");
-//     db.fs_set(42, 1, b1.clone()).await?;
-//     db.fs_set(42, 2, b2.clone()).await?;
-
-//     Ok(Chunks::new(
-//         db,
-//         42,
-//         &[
-//             Chunk {
-//                 len: b1.len(),
-//                 oid: 1,
-//             },
-//             Chunk {
-//                 len: b2.len(),
-//                 oid: 2,
-//             },
-//         ],
-//     ))
-// }

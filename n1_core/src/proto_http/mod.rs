@@ -13,7 +13,7 @@ use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::net::TcpListener;
 use tokio::spawn;
 
-use crate::op::user::login::logout_console;
+use crate::op::login::logout_console;
 use crate::op::{self, Common, DTO, Token, URLDTO};
 use crate::token::{token_decode, token_encode};
 use crate::{OpRequest, Result, errs, front};
@@ -70,20 +70,18 @@ pub async fn handle<R: AsyncRead + Unpin + Send, C: DB>(
         "_favicon.webp" => asset(mime::WEBP, front::FAVICON),
         "robots.txt" => asset(mime::TEXT, front::ROBOTSTXT),
 
-        // ":io" => with_url(s, r, op::big).await,
-
         // Render HTML
         "_" => with_url(s, r, op::menu::menu_console).await,
+        "_auth_login" => with_url(s, r, op::auth::login::login_console).await,
         "_bio" => with_url(s, r, op::bio::console).await,
         "_dropbox" => with_url(s, r, op::dropbox::page).await,
         "_fs_index" => with_url(s, r, op::fs::fs_direct_index).await,
         "_home" => with_url(s, r, op::home::home_console).await,
-        "_user_login" => with_url(s, r, op::user::login::login_console).await,
         "_wiki_new" => with_url(s, r, op::wiki::render_priv_new).await,
         "_wiki_page" => with_url(s, r, op::wiki::render_priv_page).await,
         "_wiki" => with_url(s, r, op::wiki::render_priv_index).await,
 
-        "_user_logout" => Ok(Response {
+        "_auth_logout" => Ok(Response {
             status: StatusHTTP::OK,
             mime: mime::HTML,
             header: Some(("Set-Cookie", "auth=; Max-Age=0; Path=/".to_string())),
@@ -91,14 +89,17 @@ pub async fn handle<R: AsyncRead + Unpin + Send, C: DB>(
         }),
 
         // Actions API
-        ":auth.test.access.read" => with_body(s, r, op::auth_test_access_read).await,
-        ":auth.test.access.write" => with_body(s, r, op::auth_test_access_write).await,
-        ":auth.test.id" => with_body(s, r, op::auth_test_id).await,
-        ":auth.test.isadmin" => with_body(s, r, op::auth_test_isadmin).await,
+        ":auth.admin." => with_body(s, r, op::auth_test_access_read).await,
+        ":auth.admin.new" => with_body(s, r, op::auth_admin_new).await,
         ":auth.check.access.read" => with_body(s, r, op::auth_check_access_read).await,
         ":auth.check.access.write" => with_body(s, r, op::auth_check_access_write).await,
         ":auth.check.auth" => with_body(s, r, op::auth_check_auth).await,
         ":auth.check.isadmin" => with_body(s, r, op::auth_check_isadmin).await,
+        ":auth.login" => make_token(s, r, op::auth::login::login_action).await,
+        ":auth.test.access.read" => with_body(s, r, op::auth_test_access_read).await,
+        ":auth.test.access.write" => with_body(s, r, op::auth_test_access_write).await,
+        ":auth.test.id" => with_body(s, r, op::auth_test_id).await,
+        ":auth.test.isadmin" => with_body(s, r, op::auth_test_isadmin).await,
         ":bio.get" => with_body(s, r, op::bio::get).await,
         ":bio.set" => with_body(s, r, op::bio::set).await,
         ":dropbox.text.add" => with_body(s, r, op::dropbox::text_add).await,
@@ -107,7 +108,6 @@ pub async fn handle<R: AsyncRead + Unpin + Send, C: DB>(
         ":fs.direct.mkfile" => with_body(s, r, op::fs::fs_direct_mkfile).await,
         ":fs.direct.rm" => with_body(s, r, op::fs::fs_direct_rm).await,
         ":home" => with_body(s, r, op::home::json_edit).await,
-        ":user.login" => make_token(s, r, op::user::login::action).await,
         ":wiki.article.get" => with_body(s, r, op::wiki::article_get).await,
         ":wiki.article.new" => with_body(s, r, op::wiki::article_new).await,
         ":wiki.article.rm" => with_body(s, r, op::wiki::article_rm).await,

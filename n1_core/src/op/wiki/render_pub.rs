@@ -5,8 +5,7 @@ use n1_tool::{DB, Result, mime};
 use crate::{
     Common, front,
     op::{
-        EntityAndObjectDTO, OID_ENTITY_WIKI, compo,
-        user::Entity,
+        Entity, EntityAndObjectDTO, OID_ENTITY_WIKI, compo,
         wiki::{Article, State},
     },
 };

@@ -3,8 +3,8 @@ use std::collections::BTreeSet;
 use crate::{
     OpRequest, Result, front,
     op::{
-        EntityAndObjectNullDTO, Lang, OID_ENTITY_BIO, OID_ENTITY_FS, OID_ENTITY_WIKI, Token, compo,
-        user::Entity,
+        Entity, EntityAndObjectNullDTO, Lang, OID_ENTITY_BIO, OID_ENTITY_FS, OID_ENTITY_WIKI,
+        Token, compo,
     },
 };
 use n1_html::{H, Html};

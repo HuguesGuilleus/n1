@@ -6,11 +6,10 @@ use n1_tool::{Chunk, DB, DBMemory, Result};
 use crate::{
     Common, OpRequest,
     op::{
-        self, EntityAndObjectDTO, OID_ENTITY_BIO, OID_ENTITY_DROPBOX, OID_ENTITY_FS,
-        OID_ENTITY_WIKI, OID_GLOBAL_ENTITY, OID_GLOBAL_HOME, Token, TokenItem,
+        self, Entity, EntityAndObjectDTO, Group, OID_ENTITY_BIO, OID_ENTITY_DROPBOX, OID_ENTITY_FS,
+        OID_ENTITY_WIKI, OID_GLOBAL_ENTITY, OID_GLOBAL_HOME, Token, TokenItem, User,
         dropbox::DropFile,
         fs::{MakeDTO, fs_direct_mkdir, fs_direct_mkfile, fs_direct_set},
-        user::{Entity, Group, User},
     },
 };
 

@@ -22,7 +22,7 @@ impl DTO for LoginDTO {
         Ok(())
     }
 }
-pub async fn action(_: &impl DB, r: OpRequest<LoginDTO>) -> Result<Token> {
+pub async fn login_action(_: &impl DB, r: OpRequest<LoginDTO>) -> Result<Token> {
     let users = r.common.entities.read().await;
     for (_, entity) in users.iter() {
         if let Entity::User(user) = entity {
@@ -77,7 +77,7 @@ pub async fn login_console(_: &impl DB, request: OpRequest<()>) -> Result<String
             + ";"
             + DirectHTML(js!(
                 form.onsubmit = _event => _event.preventDefault() | _event.stopPropagation() |
-                    fetcher(fetch("/:user.login", {
+                    fetcher(fetch("/:auth.login", {
                         method: "PUT",
                         body: JSON.stringify({
                             name: account.value,

@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     Result, errs,
@@ -16,7 +16,7 @@ pub struct Token {
     pub access: [TokenItem; Token::ACCESS_LEN],
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Default, Deserialize, Serialize)]
 pub struct TokenItem {
     // The owner identifier of the ressource.
     pub id: u32,
