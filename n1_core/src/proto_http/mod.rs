@@ -90,6 +90,7 @@ pub async fn handle<R: AsyncRead + Unpin + Send, C: DB>(
 
         // Actions API
         ":auth.admin." => with_body(s, r, op::auth_test_access_read).await,
+        ":auth.admin.edit.name" => with_body(s, r, op::auth_admin_edit_name).await,
         ":auth.admin.new" => with_body(s, r, op::auth_admin_new).await,
         ":auth.check.access.read" => with_body(s, r, op::auth_check_access_read).await,
         ":auth.check.access.write" => with_body(s, r, op::auth_check_access_write).await,

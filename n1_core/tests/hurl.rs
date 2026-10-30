@@ -52,7 +52,7 @@ async fn hurl_tests() {
                 .build(),
             &VariableSet::new(),
             &LoggerOptionsBuilder::new()
-                .verbosity(Some(Verbosity::Verbose))
+                .verbosity(Some(Verbosity::VeryVerbose))
                 .color(true)
                 .build(),
         )

@@ -26,6 +26,7 @@ E!(FIELD_STR, BadRequest, "empty 'str' field");
 E!(FIELD_TITLE, BadRequest, "empty 'title' field");
 E!(FORBIDEN_GLOBAL, Forbidden, "no access this global item");
 E!(FORBIDEN, Forbidden, "access forbidden");
+E!(INCOHERENT_WITH_STATE, BadRequest, "incoherent with state");
 E!(NO_AUTH, NoAuth, "No authentification token");
 E!(NOT_FOUND_ENTITY, NotFound, "not found entity");
 E!(TOKEN_BASE64, BadRequest, "cannot parse base64 in token");
