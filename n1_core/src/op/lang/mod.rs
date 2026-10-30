@@ -11,6 +11,8 @@ pub struct Lang {
     /// The language code, used in HTML root lang attribute.
     pub code: &'static str,
 
+    pub auth_admin_global: DirectHTML<'static>,
+
     /// Save anchor text.
     pub common_menu: DirectHTML<'static>,
     /// Save button text.

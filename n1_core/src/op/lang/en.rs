@@ -5,6 +5,8 @@ use crate::op::Lang;
 pub const LANG_EN: Lang = Lang {
     code: "en",
 
+    auth_admin_global: DirectHTML("Global administration"),
+
     common_menu: DirectHTML("Menu"),
     common_home: DirectHTML("Home"),
     common_save: DirectHTML("Save"),

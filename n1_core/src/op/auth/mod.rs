@@ -1,11 +1,13 @@
 pub mod admin;
 mod auth_check;
 mod auth_test;
+mod console;
 pub mod login;
 
 pub use admin::*;
 pub use auth_check::*;
 pub use auth_test::*;
+pub use console::*;
 
 use std::collections::BTreeSet;
 
@@ -88,9 +90,30 @@ impl Entity {
         }
     }
 
+    pub fn is_admin(&self) -> bool {
+        match self {
+            Entity::Administration(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_group(&self) -> bool {
+        match self {
+            Entity::Group(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn is_none(&self) -> bool {
         match self {
             Entity::None(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_user(&self) -> bool {
+        match self {
+            Entity::User(_) => true,
             _ => false,
         }
     }

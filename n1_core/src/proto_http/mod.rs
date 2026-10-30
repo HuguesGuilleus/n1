@@ -72,6 +72,7 @@ pub async fn handle<R: AsyncRead + Unpin + Send, C: DB>(
 
         // Render HTML
         "_" => with_url(s, r, op::menu::menu_console).await,
+        "_auth_global_admin" => with_url(s, r, op::auth::auth_global_admin).await,
         "_auth_login" => with_url(s, r, op::auth::login::login_console).await,
         "_bio" => with_url(s, r, op::bio::console).await,
         "_dropbox" => with_url(s, r, op::dropbox::page).await,
