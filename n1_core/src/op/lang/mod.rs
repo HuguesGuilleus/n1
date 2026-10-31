@@ -58,7 +58,7 @@ pub struct Lang {
     /// Title for login page.
     pub login_title: DirectHTML<'static>,
     /// Account name label text.
-    pub login_account: DirectHTML<'static>,
+    pub login_username: DirectHTML<'static>,
     /// Account password label text.
     pub login_password: DirectHTML<'static>,
     /// Login send button text.

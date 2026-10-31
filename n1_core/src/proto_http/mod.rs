@@ -374,8 +374,8 @@ fn print_error<C: DB>(err: Error, accept_html: bool) -> Response<C> {
                     + "\r\n"
                     + [H - "div.fh.gap.m"
                         + [H - "a.bl href=/ " + "///"]
-                        + [H - "a.bl href=/_user_login" + "Login"]
-                        + [H - "a.bl href=/_user_logout" + "Logout"]
+                        + [H - "a.bl href=/_auth_login" + "Login"]
+                        + [H - "a.bl href=/_auth_logout" + "Logout"]
                         + ""]
                     + "\r\n"]
                 + ""]

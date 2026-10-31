@@ -37,7 +37,7 @@ pub const LANG_EN: Lang = Lang {
     home_page_content: DirectHTML("Home page content, use blank line to separt paragraph:"),
 
     login_title: DirectHTML("Login"),
-    login_account: DirectHTML("Account or username"),
+    login_username: DirectHTML("Account or username"),
     login_password: DirectHTML("Password"),
     login_send: "Sign in",
 

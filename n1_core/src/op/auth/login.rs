@@ -60,10 +60,10 @@ pub async fn login_console(_: &impl DB, request: OpRequest<()>) -> Result<String
                 + ""]
             + [H - "main.w id=main"
                 + [H - "form.act.bb.fv.gap id=form"
-                    + [H - "label for=account" + lang.login_account]
-                    + [H - "input.bl id=account placeholder='eve'"]
+                    + [H - "label for=username" + lang.login_username]
+                    + [H - "input.bl id=username autocomplete=username placeholder='eve'"]
                     + [H - "label for=password" + lang.login_password]
-                    + [H - "input.bl type=password id=password placeholder='a5_6yV'"]
+                    + [H - "input.bl type=password id=password autocomplete=current-password placeholder='a5_6yV'"]
                     + [H - "div.fh.gap"
                         + [H - "input.bl type=submit value=" - Q(lang.login_send)]
                         + [H - "span.mv id=out"]
@@ -80,7 +80,7 @@ pub async fn login_console(_: &impl DB, request: OpRequest<()>) -> Result<String
                     fetcher(fetch("/:auth.login", {
                         method: "PUT",
                         body: JSON.stringify({
-                            name: account.value,
+                            name: username.value,
                             password: password.value,
                         }),
                     }), out).then(_ => {

@@ -39,7 +39,7 @@ pub const LANG_FR: Lang = Lang {
     ),
 
     login_title: DirectHTML("Connexion"),
-    login_account: DirectHTML("Compte ou pseudo"),
+    login_username: DirectHTML("Compte ou pseudo"),
     login_password: DirectHTML("Mot de passe"),
     login_send: "Se connecter",
 
