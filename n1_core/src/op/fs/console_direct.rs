@@ -166,26 +166,23 @@ pub async fn fs_direct_index(_: &impl DB, r: OpRequest<EntityAndObjectNullDTO>) 
                 },
                 _body = document.body;
 
+                _body.ondragenter = event => _body.dataset.draging=1;
+                _body.ondragleave = event => _body.dataset.draging=0;
                 _body.ondragover = _event => _event.preventDefault();
                 _body.ondrop = _event => {
                     _event.preventDefault();
-                    const _upload_file = async _entry => {
+                    _body.dataset.draging=0;
+                    const _upload_file = _entry => {
                         if (_entry.isFile) {
-                            upload([
-                                new File([
-                                    await new Promise(_resolve => _entry.file(_resolve))
-                                ], _entry.fullPath)
-                            ]);
+                            _entry.file(_file => upload([new File([_file], _entry.fullPath)]));
                         } else {
-                            (await new Promise(
-                                _resolve => _entry.webkitGetAsEntry().createReader().readEntries(_resolve)
-                            )).forEach(_upload_file);
+                            _entry.createReader().readEntries(_item => _item.forEach(_upload_file))
                         }
                     };
                     [..._event.dataTransfer.items].forEach(_item => _item.kind == "string"
                         ? new Promise(_resolve => _item.getAsString(_resolve))
                             .then(_data => upload([new File([_data], "drop_"+new Date().toJSON()+".txt")]))
-                        : _upload_file(_item)
+                        : _upload_file(_item.webkitGetAsEntry())
                     );
                 };
             ))

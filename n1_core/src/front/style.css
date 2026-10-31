@@ -149,6 +149,10 @@ textarea,
 	}
 }
 
+body[data-draging="1"] {
+	background: #F62;
+}
+
 input {
 	box-sizing: border-box;
 	width: 100%;
