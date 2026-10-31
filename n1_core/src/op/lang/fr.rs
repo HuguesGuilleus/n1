@@ -27,6 +27,7 @@ pub const LANG_FR: Lang = Lang {
 
     fs: DirectHTML("Fichiers"),
     fs_directory: DirectHTML("Répertoire"),
+    fs_new_directory: DirectHTML("Créer un nouveau répertoire"),
     fs_remove: DirectHTML("Supprimer"),
     fs_upload: DirectHTML("Téléverser"),
 

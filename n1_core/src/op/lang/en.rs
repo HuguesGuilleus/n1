@@ -27,6 +27,7 @@ pub const LANG_EN: Lang = Lang {
 
     fs: DirectHTML("Files"),
     fs_directory: DirectHTML("Directory"),
+    fs_new_directory: DirectHTML("Create a new directory"),
     fs_remove: DirectHTML("Remove"),
     fs_upload: DirectHTML("Upload"),
 

@@ -74,8 +74,9 @@ pub async fn fs_direct_index(_: &impl DB, r: OpRequest<EntityAndObjectNullDTO>) 
             + [H - "main id=main"
                 + [H - "div.fh.gap.mv"
                     + [H -"label.act.bl for=filesInput" + lang.fs_upload  ]
-                    + [H -"input id=filesInput onchange=upload(event.target.files) type=file multiple hidden"  ]
-                + ""]
+                    + [H -"input id=filesInput onchange=upload(event.target.files) type=file multiple hidden"]
+                    + [H - "button.bl id=newDir onclick=newDir()" + lang.fs_new_directory]
+                    + ""]
                 + [H - "pre id=out"]
                 + [H - "ul.p0"
                     + [H + || {
@@ -163,6 +164,20 @@ pub async fn fs_direct_index(_: &impl DB, r: OpRequest<EntityAndObjectNullDTO>) 
                     }).then(r => r.ok ? "OK" : r.text())
                     .catch(_err => "!!! " + _err)
                     .then(r => _out.textContent += r);
+                },
+                newDir = async _ => {
+                    const _name = path + prompt(newDir.innerText);
+                    if (path == _name) return;
+                    const _out = _newElement("", 0, "+ ", _name, " ... "),
+                        _1 = out.append(_out),
+                        _response = await fetch("/:fs.direct.mkdir/", {
+                            method: "PUT",
+                            body: JSON.stringify({
+                                owner,
+                                path: _name,
+                            })
+                        });
+                    _out.innerText += _response.ok ? "OK" : "!!! " + await _response.text();
                 },
                 _body = document.body;
 
