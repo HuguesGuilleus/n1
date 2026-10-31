@@ -37,6 +37,8 @@ pub struct Lang {
 
     /// File system name.
     pub fs: DirectHTML<'static>,
+    /// Title for directory.
+    pub fs_directory: DirectHTML<'static>,
     /// Help text to remove a file or a directory.
     pub fs_remove: DirectHTML<'static>,
     /// Label text to remove a file or a directory.

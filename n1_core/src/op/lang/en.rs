@@ -26,6 +26,7 @@ pub const LANG_EN: Lang = Lang {
     ],
 
     fs: DirectHTML("Files"),
+    fs_directory: DirectHTML("Directory"),
     fs_remove: DirectHTML("Remove"),
     fs_upload: DirectHTML("Upload"),
 

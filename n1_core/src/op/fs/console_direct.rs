@@ -10,6 +10,8 @@ use crate::{
 pub async fn fs_direct_index(_: &impl DB, r: OpRequest<EntityAndObjectNullDTO>) -> Result<String> {
     r.token.check_access_read(r.dto.owner, OID_ENTITY_FS)?;
 
+    let owner_name = r.common.get_entity_name(r.dto.owner).await?;
+
     let fs_guard = r.common.fs.get(r.dto.owner).await?;
     let fs = fs_guard.read().await;
 
@@ -44,11 +46,18 @@ pub async fn fs_direct_index(_: &impl DB, r: OpRequest<EntityAndObjectNullDTO>) 
 
     let lang = r.common.lang;
     let page = [H - "html lang=" - lang.code
-        + [H - "head" + front::HEAD + [H - "title" + "!Répertoire " + ""]]
+        + [H - "head" + front::HEAD +
+            [H - "title"
+                + lang.fs_directory + " "
+                + &owner_name + " "
+                + (|| ancestors.iter().map(|(_, name )| H + *name + "/"))
+                + ""]
+            + ""]
         + [H - "body"
             + compo::goto_main(lang)
             + [H - "header.fh"
                 + [H - "h1.fh"
+                    + [H - "div.bl" + "@" + &owner_name]
                     + || {
                         ancestors.iter().map(|(id, name)| {
                             [H - "a.bl href="
