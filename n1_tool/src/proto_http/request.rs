@@ -100,10 +100,7 @@ impl<R: AsyncRead + Unpin> HTTPParser<R> {
 
         // First line
         let first = self.split_line(&mut readed_len)?;
-        if !first.ends_with(" HTTP/1.0") && !first.ends_with(" HTTP/1.1") {
-            return Err(Error::NotVersion1);
-        }
-        let first = &first[..first.len() - " HTTP/1.1".len()];
+        let first = first.strip_suffix(" HTTP/1.1").ok_or(Error::NotVersion1)?;
         let (method, uri) = first.split_once(' ').ok_or(Error::WrongSyntax)?;
 
         let method = match method {
@@ -131,7 +128,7 @@ impl<R: AsyncRead + Unpin> HTTPParser<R> {
         let header_len = readed_len;
 
         let body_len = Self::get_content_len(&headers)?.unwrap_or(0);
-        let body_bytes_len = body_len.min(self.buffer.len() - header_len);
+        let body_bytes_len = body_len.min(self.cursor_end - header_len);
         let body_reader_len = body_len - body_bytes_len;
         let body = (&self.buffer[header_len..header_len + body_bytes_len])
             .chain((&mut self.r).take(body_reader_len as u64));
@@ -180,42 +177,49 @@ impl<R: AsyncRead + Unpin> HTTPParser<R> {
     }
 }
 
-// #[tokio::test]
-// async fn next() {
-//     let data = concat!(
-//         "PUT /%61bc?v=1 HTTP/1.1\r\n",
-//         "Content-Length: 5\r\n",
-//         "\r\n",
-//         "01234",
-//         "GET /%41BC?v=1 HTTP/1.1\r\n",
-//         "foo-bar: hello\r\n",
-//         "\r\n",
-//     );
-//     let mut parser = HTTPParser::new(data.as_bytes());
+#[tokio::test]
+async fn next() {
+    let data = concat!(
+        "PUT /%61bc?v=1 HTTP/1.1\r\n",
+        "Content-Length: 5\r\n",
+        "\r\n",
+        "01234",
+        "GET /%41BC?v=1 HTTP/1.1\r\n",
+        "foo-bar: hello\r\n",
+        "\r\n",
+    );
+    let mut parser = HTTPParser::new(data.as_bytes());
+    parser.buffer[0..data.len()].copy_from_slice(data.as_bytes());
+    parser.cursor_end = data.len();
 
-//     // Request 1
-//     let mut next = parser.next().await.unwrap();
-//     assert_eq!(next.method, Method::PUT);
-//     assert_eq!(next.path, String::from("/abc"));
-//     assert_eq!(next.query, String::from("v=1"));
-//     assert_eq!(
-//         next.headers,
-//         BTreeMap::from_iter([(String::from("Content-Length"), String::from("5"))])
-//     );
-//     let mut buff = String::new();
-//     next.body.read_to_string(&mut buff).await.unwrap();
-//     assert_eq!("01234", buff.as_str());
+    // Request 1
+    let mut next = parser.parse().unwrap();
+    assert_eq!(next.method, Method::PUT);
+    assert_eq!(next.path, String::from("/abc"));
+    assert_eq!(next.query, String::from("v=1"));
+    assert_eq!(
+        next.headers,
+        BTreeMap::from_iter([(String::from("Content-Length"), String::from("5"))])
+    );
+    let mut buff = String::new();
+    next.body.read_to_string(&mut buff).await.unwrap();
+    assert_eq!("01234", buff.as_str());
 
-//     // Request 2
-//     let mut next = parser.next().await.unwrap();
-//     assert_eq!(next.method, Method::GET);
-//     assert_eq!(next.path, String::from("/ABC"));
-//     assert_eq!(next.query, String::from("v=1"));
-//     assert_eq!(
-//         next.headers,
-//         BTreeMap::from_iter([(String::from("foo-bar"), String::from("hello"))])
-//     );
-//     let mut buff = String::new();
-//     next.body.read_to_string(&mut buff).await.unwrap();
-//     assert_eq!("", buff.as_str());
-// }
+    // Request 2
+    let range = parser.cursor_begin..parser.cursor_end;
+    parser.buffer.copy_within(range, 0);
+    parser.cursor_end -= parser.cursor_begin;
+    parser.buffer[parser.cursor_end..].fill(0);
+
+    let mut next = parser.parse().unwrap();
+    assert_eq!(next.method, Method::GET);
+    assert_eq!(next.path, String::from("/ABC"));
+    assert_eq!(next.query, String::from("v=1"));
+    assert_eq!(
+        next.headers,
+        BTreeMap::from_iter([(String::from("foo-bar"), String::from("hello"))])
+    );
+    let mut buff = String::new();
+    next.body.read_to_string(&mut buff).await.unwrap();
+    assert_eq!("", buff.as_str());
+}

@@ -43,19 +43,25 @@ pub async fn run_with_listener<C: DB + 'static>(
         let server = server.clone();
         let (mut stream, _) = listener.accept().await?;
 
-        spawn(async move || -> io::Result<()> {
+        spawn(async move || -> Result<()> {
             let server = server;
             let (r, mut w) = stream.split();
             let mut parser = HTTPParser::new(r);
-            let parser = &mut parser;
-            while let Some(request) = next_req(parser).await {
-                let request = request.map_err(|_| io::Error::new(io::ErrorKind::Other, "err"))?;
+            while let Some(request) = next_req(&mut parser).await {
+                let request =
+                    request.map_err(|err| errs::DECODE_REQUEST.push(format!("{:?}", err)))?;
                 let path = request.path.clone();
                 let accept_html = accept_html(&request.headers);
-                let response = handle(&server, request)
-                    .await
-                    .unwrap_or_else(|err| print_error(err, accept_html));
-                println!("{:?} <= {:?}", response.status, &path);
+                let response = match handle(&server, request).await {
+                    Ok(response) => {
+                        println!("{:?} <= {:?}", response.status, &path);
+                        response
+                    }
+                    Err(err) => {
+                        eprintln!("ERR <= {:?} {:?}", &path, err);
+                        print_error(err, accept_html)
+                    }
+                };
                 write_response(&mut w, response).await?;
             }
             Ok(())
@@ -110,6 +116,7 @@ pub async fn handle<R: AsyncRead + Unpin + Send, C: DB>(
         ":dropbox.text.rm" => with_body(s, r, op::dropbox::text_rm).await,
         ":fs.direct.mkdir" => with_body(s, r, op::fs::fs_direct_mkdir).await,
         ":fs.direct.mkfile" => with_body(s, r, op::fs::fs_direct_mkfile).await,
+        ":fs.direct.resolve" => with_body(s, r, op::fs::fs_direct_resolve).await,
         ":fs.direct.rm" => with_body(s, r, op::fs::fs_direct_rm).await,
         ":home" => with_body(s, r, op::home::json_edit).await,
         ":wiki.article.get" => with_body(s, r, op::wiki::article_get).await,

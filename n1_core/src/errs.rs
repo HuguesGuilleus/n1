@@ -14,6 +14,7 @@ E!(ALREADY_EXIST, BadRequest, "already exist");
 E!(DATA_INCOHERENT, Internal, "data are incoherent");
 E!(DECODE_REQUEST, BadRequest, "cannot decode request data");
 E!(EXPECT_REEL_ENTITY, BadRequest, "expected a user of a group");
+E!(EXPECTED, BadRequest, "expected something else");
 E!(FIELD_CONTENT, BadRequest, "empty 'content' field");
 E!(FIELD_DESC, BadRequest, "empty 'desc' field");
 E!(FIELD_EMPTY, BadRequest, "empty field");

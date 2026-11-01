@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use n1_tool::{Chunk, DB, read_to_chunks};
+use n1_tool::{Chunk, DB, errs::NOT_FOUND, read_to_chunks};
 use serde::Deserialize;
 use tokio::io::AsyncRead;
 
@@ -23,8 +23,7 @@ impl DTO for MakeDTO {
             errs::FIELD_ID_ZERO.push_result("field 'owner'")?;
         }
 
-        let path = self.path.strip_prefix("/").unwrap_or(&self.path);
-        let path = path.strip_suffix("/").unwrap_or(path);
+        let path = prepare_path(&self.path);
         if path.is_empty() {
             errs::FIELD_EMPTY.push_result("field 'path'")?;
         }
@@ -62,7 +61,7 @@ async fn make(db: &impl DB, r: OpRequest<MakeDTO>, is_dir: bool) -> Result<u32> 
     fn add_directory(fs: &mut FSState, id: &mut u32, part: &str) -> Result<()> {
         let (_, dir) = fs
             .dirs
-            .get_mut(&id)
+            .get_mut(id)
             .ok_or_else(|| errs::DATA_INCOHERENT.push(format!("not found {} directory", id)))?;
         match dir.iter().filter(|&entry| entry.name == part).next() {
             Some(entry) if entry.is_dir => {
@@ -86,13 +85,13 @@ async fn make(db: &impl DB, r: OpRequest<MakeDTO>, is_dir: bool) -> Result<u32> 
         Ok(())
     }
 
-    let path = r.dto.path.strip_prefix("/").unwrap_or(&r.dto.path);
-    let path = path.strip_suffix("/").unwrap_or(path);
-    let (path, last) = if !is_dir {
-        path.rsplit_once("/").unwrap_or(("", path))
-    } else {
+    let path = prepare_path(&r.dto.path);
+    let (path, last) = if is_dir {
         (path, "")
+    } else {
+        path.rsplit_once("/").unwrap_or(("", path))
     };
+
     let fs_guard = r.common.fs.get(r.dto.owner).await?;
     let mut fs = fs_guard.write().await;
     let mut id = 0;
@@ -190,21 +189,20 @@ pub async fn fs_direct_rm(db: &impl DB, r: OpRequest<EntityAndObjectDTO>) -> Res
     let mut fs = fs_guard.write().await;
 
     /// Remove item (file or directory) and return parent ID.
-    /// This function do not remove link to th parent.
+    /// This function do not remove link to the parent.
     async fn rm(db: &impl DB, fs: &mut FSState, owner: u32, id: u32) -> Result<u32> {
         if let Some((parent, chunks)) = fs.files.remove(&id) {
             for chunk in chunks {
                 db.fs_rm_object(owner, chunk.oid).await?;
             }
             Ok(parent)
-        } else {
-            let (parent, entries) = fs.dirs.remove(&id).ok_or_else(|| {
-                errs::DATA_INCOHERENT.push(format!("cannot find directory {}", id))
-            })?;
+        } else if let Some((parent, entries)) = fs.dirs.remove(&id) {
             for entry in entries {
                 Box::pin(rm(db, fs, owner, entry.id)).await?;
             }
             Ok(parent)
+        } else {
+            Err(NOT_FOUND.push(format!("not found {} neither files nor directory", id)))
         }
     }
     let parent = rm(db, &mut fs, r.dto.owner, r.dto.object).await?;
@@ -230,4 +228,49 @@ pub async fn fs_direct_rm(db: &impl DB, r: OpRequest<EntityAndObjectDTO>) -> Res
         .await?;
 
     Ok(())
+}
+
+pub async fn fs_direct_resolve(_: &impl DB, r: OpRequest<MakeDTO>) -> Result<u32> {
+    r.token.check_access_read(r.dto.owner, OID_ENTITY_FS)?;
+    let path = prepare_path(&r.dto.path);
+
+    let fs_guard = r.common.fs.get(r.dto.owner).await?;
+    let fs = fs_guard.read().await;
+
+    fn walk<'a>(fs: &'a FSState, id: u32, part: &str) -> Result<&'a Entry> {
+        let part = part.trim();
+        let (_, children) = fs.dirs.get(&id).ok_or_else(|| {
+            errs::INCOHERENT_WITH_STATE.push(format!("not found {part:?} in directory {id}"))
+        })?;
+        let entry = children
+            .iter()
+            .find(|&entry| entry.name == part)
+            .ok_or_else(|| errs::NOT_FOUND.push(format!("not found {part:?} in directory {id}")))?;
+        Ok(entry)
+    }
+
+    let (path, rest) = path.rsplit_once('/').unwrap_or(("", path));
+    let mut id = 0;
+    if !path.is_empty() {
+        for part in path.split('/') {
+            let entry = walk(&fs, id, part)?;
+            if !entry.is_dir {
+                errs::EXPECTED
+                    .push_result(format!("Expected {part:?} in {path:?} is a dirctory"))?;
+            }
+            id = entry.id;
+        }
+    }
+    if !rest.is_empty() {
+        let entry = walk(&fs, id, rest)?;
+        id = entry.id;
+    }
+
+    Ok(id)
+}
+
+fn prepare_path(path: &str) -> &str {
+    let path = path.strip_prefix("/").unwrap_or(path);
+    let path = path.strip_suffix("/").unwrap_or(path);
+    path
 }

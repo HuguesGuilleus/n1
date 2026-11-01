@@ -41,8 +41,19 @@ Cookie: auth={{cookie}}
 HTTP 200
 file,data.txt;
 
+PUT http://localhost:8000/:fs.direct.resolve/
+Cookie: auth={{cookie}}
+{"owner":101,"path":"/dir/"}
+HTTP 200
+[Captures]
+dirRootDir: body
+
 PUT http://localhost:8000/:fs.direct.rm/
 Cookie: auth={{cookie}}
-{"owner":101,"object":{{dirID}}}
+{"owner":101,"object":{{dirRootDir}}}
 HTTP 200
 `null`
+
+PUT http://localhost:8000/;fs.direct.get/101,{{dirRootDir}}
+Cookie: auth={{cookie}}
+HTTP 404
