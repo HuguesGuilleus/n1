@@ -181,8 +181,8 @@ pub async fn fs_direct_index(_: &impl DB, r: OpRequest<EntityAndObjectNullDTO>) 
                 },
                 _body = document.body;
 
-                _body.ondragenter = event => _body.dataset.draging=1;
-                _body.ondragleave = event => _body.dataset.draging=0;
+                _body.ondragenter = ({target}) => target == _body ? _body.dataset.draging=1 : 0;
+                _body.ondragleave = ({target}) => target == _body ? _body.dataset.draging=0 : 0;
                 _body.ondragover = _event => _event.preventDefault();
                 _body.ondrop = _event => {
                     _event.preventDefault();

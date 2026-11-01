@@ -18,7 +18,7 @@ use crate::op::{self, Common, DTO, Token, URLDTO};
 use crate::token::{token_decode, token_encode};
 use crate::{OpRequest, Result, errs, front};
 use n1_tool::proto_http::{
-    HTTPParser, HTTPRequest, Response, ResponseBody, StatusHTTP, write_response,
+    HTTPParser, HTTPRequest, Response, ResponseBody, StatusHTTP, next_req, write_response,
 };
 use n1_tool::{AtomicError, Chunk, Chunks, DB, ErrorKind, mime};
 
@@ -47,7 +47,9 @@ pub async fn run_with_listener<C: DB + 'static>(
             let server = server;
             let (r, mut w) = stream.split();
             let mut parser = HTTPParser::new(r);
-            while let Ok(request) = parser.next().await {
+            let parser = &mut parser;
+            while let Some(request) = next_req(parser).await {
+                let request = request.map_err(|_| io::Error::new(io::ErrorKind::Other, "err"))?;
                 let path = request.path.clone();
                 let accept_html = accept_html(&request.headers);
                 let response = handle(&server, request)

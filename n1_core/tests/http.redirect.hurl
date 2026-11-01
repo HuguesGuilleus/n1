@@ -3,6 +3,7 @@ PUT http://localhost:8000/:auth.login/
 HTTP 200
 [Captures]
 cookie: cookie "auth"
+``
 
 # New page
 PUT http://localhost:8000/:bio.set/
