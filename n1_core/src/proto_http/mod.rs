@@ -204,10 +204,7 @@ async fn with_body<
     let token = get_token(&s.key, &r);
 
     let mut buf = Vec::new();
-    r.body
-        .read_to_end(&mut buf)
-        .await
-        .map_err(AtomicError::from)?;
+    r.body.read_to_end(&mut buf).await.map_err(Error::from)?;
     let data: &[u8] = match &buf[..] {
         b"" => b"null",
         _ => &buf,
@@ -309,10 +306,7 @@ async fn make_token<
     f: F,
 ) -> Result<Response<C>> {
     let mut buf = Vec::new();
-    r.body
-        .read_to_end(&mut buf)
-        .await
-        .map_err(AtomicError::from)?;
+    r.body.read_to_end(&mut buf).await.map_err(Error::from)?;
     let data: &[u8] = match &buf[..] {
         b"" => b"null",
         _ => &buf,

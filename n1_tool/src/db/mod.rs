@@ -1,4 +1,5 @@
 mod chunks;
+mod db_directory;
 mod db_mem;
 mod db_onefile;
 
@@ -10,6 +11,7 @@ use serde::{Serialize, de::DeserializeOwned};
 pub use crate::errs::Result;
 use crate::errs::{self, NOT_FOUND};
 pub use chunks::{Chunk, Chunks, chuncks_len, read_to_chunks};
+pub use db_directory::DBDirectory;
 pub use db_mem::DBMemory;
 pub use db_onefile::DBOneFile;
 

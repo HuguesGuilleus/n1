@@ -61,11 +61,11 @@ impl From<AtomicError> for Error {
     }
 }
 
-impl From<io::Error> for AtomicError {
-    fn from(value: io::Error) -> Self {
-        match value.kind() {
-            io::ErrorKind::NotFound => NOT_FOUND,
-            _ => IO_ERROR,
+impl From<io::Error> for Error {
+    fn from(e: io::Error) -> Self {
+        match e.kind() {
+            io::ErrorKind::NotFound => NOT_FOUND.push(e.to_string()),
+            _ => IO_ERROR.push(e.to_string()),
         }
     }
 }

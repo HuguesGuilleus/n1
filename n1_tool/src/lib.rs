@@ -4,4 +4,4 @@ pub mod mime;
 pub mod proto_http;
 
 pub use db::*;
-pub use errs::{AtomicError, ErrorKind, Result};
+pub use errs::{AtomicError, Error, ErrorKind, Result};
