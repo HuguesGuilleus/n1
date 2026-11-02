@@ -118,6 +118,7 @@ pub async fn handle<R: AsyncRead + Unpin + Send, C: DB>(
         ":fs.direct.mkfile" => with_body(s, r, op::fs::fs_direct_mkfile).await,
         ":fs.direct.resolve" => with_body(s, r, op::fs::fs_direct_resolve).await,
         ":fs.direct.rm" => with_body(s, r, op::fs::fs_direct_rm).await,
+        ":fs.direct.tree" => with_body(s, r, op::fs::fs_direct_tree).await,
         ":home" => with_body(s, r, op::home::json_edit).await,
         ":wiki.article.get" => with_body(s, r, op::wiki::article_get).await,
         ":wiki.article.new" => with_body(s, r, op::wiki::article_new).await,

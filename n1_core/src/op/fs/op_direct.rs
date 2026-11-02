@@ -1,7 +1,7 @@
-use std::ops::Deref;
+use std::{collections::BTreeMap, ops::Deref};
 
-use n1_tool::{Chunk, DB, errs::NOT_FOUND, read_to_chunks};
-use serde::Deserialize;
+use n1_tool::{Chunk, DB, chuncks_len, errs::NOT_FOUND, read_to_chunks};
+use serde::{Deserialize, Serialize};
 use tokio::io::AsyncRead;
 
 use crate::{
@@ -273,4 +273,58 @@ fn prepare_path(path: &str) -> &str {
     let path = path.strip_prefix("/").unwrap_or(path);
     let path = path.strip_suffix("/").unwrap_or(path);
     path
+}
+
+#[derive(Debug, Clone, Serialize, Default)]
+pub struct Branch {
+    id: u32,
+    is_dir: bool,
+    content: usize,
+    children: BTreeMap<String, Branch>,
+}
+pub async fn fs_direct_tree(_: &impl DB, r: OpRequest<u32>) -> Result<Branch> {
+    r.token.check_access_read(r.dto, OID_ENTITY_FS)?;
+
+    fn new_branch_file(fs: &FSState, id: u32) -> Result<Branch> {
+        let (_, file) = fs
+            .files
+            .get(&id)
+            .ok_or_else(|| errs::INCOHERENT_WITH_STATE.push(format!("do not find file {id}")))?;
+        Ok(Branch {
+            id,
+            is_dir: false,
+            content: chuncks_len(&file),
+            children: BTreeMap::new(),
+        })
+    }
+    fn new_branch_dir(fs: &FSState, id: u32) -> Result<Branch> {
+        let (_, dir) = fs
+            .dirs
+            .get(&id)
+            .ok_or_else(|| errs::INCOHERENT_WITH_STATE.push(format!("not found directory {id}")))?;
+        let children: Result<BTreeMap<String, Branch>> = dir
+            .iter()
+            .map(|entry| -> Result<(String, Branch)> {
+                Ok((
+                    entry.name.clone(),
+                    if entry.is_dir {
+                        new_branch_dir(fs, entry.id)?
+                    } else {
+                        new_branch_file(fs, entry.id)?
+                    },
+                ))
+            })
+            .collect();
+        Ok(Branch {
+            id,
+            is_dir: true,
+            content: 0,
+            children: children?,
+        })
+    }
+
+    let fs_guard = r.common.fs.get(r.dto).await?;
+    let fs = fs_guard.read().await;
+
+    new_branch_dir(&fs, 0)
 }
