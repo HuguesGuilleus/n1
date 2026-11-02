@@ -4,9 +4,11 @@ mod op_direct;
 use std::collections::BTreeMap;
 
 pub use console_direct::*;
-use n1_tool::Chunk;
+use n1_tool::{Chunk, DB};
 pub use op_direct::*;
 use serde::{Deserialize, Serialize};
+
+use crate::{Common, Result, op::OID_ENTITY_FS};
 
 const CHUNK_LEN: usize = 65536;
 
@@ -48,4 +50,14 @@ impl Default for FSState {
             increment: 0,
         }
     }
+}
+
+pub async fn init(db: &impl DB, common: &Common) -> Result<()> {
+    let entities = common.entities.read().await;
+    for &id in entities.keys() {
+        let fs = common.fs.get(id).await?;
+        let mut fs = fs.write().await;
+        *fs = db.obj_get(id, OID_ENTITY_FS as u32).await?;
+    }
+    Ok(())
 }

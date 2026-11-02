@@ -77,8 +77,9 @@ impl Common {
         auth::init(db, self).await?;
 
         bio::generate_all_pages(db, self).await?;
-        home::init(db, self).await?;
         dropbox::render_public(db, self).await?;
+        fs::init(db, self).await?;
+        home::init(db, self).await?;
         wiki::render_pub(db, self).await?;
 
         Ok(())

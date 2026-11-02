@@ -104,6 +104,8 @@ pub async fn fs_direct_index(_: &impl DB, r: OpRequest<EntityAndObjectNullDTO>) 
                                         }
                                         - " title="
                                         - Q(lang.common_download)
+                                        - " download="
+                                        - Q(&entry.name)
                                         + "dl"
                                 })
                                 + [H - "button.bg onclick=rm(event) title=" - Q(lang.fs_remove)
