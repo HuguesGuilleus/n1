@@ -1,19 +1,25 @@
-use std::{ collections::BTreeMap, io::ErrorKind::NotFound};
+use std::{
+    io::ErrorKind,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use bytes::Bytes;
 use tokio::{
     fs::{File, create_dir_all, read, remove_dir_all, remove_file, try_exists, write},
     io::AsyncReadExt,
-    sync::{Mutex, RwLock},
+    sync::Mutex,
 };
 
-use crate::{DB, Error, Result, errs, mime::REDIRECT};
+use crate::{
+    DB, Page,
+    db::{DB_RESERVED, DBError},
+};
 
 #[derive(Debug)]
 pub struct DBDirectory {
     root: String,
     urandom: Mutex<File>,
-    pages: RwLock<BTreeMap<String, (&'static str, Bytes)>>,
+    pages: Page,
 }
 
 impl DBDirectory {
@@ -27,25 +33,34 @@ impl DBDirectory {
         Self {
             root,
             urandom: Mutex::new(File::open("/dev/urandom").await.unwrap()),
-            pages: RwLock::new(BTreeMap::new()),
+            pages: Page::new(),
         }
     }
 
-    async fn random(&self) -> Result<u32> {
+    async fn random(&self) -> Result<u32, DBError> {
         let mut urandom = self.urandom.lock().await;
         let mut buff = [0u8; 4];
-        urandom.read_exact(&mut buff).await?;
+        urandom
+            .read_exact(&mut buff)
+            .await
+            .map_err(|err| DBError::Io(err.kind()))?;
         Ok(u32::from_ne_bytes(buff))
     }
 }
 
 impl DB for DBDirectory {
-    fn fs_get(&self, eid: u32, oid: u32) -> impl Future<Output = super::Result<Bytes>> + Send {
+    fn fs_get(
+        &self,
+        owner: u32,
+        object: u32,
+    ) -> impl Future<Output = Result<Bytes, DBError>> + Send {
         async move {
-            match read(format!("{}/{}/{}", self.root, eid, oid)).await {
+            match read(format!("{}/{}/{}", self.root, owner, object)).await {
                 Ok(data) => Ok(Bytes::from_owner(data)),
-                Err(err) if err.kind() == NotFound => return Err(errs::NOT_FOUND.into()),
-                Err(err) => Err(err.into()),
+                Err(err) if err.kind() == ErrorKind::NotFound => {
+                    return Err(DBError::NotFoundID { owner, object });
+                }
+                Err(err) => Err(DBError::Io(err.kind())),
             }
         }
     }
@@ -55,70 +70,76 @@ impl DB for DBDirectory {
         eid: u32,
         oid: u32,
         data: Bytes,
-    ) -> impl Future<Output = super::Result<()>> + Send {
+    ) -> impl Future<Output = Result<(), DBError>> + Send {
         async move {
             create_dir_all(format!("{}/{}", self.root, eid))
                 .await
-                .map_err(Error::from)?;
+                .map_err(|err| DBError::Io(err.kind()))?;
             write(format!("{}/{}/{}", self.root, eid, oid), data)
                 .await
-                .map_err(Error::from)?;
+                .map_err(|err| DBError::Io(err.kind()))?;
             Ok(())
         }
     }
 
-    fn fs_rm_object(&self, eid: u32, oid: u32) -> impl Future<Output = super::Result<()>> + Send {
+    fn fs_rm_object(&self, eid: u32, oid: u32) -> impl Future<Output = Result<(), DBError>> + Send {
         async move {
             match remove_file(format!("{}/{}/{}", self.root, eid, oid)).await {
                 Ok(_) => Ok(()),
-                Err(err) if err.kind() == NotFound => Ok(()),
-                Err(err) => Err(err.into()),
+                Err(err) if err.kind() == ErrorKind::NotFound => Ok(()),
+                Err(err) => Err(DBError::Io(err.kind())),
             }
         }
     }
 
-    fn fs_rm_entity(&self, eid: u32) -> impl Future<Output = super::Result<()>> + Send {
+    fn fs_rm_owner(&self, eid: u32) -> impl Future<Output = Result<(), DBError>> + Send {
         async move {
             remove_dir_all(format!("{}/{}", self.root, eid))
                 .await
-                .map_err(Error::from)
+                .map_err(|err| DBError::Io(err.kind()))
         }
     }
 
-    fn fs_new_entity(&self) -> impl Future<Output = super::Result<u32>> + Send {
+    fn fs_new_owner(&self) -> impl Future<Output = Result<u32, DBError>> + Send {
         async move {
             loop {
                 let id = self.random().await?;
-                if try_exists(format!("{}/{}", self.root, id)).await? == false {
+                let exist = try_exists(format!("{}/{}", self.root, id))
+                    .await
+                    .map_err(|err| DBError::Io(err.kind()))?;
+                if !exist {
                     return Ok(id);
                 }
             }
         }
     }
 
-    fn fs_new_object(&self, eid: u32) -> impl Future<Output = super::Result<u32>> + Send {
+    fn fs_new_object(&self, eid: u32) -> impl Future<Output = Result<u32, DBError>> + Send {
         async move {
             loop {
                 let id = self.random().await?;
-                if try_exists(format!("{}/{}/{}", self.root, eid, id)).await? == false {
+                if id < DB_RESERVED {
+                    continue;
+                }
+                let exist = try_exists(format!("{}/{}/{}", self.root, eid, id))
+                    .await
+                    .map_err(|err| DBError::Io(err.kind()))?;
+                if !exist {
                     return Ok(id);
                 }
             }
         }
     }
 
-    fn fs_keys(&self) -> impl Future<Output = super::Result<Vec<(u32, u32)>>> + Send {
+    fn fs_keys(&self) -> impl Future<Output = Result<Vec<(u32, u32)>, DBError>> + Send {
         async { Ok(vec![]) }
     }
 
     fn page_get(
         &self,
         path: &str,
-    ) -> impl Future<Output = super::Result<(&'static str, Bytes)>> + Send {
-        async move {
-            let pages = self.pages.read().await;
-            pages.get(path).cloned().ok_or(errs::NOT_FOUND.into())
-        }
+    ) -> impl Future<Output = Result<(&'static str, Bytes), DBError>> + Send {
+        self.pages.page_get(path)
     }
 
     fn page_set(
@@ -126,32 +147,18 @@ impl DB for DBDirectory {
         path: &str,
         mime: &'static str,
         data: Bytes,
-    ) -> impl Future<Output = super::Result<()>> + Send {
-        async move {
-            let mut pages = self.pages.write().await;
-            let path_toggle = if path.ends_with("/") {
-                path[..path.len() - 1].to_string()
-            } else {
-                let mut p = path.to_string();
-                p.push('/');
-                p
-            };
-            if data.len() == 0 {
-                pages.remove(path);
-                pages.remove(&path_toggle);
-                return Ok(());
-            }
-            pages.insert(path.to_string(), (mime, data));
-            pages.insert(path_toggle, (REDIRECT, Bytes::from_owner(path.to_string())));
-            Ok(())
-        }
+    ) -> impl Future<Output = Result<(), DBError>> + Send {
+        self.pages.page_set(path, mime, data)
     }
 
-    fn now(&self) -> Result<u64> {
-        // match SystemTime::now().duration_since(UNIX_EPOCH) {
-        //     Ok(duration) => Ok(duration.as_secs()),
-        //     Err(_) => Err(errs::TIME_FAIL.into()),
-        // }
-        Ok(1780998183)
+    fn page_del(&self, prefix: &str) -> impl Future<Output = Result<(), DBError>> + Send {
+        self.pages.page_del(prefix)
+    }
+
+    fn now(&self) -> Result<u64, DBError> {
+        match SystemTime::now().duration_since(UNIX_EPOCH) {
+            Ok(duration) => Ok(duration.as_secs()),
+            Err(_) => Err(DBError::GetTime),
+        }
     }
 }

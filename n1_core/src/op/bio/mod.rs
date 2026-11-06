@@ -1,6 +1,6 @@
 //! A presentation page of the entity (group or user).
 //!
-//! HURL tst file: <https://github.com/HuguesGuilleus/n1/blob/main/n1_core/tests/bio.hurl>
+//! HURL test file: <https://github.com/HuguesGuilleus/n1/blob/main/n1_core/tests/bio.hurl>
 
 use bytes::Bytes;
 use n1_js::js;
@@ -10,7 +10,7 @@ use n1_html::{DirectHTML, H, Html, Q};
 use n1_tool::{DB, mime};
 
 use crate::{
-    Common, DTO, OpRequest, Result, errs, front,
+    Common, DTO, ErrorStep, OpRequest, Result, front,
     op::{
         OID_ENTITY_BIO,
         compo::{self, FETCHER_JS, LOGIN_JS, TIME_JS},
@@ -40,7 +40,7 @@ pub struct BioSetDTO {
 impl DTO for BioSetDTO {
     fn check(&self) -> Result<()> {
         if self.owner == 0 {
-            errs::FIELD_ID_ZERO.push_result("field `oid`")?;
+            (ErrorStep::FieldZero { name: "owner" }).result()?;
         }
         Ok(())
     }

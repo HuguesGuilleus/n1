@@ -2,11 +2,9 @@ use std::collections::BTreeMap;
 use std::io;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use bytes::Bytes;
 use n1_html::{H, Html};
-use n1_tool::errs::Error;
 use n1_tool::mime::REDIRECT;
 use serde::Serialize;
 use tokio::io::{AsyncRead, AsyncReadExt};
@@ -16,11 +14,11 @@ use tokio::spawn;
 use crate::op::login::logout_console;
 use crate::op::{self, Common, DTO, Token, URLDTO};
 use crate::token::{token_decode, token_encode};
-use crate::{OpRequest, Result, errs, front};
+use crate::{Error, ErrorCategory, ErrorStep, OpRequest, Result, errs, front};
 use n1_tool::proto_http::{
     HTTPParser, HTTPRequest, Response, ResponseBody, StatusHTTP, next_req, write_response,
 };
-use n1_tool::{AtomicError, Chunk, Chunks, DB, ErrorKind, mime};
+use n1_tool::{Chunk, Chunks, DB, mime};
 
 #[derive(Clone)]
 pub struct HTTPServer<B: DB> {
@@ -43,13 +41,14 @@ pub async fn run_with_listener<C: DB + 'static>(
         let server = server.clone();
         let (mut stream, _) = listener.accept().await?;
 
-        spawn(async move || -> Result<()> {
+        spawn(async move || -> io::Result<()> {
             let server = server;
             let (r, mut w) = stream.split();
             let mut parser = HTTPParser::new(r);
             while let Some(request) = next_req(&mut parser).await {
-                let request =
-                    request.map_err(|err| errs::DECODE_REQUEST.push(format!("{:?}", err)))?;
+                let request = request.map_err(|http_err| {
+                    io::Error::new(io::ErrorKind::Other, format!("{:?}", http_err))
+                })?;
                 let path = request.path.clone();
                 let accept_html = accept_html(&request.headers);
                 let response = match handle(&server, request).await {
@@ -178,7 +177,7 @@ async fn with_url<
     r: HTTPRequest<R>,
     f: F,
 ) -> Result<Response<C>> {
-    let token = get_token(&s.key, &r);
+    let token = get_token(s, &r);
 
     let dto: D = URLDTO::url_decode(
         r.path[1..]
@@ -211,10 +210,13 @@ async fn with_body<
     mut r: HTTPRequest<R>,
     f: F,
 ) -> Result<Response<B>> {
-    let token = get_token(&s.key, &r);
+    let token = get_token(s, &r);
 
     let mut buf = Vec::new();
-    r.body.read_to_end(&mut buf).await.map_err(Error::from)?;
+    r.body
+        .read_to_end(&mut buf)
+        .await
+        .map_err(|err| ErrorStep::ReadBody(err))?;
     let data: &[u8] = match &buf[..] {
         b"" => b"null",
         _ => &buf,
@@ -250,7 +252,7 @@ async fn with_reader<
     r: HTTPRequest<R>,
     f: F,
 ) -> Result<Response<B>> {
-    let token = get_token(&s.key, &r);
+    let token = get_token(s, &r);
 
     let dto: D = URLDTO::url_decode(
         r.path[1..]
@@ -279,7 +281,7 @@ async fn with_reader<
     })
 }
 
-fn get_token<B: AsyncRead>(key: &[u8], request: &HTTPRequest<B>) -> Token {
+fn get_token<B: AsyncRead>(s: &HTTPServer<impl DB>, request: &HTTPRequest<B>) -> Token {
     let cookie = request
         .headers
         .get("Cookie")
@@ -290,16 +292,13 @@ fn get_token<B: AsyncRead>(key: &[u8], request: &HTTPRequest<B>) -> Token {
         .next();
 
     if let Some(cookie) = cookie {
-        token_decode(
-            key,
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-            cookie,
-        )
-        .inspect_err(|err| eprintln!("Cookie auth token fail: {:?}", err))
-        .unwrap_or_default()
+        let now = match s.db.now() {
+            Ok(time) => time,
+            Err(_) => return Token::default(),
+        };
+        token_decode(&s.key[..], now, cookie)
+            .inspect_err(|err| eprintln!("Cookie auth token fail: {:?}", err))
+            .unwrap_or_default()
     } else {
         Token::default()
     }
@@ -316,7 +315,10 @@ async fn make_token<
     f: F,
 ) -> Result<Response<C>> {
     let mut buf = Vec::new();
-    r.body.read_to_end(&mut buf).await.map_err(Error::from)?;
+    r.body
+        .read_to_end(&mut buf)
+        .await
+        .map_err(|err| ErrorStep::ReadBody(err))?;
     let data: &[u8] = match &buf[..] {
         b"" => b"null",
         _ => &buf,
@@ -327,21 +329,13 @@ async fn make_token<
         &s.db,
         OpRequest {
             common: s.common.clone(),
-            token: get_token(&s.key, &r),
+            token: get_token(s, &r),
             dto,
         },
     )
     .await?;
 
-    let mut header_value = token_encode(
-        String::from("auth="),
-        &token,
-        &s.key,
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(AtomicError::from)?
-            .as_secs(),
-    );
+    let mut header_value = token_encode(String::from("auth="), &token, &s.key, s.db.now()?);
     header_value.push_str("; Max-Age=604800; SameSite=Strict; Secure; HttpOnly");
 
     Ok(Response {
@@ -353,13 +347,12 @@ async fn make_token<
 }
 
 fn print_error<C: DB>(err: Error, accept_html: bool) -> Response<C> {
-    let status = match err.atomic.kind {
-        ErrorKind::BadRequest => StatusHTTP::BadRequest,
-        ErrorKind::Forbidden => StatusHTTP::Forbidden,
-        ErrorKind::Internal => StatusHTTP::InternalServerError,
-        ErrorKind::NoAuth => StatusHTTP::Unauthorized,
-        ErrorKind::NotFound => StatusHTTP::NotFound,
-        ErrorKind::SubIO => StatusHTTP::InternalServerError,
+    let status = match err.category() {
+        ErrorCategory::BadRequest => StatusHTTP::BadRequest,
+        ErrorCategory::AuthForbidden => StatusHTTP::Forbidden,
+        ErrorCategory::Internal => StatusHTTP::InternalServerError,
+        ErrorCategory::AuthNone => StatusHTTP::Unauthorized,
+        ErrorCategory::NotFound => StatusHTTP::NotFound,
     };
 
     if accept_html {
@@ -372,9 +365,11 @@ fn print_error<C: DB>(err: Error, accept_html: bool) -> Response<C> {
                     + "\r\n"
                     + [H - "main"
                         + "\r\n"
-                        + [H - "div" + err.atomic.message]
-                        + "\r\n"
-                        + [|| err.context.iter().map(|s| [H + [H - "div" + s] + "\r\n"])]]
+                        + [|| {
+                            err.0
+                                .iter()
+                                .map(|s| [H + [H - "div" + s.to_string()] + "\r\n"])
+                        }]]
                     + "\r\n"
                     + [H - "div.fh.gap.m"
                         + [H - "a.bl href=/ " + "///"]
@@ -394,14 +389,11 @@ fn print_error<C: DB>(err: Error, accept_html: bool) -> Response<C> {
     } else {
         let mut body = status.as_str().to_string();
         body.push_str("\n");
-        err.context.iter().rev().for_each(|s| {
+        err.0.iter().rev().for_each(|step| {
             body.push_str("--- ");
-            body.push_str(s);
+            body.push_str(&step.to_string());
             body.push_str("\n");
         });
-        body.push_str("--- ");
-        body.push_str(err.atomic.message);
-        body.push_str("\n");
         Response {
             status,
             mime: mime::TEXT,

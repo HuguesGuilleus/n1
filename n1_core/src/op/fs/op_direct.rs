@@ -1,11 +1,11 @@
 use std::{collections::BTreeMap, ops::Deref};
 
-use n1_tool::{Chunk, DB, chuncks_len, errs::NOT_FOUND, read_to_chunks};
+use n1_tool::{Chunk, DB, DBError, chuncks_len, read_to_chunks};
 use serde::{Deserialize, Serialize};
 use tokio::io::AsyncRead;
 
 use crate::{
-    DTO, OpRequest, Result, errs,
+    DTO, ErrorStep, NOT_FOUND, OpRequest, Result, errs,
     op::{
         EntityAndObjectDTO, OID_ENTITY_FS,
         fs::{CHUNK_LEN, Entry, FSState},
@@ -175,7 +175,10 @@ pub async fn fs_direct_get(
         fs.files
             .get(&r.dto.object)
             .ok_or_else(|| {
-                errs::NOT_FOUND.push(format!("File {} for owner {}", r.dto.object, r.dto.owner))
+                ErrorStep::DB(DBError::NotFoundID {
+                    owner: r.dto.owner,
+                    object: r.dto.object,
+                })
             })?
             .1
             .clone(),

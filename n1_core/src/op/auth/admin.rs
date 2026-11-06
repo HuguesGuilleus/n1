@@ -4,7 +4,7 @@ use n1_tool::DB;
 use serde::Deserialize;
 
 use crate::{
-    DTO, OpRequest, Result, errs,
+    DTO, Error, OpRequest, Result, errs,
     op::{Administration, Entity, OID_GLOBAL_ENTITY},
 };
 
@@ -20,7 +20,7 @@ pub async fn auth_admin_new(db: &impl DB, r: OpRequest<String>) -> Result<u32> {
         errs::ALREADY_EXIST.push_result(format!("entity {:?} already exist", r.dto))?;
     }
 
-    let id = db.fs_new_entity().await?;
+    let id = db.fs_new_owner().await?;
     entities.insert(
         id,
         Entity::Administration(Administration {
@@ -85,5 +85,7 @@ pub async fn auth_admin_edit_name(db: &impl DB, r: OpRequest<EditNameDTO>) -> Re
 
 async fn save_entities(db: &impl DB, entities: &BTreeMap<u32, Entity>) -> Result<()> {
     let v: Vec<&Entity> = entities.values().collect();
-    db.obj_set(0, OID_GLOBAL_ENTITY.into(), v).await
+    db.obj_set(0, OID_GLOBAL_ENTITY.into(), v)
+        .await
+        .map_err(Error::from)
 }

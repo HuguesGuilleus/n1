@@ -1,9 +1,9 @@
 use bytes::Bytes;
 use n1_html::{DirectHTML, H, Html};
-use n1_tool::{DB, Result, mime};
+use n1_tool::{DB, mime};
 
 use crate::{
-    Common, front,
+    Common, Result, front,
     op::{
         Entity, EntityAndObjectDTO, OID_ENTITY_WIKI, compo,
         wiki::{Article, State},

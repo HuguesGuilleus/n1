@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Result, errs,
+    ErrorStep, Result,
     op::{OID_ENTITY_DROPBOX, OID_ENTITY_WIKI, OID_GLOBAL_ENTITY, OID_GLOBAL_HOME},
 };
 
@@ -44,7 +44,7 @@ impl Token {
     /// Check if the token is authenticated. Return `errs::NO_AUTH` if not authenticated.
     pub fn check_auth(&self) -> Result<()> {
         if self.uid == 0 {
-            return Err(errs::NO_AUTH.into());
+            return ErrorStep::AuthNone.result();
         }
         Ok(())
     }
@@ -53,7 +53,7 @@ impl Token {
     pub fn check_isadmin(&self) -> Result<()> {
         self.check_auth()?;
         if !self.is_admin {
-            return Err(errs::FORBIDEN_GLOBAL.into());
+            return ErrorStep::AuthForbiddenAdmin.result();
         }
         Ok(())
     }
@@ -76,37 +76,31 @@ impl Token {
     }
 
     /// Check if the token has read access to a specific group and app.
-    pub fn check_access_read(&self, id: u32, app_id: u16) -> Result<()> {
+    pub fn check_access_read(&self, owner: u32, app: u16) -> Result<()> {
         self.check_auth()?;
         if self.is_admin {
             return Ok(());
         }
         for item in self.access.iter() {
-            if item.id == id && item.app == app_id {
+            if item.id == owner && item.app == app {
                 return Ok(());
             }
         }
-        Err(errs::FORBIDEN.push(format!(
-            "forbiden read access for entity {} to app {}",
-            id, app_id
-        )))
+        ErrorStep::AuthForbiddenRead { owner, app }.result()
     }
 
     /// Check if the token has read access to a specific group and app.
-    pub fn check_access_write(&self, id: u32, app_id: u16) -> Result<()> {
+    pub fn check_access_write(&self, owner: u32, app: u16) -> Result<()> {
         self.check_auth()?;
         if self.is_admin {
             return Ok(());
         }
         for item in self.access.iter() {
-            if item.id == id && item.app == app_id && item.can_write {
+            if item.id == owner && item.app == app && item.can_write {
                 return Ok(());
             }
         }
-        Err(errs::FORBIDEN.push(format!(
-            "forbiden write access for entity {} to app {}",
-            id, app_id
-        )))
+        ErrorStep::AuthForbiddenWrite { owner, app }.result()
     }
 
     pub fn test_alice() -> Self {

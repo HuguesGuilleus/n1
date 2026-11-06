@@ -5,6 +5,6 @@ pub mod op;
 pub mod proto_http;
 mod token;
 
-pub use errs::{AtomicError, Result};
+pub use errs::*;
 pub use init_dev::init_dev;
 pub use op::{Common, DTO, OpRequest};

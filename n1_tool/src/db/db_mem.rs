@@ -5,10 +5,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use crate::{
-    errs::{self, Result},
-    mime::REDIRECT,
-};
+use crate::{Page, db::DBError};
 use bytes::Bytes;
 use tokio::sync::Mutex;
 
@@ -18,7 +15,7 @@ use super::DB;
 pub struct DBMemory {
     pub fs: Mutex<BTreeMap<(u32, u32), Bytes>>,
     pub inc: AtomicU32,
-    pub page: Mutex<BTreeMap<String, (&'static str, Bytes)>>,
+    pub page: Page,
     pub now: Option<u64>,
 }
 
@@ -27,56 +24,69 @@ impl DBMemory {
         Self {
             fs: Mutex::new(BTreeMap::new()),
             inc: AtomicU32::new(super::DB_RESERVED),
-            page: Mutex::new(BTreeMap::new()),
+            page: Page::new(),
             now: Some(1780998183),
         }
     }
 }
 
 impl DB for DBMemory {
-    fn fs_get(&self, eid: u32, oid: u32) -> impl Future<Output = super::Result<Bytes>> + Send {
+    fn fs_get(
+        &self,
+        owner: u32,
+        object: u32,
+    ) -> impl Future<Output = Result<Bytes, DBError>> + Send {
         async move {
             let guard = self.fs.lock().await;
             guard
-                .get(&(eid, oid))
+                .get(&(owner, object))
                 .cloned()
-                .ok_or(errs::NOT_FOUND.into())
+                .ok_or(DBError::NotFoundID { owner, object })
         }
     }
 
-    fn fs_set(&self, eid: u32, oid: u32, data: Bytes) -> impl Future<Output = Result<()>> + Send {
+    fn fs_set(
+        &self,
+        owner: u32,
+        object: u32,
+        data: Bytes,
+    ) -> impl Future<Output = Result<(), DBError>> + Send {
         async move {
             let mut guard = self.fs.lock().await;
-            guard.insert((eid, oid), data);
+            guard.insert((owner, object), data);
             Ok(())
         }
     }
 
-    fn fs_rm_object(&self, eid: u32, oid: u32) -> impl Future<Output = Result<()>> + Send {
+    fn fs_rm_object(
+        &self,
+        owner: u32,
+        object: u32,
+    ) -> impl Future<Output = Result<(), DBError>> + Send {
         async move {
             let mut guard = self.fs.lock().await;
-            guard.remove(&(eid, oid));
+            guard.remove(&(owner, object));
             Ok(())
         }
     }
 
-    fn fs_rm_entity(&self, eid: u32) -> impl Future<Output = Result<()>> + Send {
+    fn fs_rm_owner(&self, owner: u32) -> impl Future<Output = Result<(), DBError>> + Send {
         async move {
             let mut guard = self.fs.lock().await;
-            guard.retain(|&(e, _), _| e != eid);
+            guard.retain(|&(e, _), _| e != owner);
             Ok(())
         }
     }
 
-    fn fs_new_object(&self, _: u32) -> impl Future<Output = Result<u32>> + Send {
+    fn fs_new_object(&self, _: u32) -> impl Future<Output = Result<u32, DBError>> + Send {
         ready(Ok(self.inc.fetch_add(1, Ordering::SeqCst)))
     }
 
-    fn fs_new_entity(&self) -> impl Future<Output = Result<u32>> + Send {
+    fn fs_new_owner(&self) -> impl Future<Output = Result<u32, DBError>> + Send {
         ready(Ok(self.inc.fetch_add(1, Ordering::SeqCst)))
     }
 
-    fn fs_keys(&self) -> impl Future<Output = Result<Vec<(u32, u32)>>> + Send {
+    fn fs_keys(&self) -> impl Future<Output = Result<Vec<(u32, u32)>, DBError>> + Send {
         async move {
             let guard = self.fs.lock().await;
             let result = guard.keys().cloned().collect();
@@ -84,11 +94,11 @@ impl DB for DBMemory {
         }
     }
 
-    fn page_get(&self, path: &str) -> impl Future<Output = Result<(&'static str, Bytes)>> + Send {
-        async move {
-            let guard = self.page.lock().await;
-            guard.get(path).cloned().ok_or(errs::NOT_FOUND.into())
-        }
+    fn page_get(
+        &self,
+        path: &str,
+    ) -> impl Future<Output = Result<(&'static str, Bytes), DBError>> + Send {
+        self.page.page_get(path)
     }
 
     fn page_set(
@@ -96,34 +106,21 @@ impl DB for DBMemory {
         path: &str,
         mime: &'static str,
         data: Bytes,
-    ) -> impl Future<Output = Result<()>> + Send {
-        async move {
-            let mut guard = self.page.lock().await;
-            let path_toggle = if path.ends_with("/") {
-                path[..path.len() - 1].to_string()
-            } else {
-                let mut p = path.to_string();
-                p.push('/');
-                p
-            };
-            if data.len() == 0 {
-                guard.remove(path);
-                guard.remove(&path_toggle);
-                return Ok(());
-            }
-            guard.insert(path.to_string(), (mime, data));
-            guard.insert(path_toggle, (REDIRECT, Bytes::from_owner(path.to_string())));
-            Ok(())
-        }
+    ) -> impl Future<Output = Result<(), DBError>> + Send {
+        self.page.page_set(path, mime, data)
     }
 
-    fn now(&self) -> Result<u64> {
+    fn page_del(&self, prefix: &str) -> impl Future<Output = Result<(), DBError>> + Send {
+        self.page.page_del(prefix)
+    }
+
+    fn now(&self) -> Result<u64, DBError> {
         if let Some(now) = self.now {
             return Ok(now);
         };
         match SystemTime::now().duration_since(UNIX_EPOCH) {
             Ok(duration) => Ok(duration.as_secs()),
-            Err(_) => Err(errs::TIME_FAIL.into()),
+            Err(_) => Err(DBError::GetTime),
         }
     }
 }

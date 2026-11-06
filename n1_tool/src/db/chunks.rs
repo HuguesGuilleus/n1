@@ -4,14 +4,15 @@ use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncReadExt};
 
+use crate::db::DBError;
+
 use super::DB;
-use crate::{Result, errs};
 
 /** A big file with multiple chunks as content. */
 #[derive(Debug)]
 pub struct Chunks<B: DB> {
-    config: Arc<B>,
-    eid: u32,
+    db: Arc<B>,
+    owner: u32,
     chunks: Vec<Chunk>,
     position: usize,
 }
@@ -23,21 +24,21 @@ pub struct Chunk {
 }
 
 impl<B: DB> Chunks<B> {
-    pub fn new(config: Arc<B>, eid: u32, chunks: Vec<Chunk>) -> Self {
+    pub fn new(db: Arc<B>, owner: u32, chunks: Vec<Chunk>) -> Self {
         Self {
-            config,
-            eid,
-            chunks: chunks.to_vec(),
+            db,
+            owner,
+            chunks: chunks,
             position: 0,
         }
     }
 
-    // Get total size of this chuncks.
+    // Get total size of this chunks.
     pub fn len(&self) -> usize {
         self.chunks.iter().map(|item| item.len).sum()
     }
 
-    /// Move internal cursor at position arg to kip the begin.
+    /// Move internal cursor at position arg to skip the begin.
     pub fn skip(&mut self, position: usize) {
         self.position = position;
     }
@@ -59,11 +60,14 @@ impl<B: DB> Chunks<B> {
         };
 
         let data = self
-            .config
-            .fs_get(self.eid, chunck.oid)
+            .db
+            .fs_get(self.owner, chunck.oid)
             .await
-            .map_err(|err| match err.atomic {
-                errs::NOT_FOUND => io::Error::from(io::ErrorKind::NotFound),
+            .map_err(|err| match err {
+                DBError::NotFoundID { .. } | DBError::NotFoundPath { .. } => {
+                    io::Error::from(io::ErrorKind::NotFound)
+                }
+                DBError::Io(kind) => io::Error::from(kind),
                 _ => io::Error::from(io::ErrorKind::Other),
             })?;
 
@@ -106,9 +110,9 @@ async fn chunck() {
 
 pub async fn read_to_chunks<const L: usize>(
     db: &impl DB,
-    eid: u32,
+    owner: u32,
     mut reader: impl AsyncRead + Unpin,
-) -> Result<Vec<Chunk>> {
+) -> Result<Vec<Chunk>, DBError> {
     let mut buff = [0u8; L];
     let mut w = 0;
     let mut chunks = Vec::new();
@@ -116,11 +120,11 @@ pub async fn read_to_chunks<const L: usize>(
         let n = reader
             .read(&mut buff[w..])
             .await
-            .map_err(|e| errs::IO_ERROR.push(e.to_string()))?;
+            .map_err(|_| DBError::ClientConnexion)?;
         w += n;
         if w == L || (n == 0 && w != 0) {
-            let oid = db.fs_new_object(eid).await?;
-            db.fs_set(eid, oid, Bytes::copy_from_slice(&buff[..w]))
+            let oid = db.fs_new_object(owner).await?;
+            db.fs_set(owner, oid, Bytes::copy_from_slice(&buff[..w]))
                 .await?;
             chunks.push(Chunk { len: w, oid });
             w = 0;

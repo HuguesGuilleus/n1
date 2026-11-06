@@ -1,9 +1,9 @@
 use bytes::Bytes;
-use n1_tool::DB;
+use n1_tool::{DB, DBError};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    DTO, OpRequest, Result, errs,
+    DTO, ErrorStep, OpRequest, Result, errs,
     op::{
         OID_ENTITY_WIKI,
         wiki::{Article, State},
@@ -18,9 +18,9 @@ pub struct ArticleIdsDTO {
 impl DTO for ArticleIdsDTO {
     fn check(&self) -> Result<()> {
         if self.owner_id == 0 {
-            errs::FIELD_ID_ZERO.push_result("field `owner_id`")?;
+            ErrorStep::FieldZero { name: "owner_id" }.result()?
         } else if self.article_id == 0 {
-            errs::FIELD_ID_ZERO.push_result("field `article_id`")?;
+            ErrorStep::FieldZero { name: "article_id" }.result()?
         }
         Ok(())
     }
@@ -44,10 +44,12 @@ pub async fn article_get(db: &impl DB, r: OpRequest<ArticleIdsDTO>) -> Result<Ar
         errs::NOT_FOUND.push_result("wiki not initialize")?;
     }
 
-    let article = wiki
-        .articles
-        .get(&r.dto.article_id)
-        .ok_or_else(|| errs::NOT_FOUND.push(format!("Article {} not found", r.dto.article_id)))?;
+    let article = wiki.articles.get(&r.dto.article_id).ok_or_else(|| {
+        ErrorStep::DB(DBError::NotFoundID {
+            owner: r.dto.owner_id,
+            object: r.dto.article_id,
+        })
+    })?;
 
     let content = db.fs_get(r.dto.owner_id, article.article_id).await?;
     let content = String::from_utf8(content.to_vec())
@@ -71,13 +73,13 @@ pub struct NewArticleDTO {
     pub slug: String,
 }
 impl DTO for NewArticleDTO {
-    fn check(&self) -> n1_tool::Result<()> {
+    fn check(&self) -> Result<()> {
         if self.owner_id == 0 {
-            errs::FIELD_ID_ZERO.push_result("the integer field `owner_id`")?;
+            ErrorStep::FieldZero { name: "owner_id" }.result()?
         } else if self.title.trim().is_empty() {
-            errs::FIELD_EMPTY.push_result("the string field `title`")?;
+            ErrorStep::FieldEmpty { name: "title" }.result()?
         } else if self.slug.trim().is_empty() {
-            errs::FIELD_EMPTY.push_result("the string field `slug`")?;
+            ErrorStep::FieldEmpty { name: "slug" }.result()?
         }
         Ok(())
     }
@@ -114,7 +116,7 @@ pub struct ArticleSetTitleDTO {
     pub title: String,
 }
 impl DTO for ArticleSetTitleDTO {
-    fn check(&self) -> n1_tool::Result<()> {
+    fn check(&self) -> Result<()> {
         if self.owner_id == 0 {
             errs::FIELD_ID_ZERO.push_result("the integer field `owner_id`")?;
         } else if self.article_id == 0 {
@@ -150,7 +152,7 @@ pub struct ArticleSetSlugDTO {
     pub slug: String,
 }
 impl DTO for ArticleSetSlugDTO {
-    fn check(&self) -> n1_tool::Result<()> {
+    fn check(&self) -> Result<()> {
         if self.owner_id == 0 {
             errs::FIELD_ID_ZERO.push_result("the integer field `owner_id`")?;
         } else if self.article_id == 0 {
@@ -187,7 +189,7 @@ pub struct ArticleSetContentDTO {
     pub content: String,
 }
 impl DTO for ArticleSetContentDTO {
-    fn check(&self) -> n1_tool::Result<()> {
+    fn check(&self) -> Result<()> {
         if self.owner_id == 0 {
             errs::FIELD_ID_ZERO.push_result("the integer field `owner_id`")?;
         } else if self.article_id == 0 {

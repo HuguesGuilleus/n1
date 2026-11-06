@@ -1,8 +1,8 @@
 use n1_html::{H, Html, Q};
-use n1_tool::{DB, Result};
+use n1_tool::DB;
 
 use crate::{
-    OpRequest,
+    OpRequest, Result,
     errs::{self},
     front,
     op::{EntityAndObjectDTO, OID_ENTITY_WIKI, compo, wiki::State},

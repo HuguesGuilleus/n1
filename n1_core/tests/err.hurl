@@ -4,6 +4,5 @@ HTTP 400
 Content-Type: text/plain; charset=UTF-8
 ```
 400 Bad Request
---- field `article_id`
---- identifier field is zero
+--- field "article_id" is zero
 ```

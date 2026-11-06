@@ -14,7 +14,7 @@ async fn main() -> io::Result<()> {
 
     let (db, common) = init_dev()
         .await
-        .map_err(|err| io::Error::new(io::ErrorKind::Other, err.atomic.message))?;
+        .map_err(|err| io::Error::new(io::ErrorKind::Other, format!("{:?}", err)))?;
 
     let server = Arc::new(HTTPServer {
         db: Arc::new(db),

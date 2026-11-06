@@ -9,16 +9,12 @@ use std::{
 use bytes::Bytes;
 use tokio::{
     fs::{File, OpenOptions},
-    io::{self, AsyncReadExt, AsyncSeekExt, AsyncWriteExt},
+    io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt},
     sync::Mutex,
 };
 
 use super::{DB, DB_RESERVED};
-use crate::{
-    Result,
-    errs::{self, Error},
-    mime::REDIRECT,
-};
+use crate::{Page, db::DBError};
 
 const MAGIC: [u8; 8] = *b"Kventry_";
 
@@ -26,7 +22,7 @@ const MAGIC: [u8; 8] = *b"Kventry_";
 #[derive(Debug)]
 pub struct DBOneFile {
     file: Mutex<DBFile>,
-    page: Mutex<BTreeMap<String, (&'static str, Bytes)>>,
+    page: Page,
 }
 
 #[derive(Debug)]
@@ -44,22 +40,26 @@ struct DBOneFileEntry {
     size: u64,
 }
 
-fn report_io_err(io_err: io::Error) -> Error {
-    errs::IO_ERROR.push(io_err.to_string())
-}
-
 impl DBOneFile {
-    pub async fn open(path: impl AsRef<Path>) -> Result<DBOneFile> {
+    pub async fn open(path: impl AsRef<Path>) -> Result<DBOneFile, DBError> {
         // Open write file
         let mut write = OpenOptions::new()
             .append(true)
             .create(true)
             .open(&path)
             .await
-            .map_err(report_io_err)?;
+            .map_err(|err| DBError::Io(err.kind()))?;
 
-        if write.stream_position().await.map_err(report_io_err)? == 0 {
-            write.write_all(&MAGIC).await.map_err(report_io_err)?;
+        if write
+            .stream_position()
+            .await
+            .map_err(|err| DBError::Io(err.kind()))?
+            == 0
+        {
+            write
+                .write_all(&MAGIC)
+                .await
+                .map_err(|err| DBError::Io(err.kind()))?;
         }
 
         // Open read file
@@ -67,13 +67,16 @@ impl DBOneFile {
             .read(true)
             .open(&path)
             .await
-            .map_err(report_io_err)?;
+            .map_err(|err| DBError::Io(err.kind()))?;
         let mut magic = [0u8; 8];
-        read.read_exact(&mut magic).await.map_err(report_io_err)?;
+        read.read_exact(&mut magic)
+            .await
+            .map_err(|err| DBError::Io(err.kind()))?;
         if magic != MAGIC {
-            return Err(
-                errs::IO_MAGIC_NUMBER.push(format!("get={:?} // expect={:?}", magic, MAGIC))
-            );
+            return Err(DBError::MagicNumber {
+                got: magic,
+                expected: MAGIC,
+            });
         }
 
         // Index all file
@@ -85,7 +88,7 @@ impl DBOneFile {
                 if err.kind() == ErrorKind::UnexpectedEof {
                     break;
                 } else {
-                    return Err(report_io_err(err));
+                    return Err(DBError::Io(err.kind()));
                 }
             }
             let meta = u128::from_be_bytes(buff);
@@ -105,7 +108,7 @@ impl DBOneFile {
             }
             read.seek(SeekFrom::Current(size as i64))
                 .await
-                .map_err(report_io_err)?;
+                .map_err(|err| DBError::Io(err.kind()))?;
             offset += 16 + size;
         }
 
@@ -117,35 +120,44 @@ impl DBOneFile {
                 entries,
                 inc: DB_RESERVED,
             }),
-            page: Mutex::new(BTreeMap::new()),
+            page: Page::new(),
         })
     }
 }
 
 impl DB for DBOneFile {
-    fn fs_get(&self, eid: u32, oid: u32) -> impl Future<Output = Result<Bytes>> + Send {
+    fn fs_get(
+        &self,
+        owner: u32,
+        object: u32,
+    ) -> impl Future<Output = Result<Bytes, DBError>> + Send {
         async move {
             let mut guard = self.file.lock().await;
-            if let Some(&entry) = guard.entries.get(&(eid, oid)) {
+            if let Some(&entry) = guard.entries.get(&(owner, object)) {
                 let mut buff = vec![0u8; entry.size as usize];
                 guard
                     .read
                     .seek(SeekFrom::Start(entry.offset))
                     .await
-                    .map_err(|e| errs::IO_ERROR.push(e.to_string()))?;
+                    .map_err(|_| DBError::DBInternal)?;
                 guard
                     .read
                     .read_exact(&mut buff)
                     .await
-                    .map_err(|e| errs::IO_ERROR.push(e.to_string()))?;
+                    .map_err(|_| DBError::DBInternal)?;
                 Ok(Bytes::from_owner(buff))
             } else {
-                Err(errs::NOT_FOUND.push(format!("eid={} oid={}", eid, oid)))
+                Err(DBError::NotFoundID { owner, object })
             }
         }
     }
 
-    fn fs_set(&self, eid: u32, oid: u32, data: Bytes) -> impl Future<Output = Result<()>> + Send {
+    fn fs_set(
+        &self,
+        eid: u32,
+        oid: u32,
+        data: Bytes,
+    ) -> impl Future<Output = Result<(), DBError>> + Send {
         async move {
             let mut guard = self.file.lock().await;
             let mut chunck = vec![0u8; 16 + data.len()];
@@ -156,7 +168,7 @@ impl DB for DBOneFile {
                 .write
                 .write_all(&chunck)
                 .await
-                .map_err(report_io_err)?;
+                .map_err(|err| DBError::Io(err.kind()))?;
             let entry = DBOneFileEntry {
                 offset: guard.offset + 16,
                 size: data.len() as u64,
@@ -167,7 +179,7 @@ impl DB for DBOneFile {
         }
     }
 
-    fn fs_rm_object(&self, eid: u32, oid: u32) -> impl Future<Output = Result<()>> + Send {
+    fn fs_rm_object(&self, eid: u32, oid: u32) -> impl Future<Output = Result<(), DBError>> + Send {
         async move {
             let mut guard = self.file.lock().await;
             guard.entries.remove(&(eid, oid));
@@ -176,10 +188,10 @@ impl DB for DBOneFile {
                 .write
                 .write_all(&meta.to_be_bytes())
                 .await
-                .map_err(report_io_err)
+                .map_err(|err| DBError::Io(err.kind()))
         }
     }
-    fn fs_rm_entity(&self, eid: u32) -> impl Future<Output = Result<()>> + Send {
+    fn fs_rm_owner(&self, eid: u32) -> impl Future<Output = Result<(), DBError>> + Send {
         async move {
             let mut guard = self.file.lock().await;
             let removed_entries: Vec<u8> = guard
@@ -198,14 +210,14 @@ impl DB for DBOneFile {
                 .write
                 .write_all(&removed_entries)
                 .await
-                .map_err(report_io_err)?;
+                .map_err(|err| DBError::Io(err.kind()))?;
 
             guard.entries.retain(|&(local_eid, _), _| local_eid != eid);
             Ok(())
         }
     }
 
-    fn fs_new_entity(&self) -> impl Future<Output = Result<u32>> + Send {
+    fn fs_new_owner(&self) -> impl Future<Output = Result<u32, DBError>> + Send {
         async move {
             let mut guard = self.file.lock().await;
             while guard
@@ -218,7 +230,7 @@ impl DB for DBOneFile {
             Ok(guard.inc)
         }
     }
-    fn fs_new_object(&self, eid: u32) -> impl Future<Output = Result<u32>> + Send {
+    fn fs_new_object(&self, eid: u32) -> impl Future<Output = Result<u32, DBError>> + Send {
         async move {
             let mut guard = self.file.lock().await;
             while guard.entries.contains_key(&(eid, guard.inc)) {
@@ -228,18 +240,18 @@ impl DB for DBOneFile {
         }
     }
 
-    fn fs_keys(&self) -> impl Future<Output = Result<Vec<(u32, u32)>>> + Send {
+    fn fs_keys(&self) -> impl Future<Output = Result<Vec<(u32, u32)>, DBError>> + Send {
         async move {
             let guard = self.file.lock().await;
             Ok(guard.entries.keys().copied().collect())
         }
     }
 
-    fn page_get(&self, path: &str) -> impl Future<Output = Result<(&'static str, Bytes)>> + Send {
-        async move {
-            let guard = self.page.lock().await;
-            guard.get(path).cloned().ok_or(errs::NOT_FOUND.into())
-        }
+    fn page_get(
+        &self,
+        path: &str,
+    ) -> impl Future<Output = Result<(&'static str, Bytes), DBError>> + Send {
+        self.page.page_get(path)
     }
 
     fn page_set(
@@ -247,31 +259,18 @@ impl DB for DBOneFile {
         path: &str,
         mime: &'static str,
         data: Bytes,
-    ) -> impl Future<Output = Result<()>> + Send {
-        async move {
-            let mut guard = self.page.lock().await;
-            let path_toggle = if path.ends_with("/") {
-                path[..path.len() - 1].to_string()
-            } else {
-                let mut p = path.to_string();
-                p.push('/');
-                p
-            };
-            if data.len() == 0 {
-                guard.remove(path);
-                guard.remove(&path_toggle);
-                return Ok(());
-            }
-            guard.insert(path.to_string(), (mime, data));
-            guard.insert(path_toggle, (REDIRECT, Bytes::from_owner(path.to_string())));
-            Ok(())
-        }
+    ) -> impl Future<Output = Result<(), DBError>> + Send {
+        self.page.page_set(path, mime, data)
     }
 
-    fn now(&self) -> Result<u64> {
+    fn page_del(&self, prefix: &str) -> impl Future<Output = Result<(), DBError>> + Send {
+        self.page.page_del(prefix)
+    }
+
+    fn now(&self) -> Result<u64, DBError> {
         match SystemTime::now().duration_since(UNIX_EPOCH) {
             Ok(duration) => Ok(duration.as_secs()),
-            Err(_) => Err(errs::TIME_FAIL.into()),
+            Err(_) => Err(DBError::GetTime),
         }
     }
 }
