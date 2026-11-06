@@ -1,14 +1,13 @@
 use std::{collections::BTreeMap, sync::Arc};
 
 use bytes::Bytes;
-use n1_tool::{Chunk, DB, DBMemory};
+use n1_tool::{DB, DBMemory};
 
 use crate::{
     Common, OpRequest, Result,
     op::{
         self, Entity, EntityAndObjectDTO, Group, OID_ENTITY_BIO, OID_ENTITY_DROPBOX, OID_ENTITY_FS,
         OID_ENTITY_WIKI, OID_GLOBAL_ENTITY, OID_GLOBAL_HOME, Token, TokenItem, User,
-        dropbox::DropFile,
         fs::{MakeDTO, fs_direct_mkdir, fs_direct_mkfile, fs_direct_set},
     },
 };
@@ -92,29 +91,6 @@ pub async fn init_dev() -> Result<(impl DB, Arc<Common>)> {
             ],
         }),
     );
-
-    // Set dropbox
-    db.obj_set(101 , OID_ENTITY_DROPBOX as u32 , op::dropbox::State{
-        shadow: 301,
-        texts_inc: 3,
-        texts: vec![
-            (0, "Text 1".to_string()),
-            (2, "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat. Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim. Pellentesque congue. Ut in risus volutpat libero pharetra tempor. Cras vestibulum bibendum augue. Praesent egestas leo in pede. Praesent blandit odio eu enim. Pellentesque sed dui ut augue blandit sodales. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Aliquam nibh. Mauris ac mauris sed pede pellentesque fermentum. Maecenas adipiscing ante non diam sodales hendrerit.".to_string())
-        ],
-        files_inc: 3,
-        files: vec![DropFile {
-            id: 2 ,
-            name: "file.txt".to_string() ,
-            upload_secs: NOW ,
-            chunks: vec![
-                Chunk{len: 3, oid: 2001},
-                Chunk{len: 4, oid: 2002},
-            ]
-        }],
-    }).await ?;
-
-    db.fs_set(101, 2001, Bytes::from_static(b"123")).await?;
-    db.fs_set(101, 2002, Bytes::from_static(b"456!")).await?;
 
     // Wiki
     db.obj_set(
