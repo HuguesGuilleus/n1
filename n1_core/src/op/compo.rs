@@ -3,12 +3,14 @@
 use n1_html::{DirectHTML, H, Html};
 use n1_js::js;
 
-use crate::op::Lang;
+use super::Lang;
 
+/// Create link to `#main` for accessibility.
 pub fn goto_main(lang: &Lang) -> impl Html {
     [H - "a.bl href=#main" + lang.common_gotomain]
 }
 
+#[deprecated(note = "use `header_menu`")]
 pub fn header(inside: impl n1_html::Html) -> impl Html {
     [H - "header.fh" + [H - "h1.bl" + inside] + [H - "a.bl.mlauto href=/_" + "Menu"] + ""]
 }
@@ -33,6 +35,7 @@ pub fn header_menu_logged(lang: &Lang) -> impl Html {
     ]
 }
 
+/// Add link to home page for the public page footer.
 pub fn footer_home(lang: &Lang) -> impl Html {
     [H - "div.mv.fh" + [H - "a.bl href=/ " + lang.common_home]]
 }
@@ -55,11 +58,12 @@ pub const LOGIN_JS: DirectHTML = DirectHTML(js!(
     new BroadcastChannel("auth").onmessage = _ => location.reload();
 ));
 
-/// Add JS to mange login/logout event.
+/// Add JS to manage login/logout event.
 pub const LOGIN_JS_CONNECTED: DirectHTML = DirectHTML(js!(
     new BroadcastChannel("auth").onmessage = _ => location.reload();
 ));
 
+/// JS script to fetch api and indicate when request end and his sttaus.
 pub const FETCHER_JS: DirectHTML = DirectHTML(js!(
     fetcher = (_promise, _out) => (
         _out.innerText = "[...]",
