@@ -33,8 +33,8 @@ pub const LANG_FR: Lang = Lang {
 
     home: DirectHTML("Accueil"),
     home_title: DirectHTML("Home editor"),
-    home_edite_title: DirectHTML("Titre\u{00A0}:"),
-    home_edite_description: DirectHTML("Description\u{00A0}:"),
+    home_edit_title: DirectHTML("Titre\u{00A0}:"),
+    home_edit_description: DirectHTML("Description\u{00A0}:"),
     home_page_content: DirectHTML(
         "Contenu de la page d'accueil, utilisez des lignes vides pour séparer les paragraphes\u{00A0}:",
     ),

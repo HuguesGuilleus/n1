@@ -45,9 +45,9 @@ pub struct Lang {
     /// Home console title.
     pub home_title: DirectHTML<'static>,
     /// Label edit the home title.
-    pub home_edite_title: DirectHTML<'static>,
+    pub home_edit_title: DirectHTML<'static>,
     /// Label edit the home dscription.
-    pub home_edite_description: DirectHTML<'static>,
+    pub home_edit_description: DirectHTML<'static>,
     /// Label edit the page content.
     pub home_page_content: DirectHTML<'static>,
 

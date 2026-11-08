@@ -100,7 +100,7 @@ pub fn logout_console(lang: &Lang) -> String {
             + compo::goto_main(lang)
             + [H - "header.fh"
                 + [H - "h1.bl" + lang.logout_title]
-                + [H - "a.bl.mlauto href=/_user_login" + lang.login_title]
+                + [H - "a.bl.mlauto href=/_auth_login" + lang.login_title]
                 + ""]
             + [H - "main.w id=main" + lang.logout_info]
             + ""]

@@ -33,8 +33,8 @@ pub const LANG_EN: Lang = Lang {
 
     home: DirectHTML("Home"),
     home_title: DirectHTML("Modification de l'accueil"),
-    home_edite_title: DirectHTML("Title:"),
-    home_edite_description: DirectHTML("Description:"),
+    home_edit_title: DirectHTML("Title:"),
+    home_edit_description: DirectHTML("Description:"),
     home_page_content: DirectHTML("Home page content, use blank line to separt paragraph:"),
 
     login_title: DirectHTML("Login"),
