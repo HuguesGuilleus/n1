@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    ErrorStep, Result,
-    op::{OID_ENTITY_DROPBOX, OID_ENTITY_WIKI, OID_GLOBAL_ENTITY, OID_GLOBAL_HOME},
-};
+use crate::{ErrorStep, Result};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
@@ -29,19 +26,7 @@ pub struct TokenItem {
 impl Token {
     pub const ACCESS_LEN: usize = 63;
 
-    pub fn init() -> Self {
-        Self {
-            uid: 0,
-            is_admin: false,
-            access: [TokenItem {
-                id: 0,
-                app: 0,
-                can_write: false,
-            }; 63],
-        }
-    }
-
-    /// Check if the token is authenticated. Return `errs::NO_AUTH` if not authenticated.
+    /// Check if the token is authenticated. Return [`ErrorStep::AuthNone`] if not authenticated.
     pub fn check_auth(&self) -> Result<()> {
         if self.uid == 0 {
             return ErrorStep::AuthNone.result();
@@ -101,35 +86,6 @@ impl Token {
             }
         }
         ErrorStep::AuthForbiddenWrite { owner, app }.result()
-    }
-
-    pub fn test_alice() -> Self {
-        let mut access = [TokenItem::default(); 63];
-        access[0] = TokenItem {
-            id: 1,
-            app: OID_GLOBAL_ENTITY,
-            can_write: true,
-        };
-        access[0] = TokenItem {
-            id: 1,
-            app: OID_GLOBAL_HOME,
-            can_write: true,
-        };
-        access[0] = TokenItem {
-            id: 1,
-            app: OID_ENTITY_DROPBOX,
-            can_write: true,
-        };
-        access[0] = TokenItem {
-            id: 1,
-            app: OID_ENTITY_WIKI,
-            can_write: true,
-        };
-        Self {
-            uid: 1,
-            is_admin: true,
-            access,
-        }
     }
 }
 

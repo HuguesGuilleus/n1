@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, de::DeserializeOwned};
 
-use crate::{Result, errs};
+use crate::{ErrorStep, Result};
 
 pub trait DTO: DeserializeOwned + Debug {
     fn check(&self) -> Result<()>;
@@ -22,7 +22,7 @@ impl DTO for () {
 impl URLDTO for () {
     fn url_decode(url: &str) -> Result<Self> {
         if url != "" {
-            return Err(errs::FIELD_EMPTY.into());
+            return Err(ErrorStep::NeedNoData.into());
         }
         Ok(())
     }
@@ -31,21 +31,22 @@ impl URLDTO for () {
 impl DTO for u32 {
     fn check(&self) -> Result<()> {
         if *self == 0 {
-            return Err(errs::FIELD_ID_ZERO.into());
+            return Err(ErrorStep::FieldZero { name: "" }.into());
         }
         Ok(())
     }
 }
 impl URLDTO for u32 {
     fn url_decode(url: &str) -> Result<Self> {
-        url.parse::<u32>().map_err(|_| errs::DECODE_REQUEST.into())
+        url.parse::<u32>()
+            .map_err(|err| ErrorStep::ParsingInteger { err }.into())
     }
 }
 
 impl DTO for String {
     fn check(&self) -> Result<()> {
         if self.is_empty() {
-            return Err(errs::FIELD_EMPTY.into());
+            return Err(ErrorStep::FieldEmpty { name: "" }.into());
         }
         Ok(())
     }
@@ -59,20 +60,24 @@ pub struct EntityAndObjectDTO {
 impl DTO for EntityAndObjectDTO {
     fn check(&self) -> Result<()> {
         if self.owner == 0 {
-            return Err(errs::FIELD_ENTITY.into());
+            return Err(ErrorStep::FieldZero { name: "owner" }.into());
         }
         if self.object == 0 {
-            return Err(errs::FIELD_OID.into());
+            return Err(ErrorStep::FieldZero { name: "object" }.into());
         }
         Ok(())
     }
 }
 impl URLDTO for EntityAndObjectDTO {
     fn url_decode(url: &str) -> Result<Self> {
-        let (a, b) = url.split_once(',').ok_or(errs::DECODE_REQUEST)?;
+        let (a, b) = url.split_once(',').ok_or(ErrorStep::Parsing2Integer)?;
         Ok(Self {
-            owner: a.parse::<u32>().map_err(|_| errs::DECODE_REQUEST)?,
-            object: b.parse::<u32>().map_err(|_| errs::DECODE_REQUEST)?,
+            owner: a
+                .parse::<u32>()
+                .map_err(|err| ErrorStep::ParsingInteger { err })?,
+            object: b
+                .parse::<u32>()
+                .map_err(|err| ErrorStep::ParsingInteger { err })?,
         })
     }
 }
@@ -91,17 +96,21 @@ pub struct EntityAndObjectNullDTO {
 impl DTO for EntityAndObjectNullDTO {
     fn check(&self) -> Result<()> {
         if self.owner == 0 {
-            return Err(errs::FIELD_ENTITY.into());
+            return Err(ErrorStep::FieldZero { name: "owner" }.into());
         }
         Ok(())
     }
 }
 impl URLDTO for EntityAndObjectNullDTO {
     fn url_decode(url: &str) -> Result<Self> {
-        let (a, b) = url.split_once(',').ok_or(errs::DECODE_REQUEST)?;
+        let (a, b) = url.split_once(',').ok_or(ErrorStep::Parsing2Integer)?;
         Ok(Self {
-            owner: a.parse::<u32>().map_err(|_| errs::DECODE_REQUEST)?,
-            object: b.parse::<u32>().map_err(|_| errs::DECODE_REQUEST)?,
+            owner: a
+                .parse::<u32>()
+                .map_err(|err| ErrorStep::ParsingInteger { err })?,
+            object: b
+                .parse::<u32>()
+                .map_err(|err| ErrorStep::ParsingInteger { err })?,
         })
     }
 }

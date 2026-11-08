@@ -17,8 +17,8 @@ use n1_tool::DB;
 use tokio::sync::Mutex;
 use tokio::sync::RwLock;
 
+use crate::ErrorStep;
 use crate::Result;
-use crate::errs;
 pub use auth::*;
 pub use dto::*;
 pub use lang::*;
@@ -48,6 +48,7 @@ pub struct Common {
 pub struct LockMap<T>(Mutex<BTreeMap<u32, Arc<RwLock<T>>>>);
 
 impl<T: Default> LockMap<T> {
+    /// Get data of a specific user
     pub async fn get(&self, owner: u32) -> Result<Arc<RwLock<T>>> {
         let mut guard = self.0.lock().await;
         let arc = match guard.get(&owner) {
@@ -83,13 +84,13 @@ impl Common {
         Ok(())
     }
 
-    pub async fn get_entity_name(&self, oid: u32) -> Result<String> {
+    pub async fn get_entity_name(&self, id: u32) -> Result<String> {
         let entities = self.entities.read().await;
         let entity = entities
-            .get(&oid)
-            .ok_or(errs::NOT_FOUND.push(format!("Cannot get entity with id={}", oid)))?;
+            .get(&id)
+            .ok_or(ErrorStep::NotFoundEntity { entity: id })?;
         if entity.is_none() {
-            errs::EXPECT_REEL_ENTITY.push_result("entity is none")?;
+            ErrorStep::ExpectRealEntity { entity: id }.result()?
         }
         Ok(entity.name().to_string())
     }

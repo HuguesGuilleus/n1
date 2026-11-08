@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, num::ParseIntError};
 
 use n1_tool::DBError::{self, DBInternal};
 
@@ -44,15 +44,21 @@ impl From<ErrorStep> for Error {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ErrorStep {
-    AuthNone,
+    Action(&'static str),
     AuthForbiddenAdmin,
     AuthForbiddenRead { owner: u32, app: u16 },
     AuthForbiddenWrite { owner: u32, app: u16 },
-    ReadBody(io::Error),
-    Action(&'static str),
+    AuthNone,
     DB(DBError),
-    FieldZero { name: &'static str },
+    ExpectRealEntity { entity: u32 },
     FieldEmpty { name: &'static str },
+    FieldParsing { name: &'static str },
+    FieldZero { name: &'static str },
+    NeedNoData,
+    NotFoundEntity { entity: u32 },
+    Parsing2Integer,
+    ParsingInteger { err: ParseIntError },
+    ReadBody(io::Error),
 
     X(String),
     Static(&'static str),
@@ -87,8 +93,14 @@ impl ErrorStep {
             ErrorStep::DB(DBError::NotFoundID { .. } | DBError::NotFoundPath { .. }) => {
                 ErrorCategory::NotFound
             }
-            ErrorStep::FieldZero { .. } => ErrorCategory::BadRequest,
+            ErrorStep::ExpectRealEntity { .. } => ErrorCategory::BadRequest,
             ErrorStep::FieldEmpty { .. } => ErrorCategory::BadRequest,
+            ErrorStep::FieldParsing { .. } => ErrorCategory::BadRequest,
+            ErrorStep::FieldZero { .. } => ErrorCategory::BadRequest,
+            ErrorStep::NeedNoData => ErrorCategory::BadRequest,
+            ErrorStep::NotFoundEntity { .. } => ErrorCategory::NotFound,
+            ErrorStep::Parsing2Integer => ErrorCategory::BadRequest,
+            ErrorStep::ParsingInteger { .. } => ErrorCategory::BadRequest,
 
             ErrorStep::X(..) => ErrorCategory::BadRequest,
             ErrorStep::Static(..) => ErrorCategory::BadRequest,
@@ -121,9 +133,16 @@ impl ErrorStep {
                 format!("not found owner={owner} object={object}")
             }
             ErrorStep::DB(DBError::NotFoundPath { path }) => format!("not found path : {:?}", path),
-
+            ErrorStep::ExpectRealEntity { entity } => format!("expect real entity for {entity}"),
             ErrorStep::FieldZero { name } => format!("field {name:?} is zero"),
+            ErrorStep::FieldParsing { name } => format!("parsing fail in field {name:?}"),
             ErrorStep::FieldEmpty { name } => format!("field {name:?} is empty"),
+            ErrorStep::NeedNoData => "need no data".to_string(),
+            ErrorStep::NotFoundEntity { entity } => format!("not found entity {entity}"),
+            ErrorStep::Parsing2Integer => {
+                "need `owner,object` format with two integers".to_string()
+            }
+            ErrorStep::ParsingInteger { err } => format!("parsing integer: {err}"),
 
             ErrorStep::X(err) => err.to_string(),
             ErrorStep::Static(err) => err.to_string(),
