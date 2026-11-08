@@ -65,10 +65,6 @@ pub enum ErrorStep {
 }
 
 impl ErrorStep {
-    pub fn err(self) -> Error {
-        Error(vec![self])
-    }
-
     pub fn result(self) -> Result<()> {
         Err(Error(vec![self]))
     }

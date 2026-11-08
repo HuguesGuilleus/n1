@@ -13,23 +13,37 @@ use n1_tool::DB;
 pub async fn menu_console(_: &impl DB, r: OpRequest<()>) -> Result<String> {
     r.token.check_auth()?;
 
-    // Get list of group' user
+    // Get list of group of the user
     let mut ids: BTreeSet<u32> = BTreeSet::new();
     for item in r.token.access {
         ids.insert(item.id);
     }
     ids.remove(&r.token.uid);
     ids.remove(&0);
-    let mut names: Vec<(u32, &str)> = Vec::with_capacity(1 + ids.len());
-    let entities = r.common.entities.read().await;
-    names.push((
-        r.token.uid,
-        entities.get(&r.token.uid).map(Entity::name).unwrap_or("?"),
-    ));
-    for id in ids {
-        names.push((id, entities.get(&id).map(Entity::name).unwrap_or("?")));
-    }
-    names[1..].sort_by_key(|(_, name)| *name);
+    let names = {
+        let mut names: Vec<(u32, String)> = Vec::with_capacity(1 + ids.len());
+        let entities = r.common.entities.read().await;
+        names.push((
+            r.token.uid,
+            entities
+                .get(&r.token.uid)
+                .map(Entity::name)
+                .unwrap_or("?")
+                .to_string(),
+        ));
+        for id in ids {
+            names.push((
+                id,
+                entities
+                    .get(&id)
+                    .map(Entity::name)
+                    .unwrap_or("?")
+                    .to_string(),
+            ));
+        }
+        names[1..].sort_by(|(_, name1), (_, name2)| name1.cmp(name2));
+        names
+    };
 
     // Generate one rights for an entity (self or group's user)
     fn rights<'a>(lang: &Lang, token: &Token, owner: u32, name: &'a str) -> impl Html + 'a {
@@ -56,13 +70,13 @@ pub async fn menu_console(_: &impl DB, r: OpRequest<()>) -> Result<String> {
         + [H - "head" + front::HEAD + [H - "title" + lang.common_menu]]
         + [H - "body"
             + [H - "header.fh"
-                + [H - "h1.bl" + lang.common_menu + " @" + names[0].1]
+                + [H - "h1.bl" + lang.common_menu + " @" + &names[0].1]
                 + compo::header_menu_logged(lang)]
             + [H - "main.w"
                 + [H + || {
                     names
                         .iter()
-                        .map(|(id, name)| rights(lang, &r.token, *id, *name))
+                        .map(|(id, name)| rights(lang, &r.token, *id, name))
                 }]
                 + r.token.is_admin.then(|| {
                     [H + [H - "h2" + lang.common_administor]
