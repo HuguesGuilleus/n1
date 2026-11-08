@@ -1,6 +1,6 @@
 use n1_html::DirectHTML;
 
-use crate::op::Lang;
+use super::Lang;
 
 pub const LANG_EN: Lang = Lang {
     code: "en",

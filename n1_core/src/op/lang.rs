@@ -1,12 +1,6 @@
-//! All language translations.
-
-mod en;
-mod fr;
-
-pub use en::LANG_EN;
-pub use fr::LANG_FR;
 use n1_html::DirectHTML;
 
+/// All language translations.
 pub struct Lang {
     /// The language code, used in HTML root lang attribute.
     pub code: &'static str,

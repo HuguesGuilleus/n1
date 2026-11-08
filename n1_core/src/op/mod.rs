@@ -5,6 +5,8 @@ mod dto;
 pub mod fs;
 pub mod home;
 mod lang;
+mod lang_en;
+mod lang_fr;
 pub mod menu;
 mod token;
 pub mod wiki;
@@ -22,6 +24,8 @@ use crate::Result;
 pub use auth::*;
 pub use dto::*;
 pub use lang::*;
+pub use lang_en::LANG_EN;
+pub use lang_fr::LANG_FR;
 pub use token::*;
 
 pub const OID_GLOBAL_ENTITY: u16 = 1;
