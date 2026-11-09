@@ -8,6 +8,7 @@ mod lang;
 mod lang_en;
 mod lang_fr;
 pub mod menu;
+mod name;
 mod token;
 pub mod wiki;
 
@@ -26,6 +27,7 @@ pub use dto::*;
 pub use lang::*;
 pub use lang_en::LANG_EN;
 pub use lang_fr::LANG_FR;
+pub use name::Name;
 pub use token::*;
 
 pub const OID_GLOBAL_ENTITY: u16 = 1;

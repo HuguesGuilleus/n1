@@ -49,6 +49,10 @@ impl Page {
     pub async fn page_del(&self, prefix: &str) -> Result<(), DBError> {
         let mut map = self.0.lock().await;
         map.retain(|key, _| !key.starts_with(prefix));
+        if prefix.ends_with("/") {
+            let prefix_toggle = &prefix[..prefix.len() - 1];
+            map.remove(prefix_toggle);
+        }
         Ok(())
     }
 }
