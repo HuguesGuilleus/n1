@@ -85,7 +85,7 @@ pub async fn handle<R: AsyncRead + Unpin + Send, C: DB>(
         "_fs_index" => with_url(s, r, op::fs::fs_direct_index).await,
         "_home" => with_url(s, r, op::home::home_console).await,
         "_wiki_new" => with_url(s, r, op::wiki::render_priv_new).await,
-        "_wiki_page" => with_url(s, r, op::wiki::render_priv_page).await,
+        "_wiki_article" => with_url(s, r, op::wiki::render_priv_page).await,
         "_wiki" => with_url(s, r, op::wiki::render_priv_index).await,
 
         "_auth_logout" => Ok(Response {
@@ -213,12 +213,12 @@ async fn with_body<
     r.body
         .read_to_end(&mut buf)
         .await
-        .map_err(|err| ErrorStep::ReadBody(err))?;
+        .map_err(|err| ErrorStep::BodyRead(err))?;
     let data: &[u8] = match &buf[..] {
         b"" => b"null",
         _ => &buf,
     };
-    let dto: D = serde_json::from_slice(data).map_err(|_| errs::DECODE_REQUEST)?;
+    let dto: D = serde_json::from_slice(data).map_err(|err| ErrorStep::BodyDecode(err))?;
     dto.check()?;
 
     let out = f(
@@ -315,7 +315,7 @@ async fn make_token<
     r.body
         .read_to_end(&mut buf)
         .await
-        .map_err(|err| ErrorStep::ReadBody(err))?;
+        .map_err(|err| ErrorStep::BodyRead(err))?;
     let data: &[u8] = match &buf[..] {
         b"" => b"null",
         _ => &buf,

@@ -70,6 +70,8 @@ pub enum ErrorStep {
         object: u32,
         err: Utf8Error,
     },
+    BodyRead(io::Error),
+    BodyDecode(serde_json::Error),
     ExpectRealEntity {
         entity: u32,
     },
@@ -100,7 +102,6 @@ pub enum ErrorStep {
     ParsingInteger {
         err: ParseIntError,
     },
-    ReadBody(io::Error),
 
     X(String),
     Static(&'static str),
@@ -117,7 +118,8 @@ impl ErrorStep {
             ErrorStep::AuthForbiddenAdmin => ErrorCategory::AuthForbidden,
             ErrorStep::AuthForbiddenRead { .. } => ErrorCategory::AuthForbidden,
             ErrorStep::AuthForbiddenWrite { .. } => ErrorCategory::AuthForbidden,
-            ErrorStep::ReadBody(..) => ErrorCategory::BadRequest,
+            ErrorStep::BodyRead(..) => ErrorCategory::BadRequest,
+            ErrorStep::BodyDecode(..) => ErrorCategory::BadRequest,
             ErrorStep::Action(..) => ErrorCategory::BadRequest,
             ErrorStep::DB(DBError::ClientConnexion) => ErrorCategory::BadRequest,
             ErrorStep::DB(
@@ -161,7 +163,8 @@ impl ErrorStep {
             ErrorStep::AuthForbiddenWrite { owner, app } => {
                 format!("forbidden write access to {owner} for app {app}")
             }
-            ErrorStep::ReadBody(err) => format!("read body fail: {}", err),
+            ErrorStep::BodyRead(err) => format!("read body fail: {}", err),
+            ErrorStep::BodyDecode(err) => format!("decode body fail: {}", err),
             ErrorStep::DB(DBError::ClientConnexion) => "client connexion is broken".to_string(),
 
             ErrorStep::DB(DBError::Decode(err)) => format!("Decode client data: {}", err),

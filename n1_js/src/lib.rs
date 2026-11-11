@@ -56,6 +56,7 @@ fn add(out: &mut String, names: &mut BTreeMap<String, usize>, stream: TokenStrea
                 s if names.contains_key(s) => {
                     print_name(out, *names.get(s).unwrap());
                 }
+                "_" => out.push('_'),
                 s if s.starts_with("_") => {
                     names.insert(s.to_string(), names.len());
                     print_name(out, *names.get(s).unwrap());

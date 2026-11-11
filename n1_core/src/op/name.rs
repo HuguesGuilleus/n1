@@ -1,9 +1,9 @@
 use std::{
     fmt::{Debug, Display, Write},
-    ops::Deref,
     str::FromStr,
 };
 
+use n1_html::Html;
 use serde::{Deserialize, Serialize, de::Visitor};
 
 use crate::{ErrorStep, errs};
@@ -25,13 +25,6 @@ impl Name {
     }
 }
 
-impl Deref for Name {
-    type Target = str;
-    fn deref(&self) -> &Self::Target {
-        self.as_str()
-    }
-}
-
 impl FromStr for Name {
     type Err = errs::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -45,6 +38,30 @@ impl FromStr for Name {
         let mut data = [0u8; Self::MAX_SIZE];
         data[..s.len()].copy_from_slice(s.as_bytes());
         Ok(Self { len: s.len(), data })
+    }
+}
+
+impl Html for &Name {
+    fn render(&self, buf: &mut String) {
+        buf.push_str(self.as_str());
+    }
+
+    fn size(&self) -> usize {
+        self.as_str().size()
+    }
+}
+
+impl Default for Name {
+    fn default() -> Self {
+        let mut data = [0; Self::MAX_SIZE];
+        data[0] = b'-';
+        Self { len: 1, data }
+    }
+}
+
+impl Ord for Name {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.as_str().cmp(other.as_str())
     }
 }
 

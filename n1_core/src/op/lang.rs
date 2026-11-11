@@ -7,20 +7,26 @@ pub struct Lang {
 
     pub auth_admin_global: DirectHTML<'static>,
 
-    /// Save anchor text.
-    pub common_menu: DirectHTML<'static>,
-    /// Save button text.
-    pub common_save: DirectHTML<'static>,
+    /// Slug of administrator.
+    pub common_administor: DirectHTML<'static>,
+    /// Help text of download button.
+    pub common_download: DirectHTML<'static>,
+    /// Edit the page button text.
+    pub common_edit: DirectHTML<'static>,
+    /// Anchor to the main block.
+    pub common_gotomain: DirectHTML<'static>,
     /// Home anchor text.
     pub common_home: DirectHTML<'static>,
     /// Last edit label text.
     pub common_lastedit: DirectHTML<'static>,
-    /// Anchor to the main block.
-    pub common_gotomain: DirectHTML<'static>,
-    /// Help text of download button.
-    pub common_download: DirectHTML<'static>,
-    /// Slug of administrator.
-    pub common_administor: DirectHTML<'static>,
+    /// Save anchor text.
+    pub common_menu: DirectHTML<'static>,
+    /// Remove button text.
+    pub common_remove: DirectHTML<'static>,
+    /// Confirmation message before removing an item.
+    pub common_remove_confirm: DirectHTML<'static>,
+    /// Save button text.
+    pub common_save: DirectHTML<'static>,
 
     /// Bio console name.
     pub bio: DirectHTML<'static>,
@@ -51,6 +57,13 @@ pub struct Lang {
     /// Label edit the page content.
     pub home_page_content: DirectHTML<'static>,
 
+    /// Message to display when response successful.
+    pub js_ok: DirectHTML<'static>,
+    /// Message to display when an error occurs.
+    pub js_error: DirectHTML<'static>,
+    /// Message to display while waiting for a response.
+    pub js_waiting: DirectHTML<'static>,
+
     /// Title for login page.
     pub login_title: DirectHTML<'static>,
     /// Account name label text.
@@ -65,5 +78,22 @@ pub struct Lang {
     /// Tell the user they have been logged out.
     pub logout_info: DirectHTML<'static>,
 
+    /// Title for wiki.
     pub wiki: DirectHTML<'static>,
+    /// Add a new page title text.
+    pub wiki_new_article: DirectHTML<'static>,
+    /// Edit the page title text.
+    pub wiki_edit_article: DirectHTML<'static>,
+    /// Add a new page button text.
+    pub wiki_new_article_button: DirectHTML<'static>,
+    /// Title for the new article page input field.
+    pub wiki_edit_article_title: DirectHTML<'static>,
+    /// Slug for the new article page input field.
+    pub wiki_edit_article_slug: DirectHTML<'static>,
+    /// Content for the new article page input field.
+    pub wiki_edit_article_content: DirectHTML<'static>,
+    /// Public anchor to the published article.
+    pub wiki_public_anchor: DirectHTML<'static>,
+    /// Public zone wiki label text.
+    pub wiki_public_zone: DirectHTML<'static>,
 }

@@ -7,52 +7,52 @@ cookie: cookie "auth"
 # New page
 PUT http://localhost:8000/:wiki.article.new/
 Cookie: auth={{cookie}}
-{"owner_id":201,"title":"Title 1","slug":"slug1"}
+{"owner":201,"title":"Title 1","slug":"slug1","content":"..."}
 HTTP 200
 [Captures]
-article_id: body
+id: body
 
 # Get init page
 PUT http://localhost:8000/:wiki.article.get/
-{"owner_id":201,"article_id":{{article_id}}}
+{"owner":201,"article":{{id}}}
 HTTP 200
-{"article_id":{{article_id}},"slug":"slug1","title":"Title 1","last_edit":1780998183,"content":"..."}
+{"id":{{id}},"slug":"slug1","title":"Title 1","last_edit":1780998183,"content":"..."}
 
 # Set title
 PUT http://localhost:8000/:wiki.article.setTitle/
 Cookie: auth={{cookie}}
-{"owner_id":201,"article_id":{{article_id}},"title":"Title 2"}
+{"owner":201,"article":{{id}},"title":"Title 2"}
 HTTP 200
 `null`
 
 # Set slug
 PUT http://localhost:8000/:wiki.article.setSlug/
 Cookie: auth={{cookie}}
-{"owner_id":201,"article_id":{{article_id}},"slug":"slug2"}
+{"owner":201,"article":{{id}},"slug":"slug2"}
 HTTP 200
 `null`
 
 # Set content
 PUT http://localhost:8000/:wiki.article.setContent/
 Cookie: auth={{cookie}}
-{"owner_id":201,"article_id":{{article_id}},"content":"Lorem ipsum."}
+{"owner":201,"article":{{id}},"content":"Lorem ipsum."}
 HTTP 200
 `null`
 
 # Get edited article
 PUT http://localhost:8000/:wiki.article.get/
-{"owner_id":201,"article_id":{{article_id}}}
+{"owner":201,"article":{{id}}}
 HTTP 200
-{"article_id":{{article_id}},"slug":"slug2","title":"Title 2","last_edit":1780998183,"content":"Lorem ipsum."}
+{"id":{{id}},"slug":"slug2","title":"Title 2","last_edit":1780998183,"content":"Lorem ipsum."}
 
 # Check article is removed
 PUT http://localhost:8000/:wiki.article.rm/
 Cookie: auth={{cookie}}
-{"owner_id":201,"article_id":{{article_id}}}
+{"owner":201,"article":{{id}}}
 HTTP 200
 `null`
 
 # Check article is removed
 PUT http://localhost:8000/:wiki.article.get/
-{"owner_id":201,"article_id":{{article_id}}}
+{"owner":201,"article":{{id}}}
 HTTP 404

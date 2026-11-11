@@ -1,6 +1,6 @@
 //! Common components for the web interface.
 
-use n1_html::{DirectHTML, H, Html};
+use n1_html::{DirectHTML, H, Html, Q};
 use n1_js::js;
 
 use super::Lang;
@@ -10,17 +10,12 @@ pub fn goto_main(lang: &Lang) -> impl Html {
     [H - "a.bl href=#main" + lang.common_gotomain]
 }
 
-#[deprecated(note = "use `header_menu`")]
-pub fn header(inside: impl n1_html::Html) -> impl Html {
-    [H - "header.fh" + [H - "h1.bl" + inside] + [H - "a.bl.mlauto href=/_" + "Menu"] + ""]
-}
-
 /// Anchors for the header menu (at right).
 /// Use with [`LOGIN_JS`] JS script.
 pub fn header_menu(lang: &Lang) -> impl Html {
     [
         H + [H - "a.bl.mlauto.needNoAuth href=/_auth_login" + lang.login_title]
-            + [H - "a.bl.mlauto.mr.needAuth href=/_auth_logout" + lang.logout_title]
+            + [H - "a.bl.mlauto.needAuth href=/_auth_logout" + lang.logout_title]
             + [H - "a.bl.needAuth href=/_" + lang.common_menu],
     ]
 }
@@ -30,7 +25,7 @@ pub fn header_menu(lang: &Lang) -> impl Html {
 /// No need additional script.
 pub fn header_menu_logged(lang: &Lang) -> impl Html {
     [
-        H + [H - "a.bl.mlauto.mr href=/_auth_logout" + lang.logout_title]
+        H + [H - "a.bl.mlauto href=/_auth_logout" + lang.logout_title]
             + [H - "a.bl.needAuth href=/_" + lang.common_menu],
     ]
 }
@@ -54,7 +49,7 @@ pub const TIME_JS: DirectHTML = DirectHTML(js!(
 
 /// Add to js to manage user authentication state.
 pub const LOGIN_JS: DirectHTML = DirectHTML(js!(
-    document.body.dataset.auth=!!localStorage.getItem("auth");
+    document.body.dataset.auth=this.auth=!!localStorage.getItem("auth");
     new BroadcastChannel("auth").onmessage = _ => location.reload();
 ));
 
@@ -76,3 +71,20 @@ pub const FETCHER_JS: DirectHTML = DirectHTML(js!(
         }),
     )
 ));
+
+/// Define `F` a JS function to handle request promise.
+/// Define it within a constant declaration.
+pub fn fetcher_js(lang: &'static Lang) -> impl Html {
+    [H + "F=(p,o,"
+        + [H + "W=" + Q(lang.js_waiting) + ","]
+        + [H + "O=" + Q(lang.js_ok) + ","]
+        + [H + "E=" + Q(lang.js_error)]
+        + DirectHTML(")=>")
+        + DirectHTML(js!({
+            o.innerText = W;
+            return p.then(async r => {
+                if (r.ok) return o.innerText = O, r.json();
+                else throw await r.text()
+            }).catch(e=>{o.innerText = E + e; throw e;});
+        }))]
+}

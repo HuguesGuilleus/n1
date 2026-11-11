@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, sync::Arc};
+use std::{collections::BTreeMap, str::FromStr, sync::Arc};
 
 use bytes::Bytes;
 use n1_tool::{DB, DBMemory};
@@ -6,9 +6,11 @@ use n1_tool::{DB, DBMemory};
 use crate::{
     Common, OpRequest, Result,
     op::{
-        self, Entity, EntityAndObjectDTO, Group, OID_ENTITY_BIO, OID_ENTITY_DROPBOX, OID_ENTITY_FS,
-        OID_ENTITY_WIKI, OID_GLOBAL_ENTITY, OID_GLOBAL_HOME, Token, TokenItem, User,
+        self, Entity, EntityAndObjectDTO, Group, Name, OID_ENTITY_BIO, OID_ENTITY_DROPBOX,
+        OID_ENTITY_FS, OID_ENTITY_WIKI, OID_GLOBAL_ENTITY, OID_GLOBAL_HOME, Token, TokenItem, User,
+        bio,
         fs::{MakeDTO, fs_direct_mkdir, fs_direct_mkfile, fs_direct_set},
+        wiki,
     },
 };
 
@@ -96,24 +98,24 @@ pub async fn init_dev() -> Result<(impl DB, Arc<Common>)> {
     db.obj_set(
         201,
         OID_ENTITY_WIKI as u32,
-        op::wiki::State {
+        op::wiki::WikiState {
             owner_id: 201,
             articles: {
                 let mut m = BTreeMap::new();
                 m.insert(
                     401,
-                    op::wiki::Article {
-                        article_id: 401,
-                        slug: "foo".to_string(),
+                    op::wiki::WikiArticle {
+                        id: 401,
+                        slug: Name::from_str("foo")?,
                         title: "Foo article".to_string(),
                         last_edit: NOW,
                     },
                 );
                 m.insert(
                     402,
-                    op::wiki::Article {
-                        article_id: 402,
-                        slug: "bar".to_string(),
+                    op::wiki::WikiArticle {
+                        id: 402,
+                        slug: Name::from_str("bar")?,
                         title: "Bar article".to_string(),
                         last_edit: 1785597192,
                     },
@@ -184,6 +186,22 @@ async fn init_sarah_data(db: &impl DB, common: Arc<Common>) {
         },
     };
 
+    // Bio
+    bio::set(
+        db,
+        OpRequest {
+            common: common.clone(),
+            token: token.clone(),
+            dto: bio::BioSetDTO {
+                owner: uid,
+                content: "I'm Sarah!".to_string(),
+            },
+        },
+    )
+    .await
+    .unwrap();
+
+    // File system
     fs_direct_mkdir(
         db,
         OpRequest {
@@ -223,6 +241,23 @@ async fn init_sarah_data(db: &impl DB, common: Arc<Common>) {
             },
         },
         &b"Hello World\r\n"[..],
+    )
+    .await
+    .unwrap();
+
+    // Wiki
+    wiki::article_new(
+        db,
+        OpRequest {
+            common: common.clone(),
+            token: token.clone(),
+            dto: wiki::NewArticleDTO {
+                owner: uid,
+                title: "Hello Wiki".to_string(),
+                slug: Name::from_str("hello").unwrap(),
+                content: "Hello Wiki\r\n".to_string(),
+            },
+        },
     )
     .await
     .unwrap();

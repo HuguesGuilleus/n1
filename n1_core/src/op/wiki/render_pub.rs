@@ -1,84 +1,98 @@
 use bytes::Bytes;
-use n1_html::{DirectHTML, H, Html};
+use n1_html::{H, Html};
 use n1_tool::{DB, mime};
 
 use crate::{
     Common, Result, front,
     op::{
-        Entity, EntityAndObjectDTO, OID_ENTITY_WIKI, compo,
-        wiki::{Article, State},
+        Entity, EntityAndObjectDTO, Lang, compo,
+        wiki::{WikiArticle, WikiState},
     },
 };
 
-/// Render the public wiki pages for groups and users.
-pub async fn render_pub(db: &impl DB, server: &Common) -> Result<()> {
-    let entities = server.entities.read().await;
+/// Render the public wiki articles for all entities.
+pub async fn render_pub_all(db: &impl DB, common: &Common) -> Result<()> {
+    let entities = common.entities.read().await;
     for owner in entities.values() {
-        render_pub_for_entity(db, owner)
+        render_pub_entity(db, common, owner)
             .await
             .err()
             .inspect(|err| eprintln!("in wiki load of {}: {:?}", owner.id(), err));
     }
-
     Ok(())
 }
 
-async fn render_pub_for_entity(db: &impl DB, owner: &Entity) -> Result<()> {
+/// Render public articles for a specific entity's wiki.
+async fn render_pub_entity(db: &impl DB, common: &Common, owner: &Entity) -> Result<()> {
     if owner.is_none() {
         return Ok(());
     }
 
-    let state: State = db.obj_get(owner.id(), OID_ENTITY_WIKI as u32).await?;
-    if state.owner_id == 0 {
-        return Ok(());
-    }
-
-    render_one_wiki(db, owner.name(), &state).await?;
-
-    Ok(())
-}
-
-pub async fn render_one_wiki(db: &impl DB, owner_name: &str, wiki: &State) -> Result<()> {
-    render_pub_index(db, owner_name, wiki).await?;
-    for article in wiki.articles.values() {
-        render_pub_page(db, owner_name, wiki, article).await?;
+    let guard = common.wiki.get(owner.id()).await?;
+    let wiki = guard.read().await;
+    if wiki.articles.len() == 0 {
+        db.page_del(&format!("/@{}/w/", owner.name())).await?;
+    } else {
+        render_pub_index(db, common, &owner, &wiki).await?;
+        for article in wiki.articles.values() {
+            let raw_content = db.fs_get(owner.id(), article.id).await?;
+            let content = &String::from_utf8_lossy(&raw_content);
+            render_pub_article(db, &common.lang, owner, &article, content).await?;
+        }
     }
     Ok(())
 }
 
-async fn render_pub_index(db: &impl DB, owner_name: &str, state: &State) -> Result<()> {
+/// Render the public index article for a specific entity's wiki.
+pub async fn render_pub_index(
+    db: &impl DB,
+    common: &Common,
+    owner: &Entity,
+    state: &WikiState,
+) -> Result<()> {
     let mut articles = state.articles.values().collect::<Vec<_>>();
     articles.sort_by_key(|article| &article.slug);
 
+    let lang = common.lang;
     db.page_set(
-        &format!("/@{}/w/", &owner_name),
+        &format!("/@{}/w/", owner.name()),
         mime::HTML,
         Bytes::from_owner(
             [H - "html lang=fr"
-                + [H - "head" + front::HEAD + [H - "title" + "Wiki de " + owner_name]]
+                + [H - "head" + front::HEAD + [H - "title" + lang.wiki + " @" + owner.name()]]
                 + [H - "body"
+                    + compo::goto_main(lang)
                     + [H - "header.fh.gap"
-                        + [H - "div.bl.fh.gap"
-                            + [H - "a.bg href=/@" - owner_name + "@" + owner_name]
-                            + "[wiki]"
-                            + ""]
-                        + [H - "a.mlauto.bl href=/_" + "Menu"]
-                        + ""]
-                    + [H - "main.w"
+                        + [H - "a.bl href=/@" - owner.name() - "/ " + "@" + owner.name()]
+                        + [H - "div.bl" + lang.wiki]
+                        + [H - "a.bl.needAuth href=/_wiki/" - owner.id() + lang.common_edit]
+                        + compo::header_menu(lang)]
+                    + [H - "main.w id=main"
                         + [H - "div.fv.gap"
                             + || {
                                 articles.iter().map(|&article| {
                                     [H - "a.bl href="
                                         - format!(
                                             "/@{}/w/{}-{}",
-                                            owner_name, article.article_id, article.slug
+                                            owner.name(),
+                                            article.id,
+                                            article.slug
                                         )
                                         + &article.title
                                         + ""]
                                 })
                             }]]
-                    + [H - "script" + compo::LOGIN_JS + compo::TIME_JS]
+                    + [H - "footer"
+                        + [H - "div"
+                            + lang.common_lastedit
+                            + [H - "time"
+                                + articles
+                                    .iter()
+                                    .fold(0u64, |acc, article| acc.max(article.last_edit))
+                                + ""]]
+                        + compo::footer_home(lang)]
                     + ""]
+                + [H - "script" + compo::LOGIN_JS + compo::TIME_JS]
                 + ""]
             .render_page(),
         ),
@@ -88,51 +102,49 @@ async fn render_pub_index(db: &impl DB, owner_name: &str, state: &State) -> Resu
     Ok(())
 }
 
-async fn render_pub_page(
+/// Public render of one article.
+pub async fn render_pub_article(
     db: &impl DB,
-    owner_name: &str,
-    wiki: &State,
-    article: &Article,
+    lang: &Lang,
+    owner: &Entity,
+    article: &WikiArticle,
+    content: &str,
 ) -> Result<()> {
-    let content =
-        String::from_utf8_lossy(&db.fs_get(wiki.owner_id, article.article_id).await?).to_string();
-
     db.page_set(
-        &format!("/@{}/w/{}-{}", owner_name, article.article_id, article.slug),
+        &format!("/@{}/w/{}-{}", owner.name(), article.id, article.slug),
         mime::HTML,
         Bytes::from_owner(
             [H - "html lang=fr"
                 + [H - "head" + front::HEAD + [H - "title" + &article.title]]
                 + [H - "body"
+                    + compo::goto_main(lang)
                     + [H - "header.fh.gap"
-                        + [H - "div.bl.fh.gap"
-                            + [H - "a.bg href=/@" - owner_name + "@" + owner_name]
-                            + [H - "a.bg href=./ " + "[wiki]"]
-                            + [H - "h1" + &article.title + ""]
-                            + [H - "a.bg href=/_wiki_page/"
-                                - EntityAndObjectDTO {
-                                    owner: wiki.owner_id,
-                                    object: article.article_id,
-                                }
-                                + "Éditer la page"]
+                        + [H - "a.bl href=/@" - owner.name() - "/ " + "@" + owner.name()]
+                        + [H - "a.bl href=./ " + lang.wiki]
+                        + [H - "div.bl" + article.id + "-" + &article.slug + ""]
+                        + [H - "a.bl.needAuth id=edit href=/_wiki_article/"
+                            - EntityAndObjectDTO {
+                                owner: owner.id(),
+                                object: article.id,
+                            }
+                            + lang.common_edit
                             + ""]
-                        + [H - "a.mlauto.bl href=/_" + "Menu"]
+                        + compo::header_menu(lang)
                         + ""]
-                    + [H - "main.w"
-                        + [H - "div"
-                            + [H - "i"
-                                + "Dernière modification\u{202F}: "
-                                + [H - "time" + article.last_edit]
-                                + ""]]
-                        + [H - "" + || content.lines().map(|line| H - "p" + line)]
+                    + [H - "main.w id=main"
+                        + [H - "h1.bl" + &article.title + ""]
+                        + [|| content.lines().map(|line| H - "p" + line)]
                         + ""]
                     + ""]
-                + [H - "script" + compo::LOGIN_JS + compo::TIME_JS + DirectHTML(r#""#)]
+                + [H - "footer"
+                    + [H - "div" + lang.common_lastedit + [H - "time" + article.last_edit]]
+                    + compo::footer_home(lang)
+                    + ""]
+                + [H - "script" + compo::LOGIN_JS + compo::TIME_JS]
                 + ""]
             .render_page(),
         ),
     )
     .await?;
-
     Ok(())
 }

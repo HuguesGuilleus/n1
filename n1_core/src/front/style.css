@@ -84,8 +84,11 @@ textarea {
 	background: unset;
 }
 
-textarea.norh {
-	resize: vertical;
+textarea {
+	width: 100%;
+	box-sizing: border-box;
+	resize: none;
+	field-sizing: content;
 }
 
 pre {
@@ -132,6 +135,10 @@ th,
 td {
 	border: solid var(--LINE);
 	padding: var(--LINE);
+}
+
+div:empty {
+	display: none;
 }
 
 /* COLOR AND BLOCK */
@@ -211,8 +218,6 @@ a {
 
 	&>* {
 		margin: 0;
-		width: auto;
-		align-items: center;
 	}
 }
 

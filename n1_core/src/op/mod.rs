@@ -45,10 +45,12 @@ pub struct OpRequest<D: DTO> {
 
 /// Common value shared between all operations.
 pub struct Common {
+    pub lang: &'static Lang,
+
     pub entities: RwLock<BTreeMap<u32, Entity>>,
     pub shadow: RwLock<BTreeSet<u32>>,
     pub fs: LockMap<fs::FSState>,
-    pub lang: &'static Lang,
+    pub wiki: LockMap<wiki::WikiState>,
 }
 
 pub struct LockMap<T>(Mutex<BTreeMap<u32, Arc<RwLock<T>>>>);
@@ -72,10 +74,12 @@ impl<T: Default> LockMap<T> {
 impl Common {
     pub fn new() -> Self {
         Common {
+            lang: &LANG_EN,
+
             entities: RwLock::new(BTreeMap::new()),
             shadow: RwLock::new(BTreeSet::new()),
             fs: LockMap(Mutex::new(BTreeMap::new())),
-            lang: &LANG_EN,
+            wiki: LockMap(Mutex::new(BTreeMap::new())),
         }
     }
 
@@ -85,9 +89,20 @@ impl Common {
         bio::generate_all_pages(db, self).await?;
         fs::init(db, self).await?;
         home::init(db, self).await?;
-        wiki::render_pub(db, self).await?;
+        wiki::render_pub_all(db, self).await?;
 
         Ok(())
+    }
+
+    pub async fn get_entity(&self, id: u32) -> Result<Entity> {
+        let entities = self.entities.read().await;
+        let entity = entities
+            .get(&id)
+            .ok_or(ErrorStep::NotFoundEntity { entity: id })?;
+        if entity.is_none() {
+            ErrorStep::ExpectRealEntity { entity: id }.result()?
+        }
+        Ok(entity.clone())
     }
 
     pub async fn get_entity_name(&self, id: u32) -> Result<String> {
