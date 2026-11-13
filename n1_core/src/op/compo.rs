@@ -54,7 +54,6 @@ pub const LOGIN_JS: DirectHTML = js_const! {
 
 /// Add JS to manage login/logout event.
 pub const LOGIN_JS_CONNECTED: DirectHTML = js_const! {
-    document.body.dataset.auth=this.auth=!!localStorage.getItem("auth");
     new BroadcastChannel("auth").onmessage = _ => location.reload();
 };
 
@@ -68,7 +67,7 @@ pub const FETCHER_JS: DirectHTML = js_const! {
         }).catch(_err => {
             _out.innerText = "[!!!] " + _err;
             throw _err;
-        }),
+        })
     )
 };
 

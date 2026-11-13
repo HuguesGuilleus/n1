@@ -1,14 +1,13 @@
 //! Home page configuration and generation.
 //!
-//! The access is administrator reserved.
+//! The write access is administrator reserved.
 
 use bytes::Bytes;
-use n1_js::js;
 use serde::{Deserialize, Serialize};
 
 use super::{DTO, OID_GLOBAL_HOME, OpRequest, compo};
 use crate::{Common, ErrorStep, Result, front, op::Lang};
-use n1_html::{DirectHTML, H, Html, Q};
+use n1_html::{H, Html, Q, js};
 use n1_tool::{DB, mime};
 
 /// The State and DTO for home.
@@ -20,6 +19,22 @@ pub struct HomeState {
     desc: String,
     /// Content, each line in a separate paragraph
     content: String,
+}
+
+/// Check all field are not empty.
+impl DTO for HomeState {
+    fn check(&self) -> Result<()> {
+        if self.title.is_empty() {
+            ErrorStep::FieldEmpty { name: "title" }.result()?;
+        }
+        if self.desc.is_empty() {
+            ErrorStep::FieldEmpty { name: "desc" }.result()?;
+        }
+        if self.content.is_empty() {
+            ErrorStep::FieldEmpty { name: "content" }.result()?;
+        }
+        Ok(())
+    }
 }
 
 /// Initialise default data and generate home page.
@@ -53,23 +68,14 @@ pub async fn init(db: &impl DB, common: &Common) -> Result<()> {
     Ok(())
 }
 
-/// Check all field are not empty.
-impl DTO for HomeState {
-    fn check(&self) -> Result<()> {
-        if self.title.is_empty() {
-            ErrorStep::FieldEmpty { name: "title" }.result()?;
-        }
-        if self.desc.is_empty() {
-            ErrorStep::FieldEmpty { name: "desc" }.result()?;
-        }
-        if self.content.is_empty() {
-            ErrorStep::FieldEmpty { name: "content" }.result()?;
-        }
-        Ok(())
-    }
+/// API to get home page data. Publicly accessible.
+pub async fn json_get(db: &impl DB, _: OpRequest<()>) -> Result<HomeState> {
+    let state: HomeState = db.obj_get(0, OID_GLOBAL_HOME as u32).await?;
+    Ok(state)
 }
+
 /// API to change home page data, and regenerate it.
-pub async fn json_edit(db: &impl DB, r: OpRequest<HomeState>) -> Result<()> {
+pub async fn json_set(db: &impl DB, r: OpRequest<HomeState>) -> Result<()> {
     r.token.check_isadmin()?;
     db.obj_set(0, OID_GLOBAL_HOME as u32, &r.dto).await?;
     db.page_set("/", mime::HTML, render_pub(r.common.lang, &r.dto))
@@ -84,10 +90,7 @@ fn render_pub(lang: &Lang, home: &HomeState) -> Bytes {
             + [H - "head"
                 + front::HEAD
                 + [H - "title" + &home.title]
-                + [H - "meta name=description "
-                    - DirectHTML("content=\"")
-                    - &home.desc
-                    - DirectHTML("\"")]
+                + [H - "meta name=description content=" - Q(&home.desc)]
                 + ""]
             + [H - "body"
                 + [H - "header.fh.gap" + [H - "h1.bl" + &home.title] + compo::header_menu(lang)]
@@ -99,6 +102,7 @@ fn render_pub(lang: &Lang, home: &HomeState) -> Bytes {
                             .map(|line| [H - "p" + line.trim()])
                     })
                     + ""]
+                + [H - "footer" + compo::footer_home(lang)]
                 + ""]
             + [H - "script" + compo::LOGIN_JS]
             + ""]
@@ -119,41 +123,41 @@ pub async fn home_console(db: &impl DB, r: OpRequest<()>) -> Result<String> {
                 + [H - "h1.bl" + lang.home_title]
                 + compo::header_menu_logged(lang)]
             + [H - "main.w"
-                + [H - "div.act.fv.gap"
-                    + [H - "div.g2.gap"
+                + [H - "div.fv.gap"
+                    + [H - "div.fv"
                         + [H - "label for=title" + lang.home_edit_title]
                         + [H - "input.bl id=title value=" - Q(&state.title)]
                         + ""]
-                    + [H - "label for=desc" + lang.home_edit_description]
-                    + [H - "textarea.act.bl id=desc" + &state.desc]
-                    + [H - "label for=content" + lang.home_page_content]
-                    + [H - "textarea.act.bl id=content rows="
-                        - (state.content.split("\n").count() + 3)
-                        + &state.content]
+                    + [H - "div.fv"
+                        + [H - "label for=desc" + lang.home_edit_description]
+                        + [H - "textarea.act.bl id=desc" + &state.desc]
+                        + ""]
+                    + [H - "div.fv"
+                        + [H - "label for=content" + lang.home_page_content]
+                        + [H - "textarea.act.bl id=content rows="
+                            - (state.content.split("\n").count() + 3)
+                            + &state.content]
+                        + ""]
                     + [H - "div.fh.gap"
                         + [H - "button.bl onclick=send()" + lang.common_save]
                         + [H - "a.bl href=/ " + lang.home]]
                     + [H - "div id=out"]
                     + ""]
-                + [H - "script"
-                    + "const "
-                    + compo::FETCHER_JS
-                    + ","
-                    + DirectHTML(js!(
-                        send = _ => fetcher(fetch("/:home/", {
-                            method: "PUT",
-                            body: JSON.stringify({
-                                title: title.value,
-                                desc: desc.value,
-                                content: content.value,
-                            }),
-                        }), out);
-                    ))
-                    + compo::LOGIN_JS_CONNECTED
-                    + ""]
                 + ""]
             + ""]
-        + [H - "script" + compo::LOGIN_JS]
+        + [H - "script"
+            + compo::LOGIN_JS_CONNECTED
+            + js! {
+                const {html compo::fetcher_js(lang)},
+                    send = _ => F(fetch("/:home.set/", {
+                        method: "PUT",
+                        body: JSON.stringify({
+                            title: title.value,
+                            desc: desc.value,
+                            content: content.value,
+                        }),
+                    }), out);
+            }]
         + ""]
     .render_page())
 }
