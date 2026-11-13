@@ -83,11 +83,13 @@ fn add(out: &mut String, names: &mut BTreeMap<String, usize>, stream: TokenStrea
 }
 
 fn print_name(out: &mut String, id: usize) {
-    match id % (26 * 2) {
+    out.push('_');
+    match id % (26 * 2 + 10) {
         0..26 => out.push((b'a' + id as u8) as char),
-        _ => out.push((b'A' + (id as u8 - 26)) as char),
+        26..52 => out.push((b'A' + (id as u8 - 26)) as char),
+        _ => out.push((b'0' + (id as u8 - 52)) as char),
     }
-    let id = id / (26 * 2);
+    let id = id / (26 * 2 + 10);
     if id != 0 {
         print_name(out, id);
     }

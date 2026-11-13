@@ -9,19 +9,19 @@ fn js_test() {
         }
     );
     assert_eq!(
-        r#"const a=1+2;"#,
+        r#"const _a=1+2;"#,
         js! {
             const _x = 1 + 2;
         }
     );
     assert_eq!(
-        r#"const a=/[a-z]+/g;"#,
+        r#"const _a=/[a-z]+/g;"#,
         js! {
             const _x ="regexp/[a-z]+/g";
         }
     );
     assert_eq!(
-        r#"const a=/\w+/g;"#,
+        r#"const _a=/\w+/g;"#,
         js! {
             const _x =r#"regexp/\w+/g"#;
         }
@@ -30,7 +30,7 @@ fn js_test() {
 
 #[test]
 fn test_time_js() {
-    let raw = r#"document.querySelectorAll("time").forEach(a=>a.innerText=new Intl.DateTimeFormat(document.documentElement.lang,{dateStyle:"full",timeStyle:"long"}).format(new Date(parseInt(a.innerText)*1000)));"#;
+    let raw = r#"document.querySelectorAll("time").forEach(_a=>_a.innerText=new Intl.DateTimeFormat(document.documentElement.lang,{dateStyle:"full",timeStyle:"long"}).format(new Date(parseInt(_a.innerText)*1000)));"#;
 
     let with_js = js!(
         document.querySelectorAll("time").forEach(_t =>
