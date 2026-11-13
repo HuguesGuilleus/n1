@@ -1,3 +1,6 @@
+mod js;
+mod js_const;
+
 pub trait Html {
     fn render(&self, buf: &mut String);
 
@@ -76,7 +79,7 @@ impl Html for bool {
 }
 
 /// HTML block direct injected in the output without escape.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DirectHTML<'a>(pub &'a str);
 impl<'a> Html for DirectHTML<'a> {
     fn render(&self, buf: &mut String) {
@@ -170,9 +173,17 @@ impl<F: Fn() -> I, I: Iterator<Item = U>, U: Html> Html for F {
 
 /* HTML Node */
 
+#[derive(Debug)]
 pub struct HtmlZero {}
 
 pub const H: HtmlZero = HtmlZero {};
+
+impl Html for HtmlZero {
+    fn render(&self, _: &mut String) {}
+    fn size(&self) -> usize {
+        0
+    }
+}
 
 impl std::ops::Sub<&'static str> for HtmlZero {
     type Output = HtmlNode<(), ()>;
@@ -327,5 +338,103 @@ impl<H: Html> Html for Q<H> {
 
     fn size(&self) -> usize {
         2 + self.0.size()
+    }
+}
+
+// // /// Encode the value as JSON.
+// // pub struct J<T: serde::Serialize>(pub T);
+pub struct J<T>(pub T);
+
+impl Html for J<bool> {
+    fn render(&self, buf: &mut String) {
+        buf.push_str(if self.0 { "true" } else { "false" });
+    }
+    fn size(&self) -> usize {
+        if self.0 { 4 } else { 5 }
+    }
+}
+
+impl Html for J<&str> {
+    fn render(&self, buf: &mut String) {
+        buf.push('"');
+        for b in self.0.chars() {
+            match b {
+                '"' => buf.push_str("\\\""),
+                '\\' => buf.push_str("\\\\"),
+                '\n' => buf.push_str("\\n"),
+                '\r' => buf.push_str("\\r"),
+                '\t' => buf.push_str("\\t"),
+                '<' => buf.push_str("\x3C"),
+                '>' => buf.push_str("\x3E"),
+                '&' => buf.push_str("\x26"),
+                _ => buf.push(b),
+            }
+        }
+        buf.push('"');
+    }
+    fn size(&self) -> usize {
+        self.0
+            .chars()
+            .map(|c| match c {
+                '"' => 2,
+                '\\' => 2,
+                '\n' => 3,
+                '\r' => 3,
+                '\t' => 3,
+                '<' => 3,
+                '>' => 3,
+                '&' => 3,
+                _ => 1,
+            })
+            .sum::<usize>()
+            + 2
+    }
+}
+
+impl Html for J<DirectHTML<'static>> {
+    fn render(&self, buf: &mut String) {
+        buf.push('"');
+        self.0.render(buf);
+        buf.push('"');
+    }
+    fn size(&self) -> usize {
+        self.0.size() + 2
+    }
+}
+
+macro_rules! impl_j_nb {
+    ($t:ty) => {
+        impl Html for J<$t> {
+            fn render(&self, buf: &mut String) {
+                use std::fmt::Write;
+                write!(buf, "{}", self.0).unwrap();
+            }
+            fn size(&self) -> usize {
+                self.0.ilog10() as usize + 1
+            }
+        }
+    };
+}
+impl_j_nb!(u8);
+impl_j_nb!(u16);
+impl_j_nb!(u32);
+impl_j_nb!(u64);
+impl_j_nb!(usize);
+impl_j_nb!(i8);
+impl_j_nb!(i16);
+impl_j_nb!(i32);
+impl_j_nb!(i64);
+impl_j_nb!(isize);
+
+/// Wrap a value and assert that it implements the `Html` trait.
+/// This is useful for ensuring that a value can be rendered as HTML within the `js!` macro.
+pub struct AssertHtml<T: Html>(pub T);
+
+impl<T: Html> Html for AssertHtml<T> {
+    fn render(&self, buf: &mut String) {
+        self.0.render(buf);
+    }
+    fn size(&self) -> usize {
+        self.0.size()
     }
 }

@@ -1,7 +1,6 @@
 //! Common components for the web interface.
 
-use n1_html::{DirectHTML, H, Html, Q};
-use n1_js::js;
+use n1_html::{DirectHTML, H, Html, js, js_const};
 
 use super::Lang;
 
@@ -36,7 +35,7 @@ pub fn footer_home(lang: &Lang) -> impl Html {
 }
 
 /// Pass on all time element to set their datetime and text with internationalized formatting.
-pub const TIME_JS: DirectHTML = DirectHTML(js!(
+pub const TIME_JS: DirectHTML = js_const! {
     document.querySelectorAll("time").forEach(_time => {
         const _date = new Date(parseInt(_time.innerText) * 1000);
         _time.datetime = _date.toJSON();
@@ -45,21 +44,22 @@ pub const TIME_JS: DirectHTML = DirectHTML(js!(
             timeStyle: "long"
         }).format(_date);
     });
-));
+};
 
 /// Add to js to manage user authentication state.
-pub const LOGIN_JS: DirectHTML = DirectHTML(js!(
+pub const LOGIN_JS: DirectHTML = js_const! {
     document.body.dataset.auth=this.auth=!!localStorage.getItem("auth");
     new BroadcastChannel("auth").onmessage = _ => location.reload();
-));
+};
 
 /// Add JS to manage login/logout event.
-pub const LOGIN_JS_CONNECTED: DirectHTML = DirectHTML(js!(
+pub const LOGIN_JS_CONNECTED: DirectHTML = js_const! {
+    document.body.dataset.auth=this.auth=!!localStorage.getItem("auth");
     new BroadcastChannel("auth").onmessage = _ => location.reload();
-));
+};
 
 /// JS script to fetch api and indicate when request end and his sttaus.
-pub const FETCHER_JS: DirectHTML = DirectHTML(js!(
+pub const FETCHER_JS: DirectHTML = js_const! {
     fetcher = (_promise, _out) => (
         _out.innerText = "[...]",
         _promise.then(async _response => {
@@ -70,21 +70,21 @@ pub const FETCHER_JS: DirectHTML = DirectHTML(js!(
             throw _err;
         }),
     )
-));
+};
 
 /// Define `F` a JS function to handle request promise.
 /// Define it within a constant declaration.
 pub fn fetcher_js(lang: &'static Lang) -> impl Html {
-    [H + "F=(p,o,"
-        + [H + "W=" + Q(lang.js_waiting) + ","]
-        + [H + "O=" + Q(lang.js_ok) + ","]
-        + [H + "E=" + Q(lang.js_error)]
-        + DirectHTML(")=>")
-        + DirectHTML(js!({
-            o.innerText = W;
-            return p.then(async r => {
-                if (r.ok) return o.innerText = O, r.json();
-                else throw await r.text()
-            }).catch(e=>{o.innerText = E + e; throw e;});
-        }))]
+    js! {
+        F = (p, o) => (
+            o.innerText = {extern lang.js_waiting},
+            p.then(async r => {
+                if (r.ok) return o.innerText = {extern lang.js_ok}, r.json();
+                else throw await r.text();
+            }).catch(e => {
+                o.innerText = {extern lang.js_error} + e;
+                throw e;
+            })
+        )
+    }
 }

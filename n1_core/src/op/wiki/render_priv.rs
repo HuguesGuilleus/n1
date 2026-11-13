@@ -1,5 +1,4 @@
-use n1_html::{DirectHTML, H, Html, Q};
-use n1_js::js;
+use n1_html::{H, Html, Q, js};
 use n1_tool::DB;
 
 use crate::{
@@ -112,39 +111,41 @@ pub async fn render_priv_page(db: &impl DB, r: OpRequest<EntityAndObjectDTO>) ->
             + ""]
         + [H - "script"
             + compo::TIME_JS
-            + [H + "const owner=" + owner.id() + ",article=" + r.dto.object + ","]
-            + [H + compo::fetcher_js(lang) + ","]
-            + [H + "RMM=" + Q(lang.common_remove_confirm) + ","]
-            + DirectHTML(js!(
+            + js! {
+                const {html compo::fetcher_js(lang)},
                 setTitle = _ => F(fetch("/:wiki.article.setTitle/", {
                     method: "PUT",
                     body: JSON.stringify({
-                        owner,
-                        article,
+                        owner: {extern owner.id()},
+                        article: {extern article.id},
                         title: title.value,
                     }),
                 }), outTitle),
                 setSlug = _ => F(fetch("/:wiki.article.setSlug/", {
                     method: "PUT",
                     body: JSON.stringify({
-                        owner,
-                        article,
+                        owner: {extern owner.id()},
+                        article: {extern article.id},
                         slug: slug.value,
                     }),
                 }), outSlug),
                 setContent = _ => F(fetch("/:wiki.article.setContent/", {
                     method: "PUT",
                     body: JSON.stringify({
-                        owner,
-                        article,
+                        owner: {extern owner.id()},
+                        article: {extern article.id},
                         content: content.value,
                     }),
                 }), outContent),
-                remove = _ => confirm(RMM) && F(fetch("/:wiki.article.rm/", {
+                remove = _ => confirm({extern lang.common_remove_confirm}) && F(fetch("/:wiki.article.rm/", {
                     method: "PUT",
-                    body: JSON.stringify({ owner, article }),
-                }), outRemove).then(_ => location = "/_wiki/" + owner);
-            ))]
+                    body: JSON.stringify({
+                        owner: {extern owner.id()},
+                        article: {extern article.id}
+                    }),
+                }), outRemove).then(_ => location = "/_wiki/" + {extern owner.id()});
+            }
+        ]
         + ""]
     .render_page())
 }
@@ -187,28 +188,25 @@ pub async fn render_priv_new(_: &impl DB, r: OpRequest<u32>) -> Result<String> {
             + ""]
         + [H - "script"
             + compo::TIME_JS
-            + "const owner="
-            + owner.id()
-            + ","
-            + compo::fetcher_js(lang)
-            + ";"
-            + DirectHTML(js!(
+            + js! {
+                const {html compo::fetcher_js(lang)};
                 form.onsubmit = e => e.preventDefault() | F(fetch("/:wiki.article.new/", {
                     method: "PUT",
                     body: JSON.stringify({
-                        owner,
+                        owner: {extern owner.id()},
                         title: title.value,
                         slug: slug.value,
                         content: content.value,
                     })
-                }), out).then(id => {
+                }), out)
+                .then(id => {
                     onbeforeunload = 0;
-                    location.href = "/_wiki_article/" + owner + "," + id;
+                    location.href = "/_wiki_article/" + {extern owner.id()} + "," + id;
                 });
                 form.oninput = _ => onbeforeunload = title.value || slug.value || content.value
                     ? _event => _event.returnValue = !_event.preventDefault()
                     : 0;
-            ))]
+            }]
         + ""]
     .render_page())
 }
