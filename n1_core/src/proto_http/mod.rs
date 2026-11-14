@@ -1,10 +1,9 @@
 use std::collections::BTreeMap;
 use std::io;
-use std::net::SocketAddr;
 use std::sync::Arc;
 
 use bytes::Bytes;
-use n1_html::{H, Html};
+use n1_html::{Html, H};
 use n1_tool::mime::REDIRECT;
 use serde::Serialize;
 use tokio::io::{AsyncRead, AsyncReadExt};
@@ -12,35 +11,28 @@ use tokio::net::TcpListener;
 use tokio::spawn;
 
 use crate::op::login::logout_console;
-use crate::op::{self, Common, DTO, Token, URLDTO};
+use crate::op::{self, Common, Token, DTO, URLDTO};
 use crate::token::{token_decode, token_encode};
-use crate::{Error, ErrorCategory, ErrorStep, OpRequest, Result, errs, front};
+use crate::{errs, front, Error, ErrorCategory, ErrorStep, OpRequest, Result};
 use n1_tool::proto_http::{
-    HTTPParser, HTTPRequest, Response, ResponseBody, StatusHTTP, next_req, write_response,
+    next_req, write_response, HTTPParser, HTTPRequest, Response, ResponseBody, StatusHTTP,
 };
-use n1_tool::{Chunk, Chunks, DB, mime};
+use n1_tool::{mime, Chunk, Chunks, DB};
 
 #[derive(Clone)]
 pub struct HTTPServer<B: DB> {
     pub db: Arc<B>,
     pub common: Arc<Common>,
-    pub key: [u8; 64],
+    pub token_key: [u8; 64],
 }
 
-pub async fn run<C: DB + 'static>(server: Arc<HTTPServer<C>>) -> io::Result<()> {
-    let addr: SocketAddr = ([127, 0, 0, 1], 8000).into();
-    let listener = TcpListener::bind(addr).await?;
-    run_with_listener(listener, server).await
-}
-
-pub async fn run_with_listener<C: DB + 'static>(
+pub async fn run<C: DB + 'static>(
     listener: TcpListener,
     server: Arc<HTTPServer<C>>,
 ) -> io::Result<()> {
     loop {
         let server = server.clone();
         let (mut stream, _) = listener.accept().await?;
-
         spawn(async move || -> io::Result<()> {
             let server = server;
             let (r, mut w) = stream.split();
@@ -294,7 +286,7 @@ fn get_token<B: AsyncRead>(s: &HTTPServer<impl DB>, request: &HTTPRequest<B>) ->
             Ok(time) => time,
             Err(_) => return Token::default(),
         };
-        token_decode(&s.key[..], now, cookie)
+        token_decode(&s.token_key[..], now, cookie)
             .inspect_err(|err| eprintln!("Cookie auth token fail: {:?}", err))
             .unwrap_or_default()
     } else {
@@ -333,7 +325,7 @@ async fn make_token<
     )
     .await?;
 
-    let mut header_value = token_encode(String::from("auth="), &token, &s.key, s.db.now()?);
+    let mut header_value = token_encode(String::from("auth="), &token, &s.token_key, s.db.now()?);
     header_value.push_str("; Max-Age=604800; SameSite=Strict; Secure; HttpOnly");
 
     Ok(Response {

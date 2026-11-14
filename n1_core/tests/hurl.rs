@@ -1,5 +1,5 @@
 use hurl::{
-    runner::{RunnerOptionsBuilder, VariableSet, run},
+    runner::{run, RunnerOptionsBuilder, VariableSet},
     util::{
         logger::{LoggerOptionsBuilder, Verbosity},
         path::ContextDir,
@@ -12,26 +12,26 @@ use std::{fs, net::SocketAddr, path::Path, sync::Arc};
 
 use n1_core::{
     init_dev,
-    proto_http::{HTTPServer, run_with_listener},
+    proto_http::{self, HTTPServer},
 };
 
 #[tokio::test(flavor = "multi_thread")]
 async fn hurl_tests() {
     // Server
-    let mut key = [0u8; 64];
-    for i in 0..key.len() {
-        key[i] = i as u8;
+    let mut token_key = [0u8; 64];
+    for i in 0..token_key.len() {
+        token_key[i] = i as u8;
     }
     let (db, common) = init_dev().await.unwrap();
     let server = Arc::new(HTTPServer {
         db: Arc::new(db),
         common: common,
-        key,
+        token_key,
     });
 
     let addr: SocketAddr = ([127, 0, 0, 1], 8000).into();
     let listener = TcpListener::bind(addr).await.unwrap();
-    spawn(run_with_listener(listener, server));
+    spawn(proto_http::run(listener, server));
 
     // Index hurl files
     let mut paths: Vec<_> = std::fs::read_dir("tests")
