@@ -159,15 +159,14 @@ fn asset<C: DB>(mime: &'static str, bytes: &'static [u8]) -> Result<Response<C>>
 async fn with_url<
     C: DB,
     R: AsyncRead,
-    F: AsyncFn(&C, OpRequest<D>) -> Result<O>,
-    O: Into<Response<C>>,
+    F: AsyncFn(&C, OpRequest<D>) -> Result<String>,
     D: URLDTO,
 >(
     s: &HTTPServer<C>,
     r: HTTPRequest<R>,
     f: F,
 ) -> Result<Response<C>> {
-    let token = get_token(s, &r);
+    let token: Token = get_token(s, &r);
 
     let dto: D = URLDTO::url_decode(
         r.path[1..]
@@ -177,7 +176,7 @@ async fn with_url<
     )?;
     dto.check()?;
 
-    Ok(f(
+    let html = f(
         &s.db,
         OpRequest {
             common: s.common.clone(),
@@ -185,8 +184,14 @@ async fn with_url<
             dto,
         },
     )
-    .await?
-    .into())
+    .await?;
+
+    Ok(Response {
+        status: StatusHTTP::OK,
+        mime: mime::HTML,
+        header: None,
+        body: ResponseBody::Bytes(Bytes::from_owner(html)),
+    })
 }
 
 async fn with_body<

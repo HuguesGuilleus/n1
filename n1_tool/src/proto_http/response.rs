@@ -1,4 +1,4 @@
-use crate::{Chunks, DB, mime, proto_http::StatusHTTP};
+use crate::{proto_http::StatusHTTP, Chunks, DB};
 use bytes::Bytes;
 use tokio::io::{AsyncWrite, AsyncWriteExt};
 
@@ -53,37 +53,4 @@ pub async fn write_response(
     }
 
     Ok(())
-}
-
-impl<B: DB> From<()> for Response<B> {
-    fn from(_: ()) -> Self {
-        Response {
-            status: StatusHTTP::OK,
-            mime: mime::HTML,
-            header: None,
-            body: ResponseBody::Bytes(Bytes::new()),
-        }
-    }
-}
-/// Consider the string as geenrated HTML.
-impl<B: DB> From<String> for Response<B> {
-    fn from(body: String) -> Self {
-        Response {
-            status: StatusHTTP::OK,
-            mime: mime::HTML,
-            header: None,
-            body: ResponseBody::Bytes(Bytes::from_owner(body)),
-        }
-    }
-}
-
-impl<C: DB> From<Chunks<C>> for Response<C> {
-    fn from(chunks: Chunks<C>) -> Self {
-        Response {
-            status: StatusHTTP::OK,
-            mime: "",
-            header: None,
-            body: ResponseBody::Chunks(chunks),
-        }
-    }
 }
