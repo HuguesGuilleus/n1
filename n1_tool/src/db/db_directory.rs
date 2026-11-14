@@ -5,14 +5,14 @@ use std::{
 
 use bytes::Bytes;
 use tokio::{
-    fs::{File, create_dir_all, read, remove_dir_all, remove_file, try_exists, write},
+    fs::{create_dir_all, read, remove_dir_all, remove_file, try_exists, write, File},
     io::AsyncReadExt,
     sync::Mutex,
 };
 
 use crate::{
-    DB, Page,
-    db::{DB_RESERVED, DBError},
+    db::{DBError, DB_RESERVED},
+    Page, DB,
 };
 
 #[derive(Debug)]
@@ -153,6 +153,18 @@ impl DB for DBDirectory {
 
     fn page_del(&self, prefix: &str) -> impl Future<Output = Result<(), DBError>> + Send {
         self.pages.page_del(prefix)
+    }
+
+    fn random(&self) -> impl Future<Output = Result<u32, DBError>> + Send {
+        async move {
+            let mut buf = [0u8; 4];
+            let mut urandom = self.urandom.lock().await;
+            urandom
+                .read_exact(&mut buf)
+                .await
+                .map_err(|err| DBError::RandomIOFail(err.kind()))?;
+            Ok(u32::from_le_bytes(buf))
+        }
     }
 
     fn now(&self) -> Result<u64, DBError> {

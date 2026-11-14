@@ -128,7 +128,8 @@ impl ErrorStep {
                 | DBError::GetTime
                 | DBInternal
                 | DBError::Io(..)
-                | DBError::MagicNumber { .. },
+                | DBError::MagicNumber { .. }
+                | DBError::RandomIOFail(..),
             ) => ErrorCategory::Internal,
             ErrorStep::DB(DBError::NotFoundID { .. } | DBError::NotFoundPath { .. }) => {
                 ErrorCategory::NotFound
@@ -179,6 +180,7 @@ impl ErrorStep {
                 format!("not found owner={owner} object={object}")
             }
             ErrorStep::DB(DBError::NotFoundPath { path }) => format!("not found path : {:?}", path),
+            ErrorStep::DB(DBError::RandomIOFail(kind)) => format!("random io fail {kind}"),
             ErrorStep::DBDataNotString { owner, object, err } => {
                 format!("DB data not string: owner={owner} object={object} err={err}")
             }

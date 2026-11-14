@@ -14,7 +14,7 @@ use tokio::{
 };
 
 use super::{DB, DB_RESERVED};
-use crate::{Page, db::DBError};
+use crate::{db::DBError, Page};
 
 const MAGIC: [u8; 8] = *b"Kventry_";
 
@@ -265,6 +265,20 @@ impl DB for DBOneFile {
 
     fn page_del(&self, prefix: &str) -> impl Future<Output = Result<(), DBError>> + Send {
         self.page.page_del(prefix)
+    }
+
+    fn random(&self) -> impl Future<Output = Result<u32, DBError>> + Send {
+        async move {
+            let mut buf = [0u8; 4];
+            let mut urandom = File::open("/dev/urandom")
+                .await
+                .map_err(|err| DBError::RandomIOFail(err.kind()))?;
+            urandom
+                .read_exact(&mut buf)
+                .await
+                .map_err(|err| DBError::RandomIOFail(err.kind()))?;
+            Ok(u32::from_le_bytes(buf))
+        }
     }
 
     fn now(&self) -> Result<u64, DBError> {

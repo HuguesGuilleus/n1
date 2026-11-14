@@ -7,9 +7,9 @@ mod page;
 use std::fmt::Debug;
 
 use bytes::Bytes;
-use serde::{Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Serialize};
 
-pub use chunks::{Chunk, Chunks, chuncks_len, read_to_chunks};
+pub use chunks::{chuncks_len, read_to_chunks, Chunk, Chunks};
 pub use db_directory::DBDirectory;
 pub use db_mem::DBMemory;
 pub use db_onefile::DBOneFile;
@@ -89,6 +89,8 @@ pub trait DB: Debug + Send + Sync {
     /// Delete all page with the prefix.
     fn page_del(&self, prefix: &str) -> impl Future<Output = Result<(), DBError>> + Send;
 
+    fn random(&self) -> impl Future<Output = Result<u32, DBError>> + Send;
+
     // Get time, seconds since epoch.
     fn now(&self) -> Result<u64, DBError>;
 }
@@ -105,4 +107,5 @@ pub enum DBError {
     MagicNumber { got: [u8; 8], expected: [u8; 8] },
     NotFoundID { owner: u32, object: u32 },
     NotFoundPath { path: String },
+    RandomIOFail(std::io::ErrorKind),
 }

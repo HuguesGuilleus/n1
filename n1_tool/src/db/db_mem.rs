@@ -5,7 +5,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use crate::{Page, db::DBError};
+use crate::{db::DBError, Page};
 use bytes::Bytes;
 use tokio::sync::Mutex;
 
@@ -112,6 +112,10 @@ impl DB for DBMemory {
 
     fn page_del(&self, prefix: &str) -> impl Future<Output = Result<(), DBError>> + Send {
         self.page.page_del(prefix)
+    }
+
+    fn random(&self) -> impl Future<Output = Result<u32, DBError>> + Send {
+        std::future::ready(Ok(self.inc.fetch_add(1, Ordering::SeqCst)))
     }
 
     fn now(&self) -> Result<u64, DBError> {
