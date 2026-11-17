@@ -48,6 +48,12 @@ HTTP 200
 [Captures]
 dirRootDir: body
 
+PUT http://localhost:8000/:fs.direct.move/
+Cookie: auth={{cookie}}
+{"owner":101,"object":{{fileID}},"path":"/dir/sub/demo.txt"}
+HTTP 200
+`null`
+
 PUT http://localhost:8000/:fs.direct.tree/
 Cookie: auth={{cookie}}
 101
@@ -62,9 +68,9 @@ jsonpath "$.children.dir.content" == 0
 jsonpath "$.children.dir.children.sub.id" != 0
 jsonpath "$.children.dir.children.sub.is_dir" == true
 jsonpath "$.children.dir.children.sub.content" == 0
-jsonpath "$.children.dir.children.sub.children['file.txt'].id" toString == {{fileID}}
-jsonpath "$.children.dir.children.sub.children['file.txt'].is_dir" == false
-jsonpath "$.children.dir.children.sub.children['file.txt'].content" == 266668
+jsonpath "$.children.dir.children.sub.children['demo.txt'].id" toString == {{fileID}}
+jsonpath "$.children.dir.children.sub.children['demo.txt'].is_dir" == false
+jsonpath "$.children.dir.children.sub.children['demo.txt'].content" == 266668
 jsonpath "$.children.dir.children.subdir1.id" toString == {{dirID}}
 jsonpath "$.children.dir.children.subdir1.is_dir" == true
 jsonpath "$.children.dir.children.subdir1.content" == 0

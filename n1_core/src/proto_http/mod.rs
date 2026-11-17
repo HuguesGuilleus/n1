@@ -104,6 +104,7 @@ pub async fn handle<R: AsyncRead + Unpin + Send, C: DB>(
         ":bio.set" => with_body(s, r, op::bio::set).await,
         ":fs.direct.mkdir" => with_body(s, r, op::fs::fs_direct_mkdir).await,
         ":fs.direct.mkfile" => with_body(s, r, op::fs::fs_direct_mkfile).await,
+        ":fs.direct.move" => with_body(s, r, op::fs::fs_direct_move).await,
         ":fs.direct.resolve" => with_body(s, r, op::fs::fs_direct_resolve).await,
         ":fs.direct.rm" => with_body(s, r, op::fs::fs_direct_rm).await,
         ":fs.direct.tree" => with_body(s, r, op::fs::fs_direct_tree).await,

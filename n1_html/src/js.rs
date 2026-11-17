@@ -55,33 +55,64 @@
 /// with_js.render(&mut buff);
 /// assert_eq!(raw, &buff);
 /// ```
+///
+/// Source: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators
 #[macro_export]
 macro_rules! js {
-    (=>) => ( $crate::DirectHTML("=>") );
+    (_) => ( $crate::DirectHTML("_") );
+    (-) => ( $crate::DirectHTML("-") );
+    (,) => ( $crate::DirectHTML(",") );
+    (;) => ( $crate::DirectHTML(";") );
+    (:) => ( $crate::DirectHTML(":") );
     (!) => ( $crate::DirectHTML("!") );
+    (?) => ( $crate::DirectHTML("?") );
+    (.) => ( $crate::DirectHTML(".") );
+    (@) => ( $crate::DirectHTML("@") );
+    (*) => ( $crate::DirectHTML("*") );
+    (/) => ( $crate::DirectHTML("/") );
+    (&) => ( $crate::DirectHTML("&") );
     (#) => ( $crate::DirectHTML("#") );
     (%) => ( $crate::DirectHTML("%") );
-    (&) => ( $crate::DirectHTML("&") );
-    (*) => ( $crate::DirectHTML("*") );
+    (^) => ( $crate::DirectHTML("^") );
     (+) => ( $crate::DirectHTML("+") );
-    (,) => ( $crate::DirectHTML(",") );
-    (-) => ( $crate::DirectHTML("-") );
-    (.) => ( $crate::DirectHTML(".") );
-    (/) => ( $crate::DirectHTML("/") );
-    (:) => ( $crate::DirectHTML(":") );
-    (;) => ( $crate::DirectHTML(";") );
     (<) => ( $crate::DirectHTML("<") );
     (=) => ( $crate::DirectHTML("=") );
     (>) => ( $crate::DirectHTML(">") );
-    (?) => ( $crate::DirectHTML("?") );
-    (@) => ( $crate::DirectHTML("@") );
-    (^) => ( $crate::DirectHTML("^") );
-    (_) => ( $crate::DirectHTML("_") );
     (|) => ( $crate::DirectHTML("|") );
     (~) => ( $crate::DirectHTML("~") );
 
-    (||) => ( $crate::DirectHTML("||") );
+    (--) => ( $crate::DirectHTML("--") );
+    (-=) => ( $crate::DirectHTML("-=") );
+    (!=) => ( $crate::DirectHTML("!=") );
+    (??) => ( $crate::DirectHTML("??") );
+    (?.) => ( $crate::DirectHTML("?.") );
+    (**) => ( $crate::DirectHTML("**") );
+    (*=) => ( $crate::DirectHTML("*=") );
+    (/=) => ( $crate::DirectHTML("/=") );
     (&&) => ( $crate::DirectHTML("&&") );
+    (&=) => ( $crate::DirectHTML("&=") );
+    (^=) => ( $crate::DirectHTML("^=") );
+    (++) => ( $crate::DirectHTML("++") );
+    (+=) => ( $crate::DirectHTML("+=") );
+    (<<) => ( $crate::DirectHTML("<<") );
+    (==) => ( $crate::DirectHTML("==") );
+    (=>) => ( $crate::DirectHTML("=>") );
+    (|=) => ( $crate::DirectHTML("|=") );
+    (||) => ( $crate::DirectHTML("||") );
+
+    (!==) => ( $crate::DirectHTML("!==") );
+    (??=) => ( $crate::DirectHTML("??=") );
+    (...) => ( $crate::DirectHTML("...") );
+    (**=) => ( $crate::DirectHTML("**=") );
+    (&&=) => ( $crate::DirectHTML("&&=") );
+    (<<=) => ( $crate::DirectHTML("<<=") );
+    (===) => ( $crate::DirectHTML("===") );
+    (>>=) => ( $crate::DirectHTML(">>=") );
+    (>>>) => ( $crate::DirectHTML(">>>") );
+    (>>>) => ( $crate::DirectHTML(">>>") );
+    (||=) => ( $crate::DirectHTML("||=") );
+
+    (>>>=) => ( $crate::DirectHTML(">>>=") );
 
     (async) => ( $crate::DirectHTML("async ") );
     (await) => ( $crate::DirectHTML("await ") );
@@ -90,13 +121,20 @@ macro_rules! js {
     (const) => ( $crate::DirectHTML("const ") );
     (continue) => ( $crate::DirectHTML("continue ") );
     (default) => ( $crate::DirectHTML("default ") );
+    (delete) => ( $crate::DirectHTML("delete ") );
     (else) => ( $crate::DirectHTML("else ") );
     (function) => ( $crate::DirectHTML("function ") );
+    (in) => ( $crate::DirectHTML(" in ") );
+    (instanceof) => ( $crate::DirectHTML("instanceof ") );
     (let) => ( $crate::DirectHTML("let ") );
     (new) => ( $crate::DirectHTML("new ") );
+    (of) => ( $crate::DirectHTML(" of ") );
     (return) => ( $crate::DirectHTML("return ") );
     (throw) => ( $crate::DirectHTML("throw ") );
+    (typeof) => ( $crate::DirectHTML("typeof ") );
     (using) => ( $crate::DirectHTML("using ") );
+    (void) => ( $crate::DirectHTML("void ") );
+    (yield) => ( $crate::DirectHTML("yield ") );
 
     ($i:ident) => {
         $crate::DirectHTML(stringify!($i))

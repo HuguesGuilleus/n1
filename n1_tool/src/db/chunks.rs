@@ -17,7 +17,7 @@ pub struct Chunks<B: DB> {
     position: usize,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Chunk {
     pub len: usize,
     pub oid: u32,

@@ -17,6 +17,14 @@ pub enum ErrorCategory {
 }
 
 impl Error {
+    pub fn new<const N: usize>(steps: [ErrorStep; N]) -> Self {
+        let mut v = Vec::new();
+        for s in steps.into_iter() {
+            v.push(s);
+        }
+        Self(v)
+    }
+
     pub fn push(mut self, context: impl Into<ErrorStep>) -> Self {
         self.0.push(context.into());
         self
@@ -84,6 +92,10 @@ pub enum ErrorStep {
     FieldZero {
         name: &'static str,
     },
+    IncoherentFS {
+        owner: u32,
+        id: u32,
+    },
     NameEmpty,
     NameInvalid,
     NameTooLong {
@@ -101,6 +113,14 @@ pub enum ErrorStep {
     Parsing2Integer,
     ParsingInteger {
         err: ParseIntError,
+    },
+    PathPartEmpty,
+    PathPartDots,
+    PathPartIsDirectory {
+        id: u32,
+    },
+    PathPartIsFile {
+        id: u32,
     },
 
     X(String),
@@ -139,6 +159,7 @@ impl ErrorStep {
             ErrorStep::FieldEmpty { .. } => ErrorCategory::BadRequest,
             ErrorStep::FieldParsing { .. } => ErrorCategory::BadRequest,
             ErrorStep::FieldZero { .. } => ErrorCategory::BadRequest,
+            ErrorStep::IncoherentFS { .. } => ErrorCategory::Internal,
             ErrorStep::NameEmpty => ErrorCategory::BadRequest,
             ErrorStep::NameInvalid => ErrorCategory::BadRequest,
             ErrorStep::NameTooLong { .. } => ErrorCategory::BadRequest,
@@ -147,6 +168,10 @@ impl ErrorStep {
             ErrorStep::NotFoundObject { .. } => ErrorCategory::NotFound,
             ErrorStep::Parsing2Integer => ErrorCategory::BadRequest,
             ErrorStep::ParsingInteger { .. } => ErrorCategory::BadRequest,
+            ErrorStep::PathPartDots => ErrorCategory::BadRequest,
+            ErrorStep::PathPartEmpty => ErrorCategory::BadRequest,
+            ErrorStep::PathPartIsDirectory { .. } => ErrorCategory::BadRequest,
+            ErrorStep::PathPartIsFile { .. } => ErrorCategory::BadRequest,
 
             ErrorStep::X(..) => ErrorCategory::BadRequest,
             ErrorStep::Static(..) => ErrorCategory::BadRequest,
@@ -188,6 +213,9 @@ impl ErrorStep {
             ErrorStep::FieldZero { name } => format!("field {name:?} is zero"),
             ErrorStep::FieldParsing { name } => format!("parsing fail in field {name:?}"),
             ErrorStep::FieldEmpty { name } => format!("field {name:?} is empty"),
+            ErrorStep::IncoherentFS { id, owner } => {
+                format!("incoherent filesystem in owner={owner} with id={id}")
+            }
             ErrorStep::NameEmpty => "name could not be empty".to_string(),
             ErrorStep::NameInvalid => "invalid name (contain spaces or underscores)".to_string(),
             ErrorStep::NameTooLong { len } => format!("name too long: {len}"),
@@ -202,6 +230,10 @@ impl ErrorStep {
                 "need `owner,object` format with two integers".to_string()
             }
             ErrorStep::ParsingInteger { err } => format!("parsing integer: {err}"),
+            ErrorStep::PathPartEmpty => "empty path part".to_string(),
+            ErrorStep::PathPartDots => "invalid path part '.' or '..'".to_string(),
+            ErrorStep::PathPartIsDirectory { id } => format!("part {id} is a directory"),
+            ErrorStep::PathPartIsFile { id } => format!("part {id} is a regular file"),
 
             ErrorStep::X(err) => err.to_string(),
             ErrorStep::Static(err) => err.to_string(),

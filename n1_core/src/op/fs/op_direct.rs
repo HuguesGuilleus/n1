@@ -1,15 +1,15 @@
 use std::{collections::BTreeMap, ops::Deref};
 
-use n1_tool::{Chunk, DB, DBError, chuncks_len, read_to_chunks};
+use n1_tool::{chuncks_len, read_to_chunks, Chunk, DB};
 use serde::{Deserialize, Serialize};
 use tokio::io::AsyncRead;
 
 use crate::{
-    DTO, ErrorStep, NOT_FOUND, OpRequest, Result, errs,
     op::{
+        fs::{Entry, FSState, CHUNK_LEN},
         EntityAndObjectDTO, OID_ENTITY_FS,
-        fs::{CHUNK_LEN, Entry, FSState},
     },
+    Error, ErrorStep, OpRequest, Result, DTO,
 };
 
 #[derive(Debug, Deserialize)]
@@ -20,23 +20,31 @@ pub struct MakeDTO {
 impl DTO for MakeDTO {
     fn check(&self) -> Result<()> {
         if self.owner == 0 {
-            errs::FIELD_ID_ZERO.push_result("field 'owner'")?;
+            ErrorStep::FieldZero { name: "owner" }.result()?
         }
-
-        let path = prepare_path(&self.path);
-        if path.is_empty() {
-            errs::FIELD_EMPTY.push_result("field 'path'")?;
-        }
-        for part in path.split("/") {
-            match part.trim() {
-                "" => errs::WRONG_PATH.push_result("empty path part")?,
-                "." | ".." => errs::WRONG_PATH.push_result("invalid part '.' or '..' ")?,
-                _ => {}
-            }
-        }
-
+        check_path(&self.path)?;
         Ok(())
     }
+}
+fn check_path(path: &str) -> Result<()> {
+    let path = prepare_path(path);
+    if path.is_empty() {
+        ErrorStep::FieldEmpty { name: "path" }.result()?
+    }
+    for part in path.split("/") {
+        match part.trim() {
+            "" => ErrorStep::PathPartEmpty.result()?,
+            "." | ".." => ErrorStep::PathPartDots.result()?,
+            _ => {}
+        }
+    }
+    Ok(())
+}
+/// Remove leading and trailing slashes from a path string.
+fn prepare_path(path: &str) -> &str {
+    let path = path.strip_prefix("/").unwrap_or(path);
+    let path = path.strip_suffix("/").unwrap_or(path);
+    path
 }
 
 /// Make a new directory. Path: `:fs.direct.mkdir`
@@ -58,75 +66,62 @@ pub async fn fs_direct_mkfile(db: &impl DB, r: OpRequest<MakeDTO>) -> Result<u32
 async fn make(db: &impl DB, r: OpRequest<MakeDTO>, is_dir: bool) -> Result<u32> {
     r.token.check_access_write(r.dto.owner, OID_ENTITY_FS)?;
 
-    fn add_directory(fs: &mut FSState, id: &mut u32, part: &str) -> Result<()> {
-        let (_, dir) = fs
-            .dirs
-            .get_mut(id)
-            .ok_or_else(|| errs::DATA_INCOHERENT.push(format!("not found {} directory", id)))?;
-        match dir.iter().filter(|&entry| entry.name == part).next() {
-            Some(entry) if entry.is_dir => {
-                *id = entry.id;
-            }
-            Some(_) => {
-                errs::ALREADY_EXIST.push_result(format!("{} is a regular file", part))?;
-            }
-            None => {
-                fs.increment += 1;
-                let new_id = fs.increment;
-                dir.push(Entry {
-                    id: new_id,
-                    name: part.to_string(),
-                    is_dir: true,
-                });
-                fs.dirs.insert(new_id, (*id, Vec::new()));
-                *id = new_id;
-            }
-        }
-        Ok(())
-    }
-
-    let path = prepare_path(&r.dto.path);
     let (path, last) = if is_dir {
-        (path, "")
+        (prepare_path(&r.dto.path), "")
     } else {
+        let path = prepare_path(&r.dto.path);
         path.rsplit_once("/").unwrap_or(("", path))
     };
 
-    let fs_guard = r.common.fs.get(r.dto.owner).await?;
-    let mut fs = fs_guard.write().await;
-    let mut id = 0;
+    let guard = r.common.fs.get(r.dto.owner).await?;
+    let mut fs = guard.write().await;
 
-    if !path.is_empty() {
-        // Possible, because "/new_file.txt"
-        for part in path.split("/").map(str::trim) {
-            add_directory(&mut fs, &mut id, part)?;
+    let mut id = fs_direct_make(&mut fs, path, r.dto.owner)?;
+    if !last.is_empty() {
+        while fs.inc == 0 || fs.entries.contains_key(&fs.inc) {
+            fs.inc += 1;
         }
-    }
+        let new_id = fs.inc;
+        let mut used_new_id = false;
 
-    if !is_dir {
-        let fs: &mut FSState = &mut fs;
-        let (_, dir) = fs
-            .dirs
-            .get_mut(&id)
-            .ok_or_else(|| errs::DATA_INCOHERENT.push(format!("not found {} directory", id)))?;
-        match dir.iter().filter(|&entry| entry.name == last).next() {
-            Some(entry) if !entry.is_dir => {
-                id = entry.id;
-            }
-            Some(_) => {
-                errs::ALREADY_EXIST.push_result(format!("{} is a directory", last))?;
-            }
+        let children = get_children(&mut fs, r.dto.owner, id)?;
+        match children.get(last) {
+            Some(&child_id) => match fs.entries.get(&child_id) {
+                Some(Entry::File { .. }) => {
+                    id = child_id;
+                }
+                Some(Entry::Directory { .. }) => {
+                    return Err(ErrorStep::PathPartIsDirectory { id: child_id }.into());
+                }
+                None => {
+                    return Err(Error::new([
+                        ErrorStep::IncoherentFS {
+                            owner: r.dto.owner,
+                            id: child_id,
+                        },
+                        ErrorStep::NotFoundObject {
+                            owner: r.dto.owner,
+                            object: child_id,
+                            type_name: "fs-item",
+                        },
+                    ]))
+                }
+            },
             None => {
-                fs.increment += 1;
-                let new_id = fs.increment;
-                dir.push(Entry {
-                    id: new_id,
-                    name: last.to_string(),
-                    is_dir: false,
-                });
-                fs.files.insert(new_id, (id, Vec::new()));
+                used_new_id = true;
+                children.insert(last.to_string(), new_id);
+                fs.entries.insert(
+                    new_id,
+                    Entry::File {
+                        parent: id,
+                        chunks: Vec::new(),
+                    },
+                );
                 id = new_id;
             }
+        }
+        if used_new_id {
+            fs.inc += 1;
         }
     }
 
@@ -134,6 +129,60 @@ async fn make(db: &impl DB, r: OpRequest<MakeDTO>, is_dir: bool) -> Result<u32> 
         .await?;
 
     Ok(id)
+}
+/// Get or create the directory path and return its ID.
+fn fs_direct_make(fs: &mut FSState, path: &str, owner: u32) -> Result<u32> {
+    let mut id = 0;
+    for part in path
+        .split("/")
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+    {
+        while fs.inc == 0 || fs.entries.contains_key(&fs.inc) {
+            fs.inc += 1;
+        }
+        let new_id = fs.inc;
+        let mut used_new_id = false;
+
+        let children = get_children(fs, owner, id)?;
+        if let Some(child) = children.get(part) {
+            id = *child;
+        } else {
+            used_new_id = true;
+            children.insert(part.to_string(), new_id);
+            fs.entries.insert(
+                new_id,
+                Entry::Directory {
+                    parent: id,
+                    children: BTreeMap::new(),
+                },
+            );
+            id = new_id;
+        }
+        if used_new_id {
+            fs.inc += 1;
+        }
+    }
+
+    Ok(id)
+}
+/// Get the children of a directory by its ID.
+fn get_children(fs: &mut FSState, owner: u32, id: u32) -> Result<&mut BTreeMap<String, u32>> {
+    let children = match fs.entries.get_mut(&id) {
+        Some(Entry::Directory { children, .. }) => children,
+        Some(Entry::File { .. }) => return Err(ErrorStep::PathPartIsFile { id }.into()),
+        None => {
+            return Err(Error::new([
+                ErrorStep::IncoherentFS { owner, id },
+                ErrorStep::NotFoundObject {
+                    owner,
+                    object: id,
+                    type_name: "fs-item",
+                },
+            ]))
+        }
+    };
+    Ok(children)
 }
 
 pub async fn fs_direct_set(
@@ -143,16 +192,30 @@ pub async fn fs_direct_set(
 ) -> Result<(u32, Vec<Chunk>)> {
     r.token.check_access_write(r.dto.owner, OID_ENTITY_FS)?;
 
-    let chunks = read_to_chunks::<CHUNK_LEN>(db, r.dto.owner, content).await?;
+    let new_chunks = read_to_chunks::<CHUNK_LEN>(db, r.dto.owner, content).await?;
 
     let fs_guard = r.common.fs.get(r.dto.owner).await?;
     let mut fs = fs_guard.write().await;
 
-    let file = fs
-        .files
+    let entry = fs
+        .entries
         .get_mut(&r.dto.object)
-        .ok_or_else(|| errs::NOT_FOUND.push(format!("file {}", r.dto.object)))?;
-    file.1 = chunks;
+        .ok_or_else(|| ErrorStep::NotFoundObject {
+            owner: r.dto.owner,
+            object: r.dto.object,
+            type_name: "fs-entry",
+        })?;
+    match entry {
+        Entry::File { chunks, .. } => {
+            for chunk in chunks.iter() {
+                db.fs_rm_object(r.dto.owner, chunk.oid).await?;
+            }
+            *chunks = new_chunks;
+        }
+        Entry::Directory { .. } => {
+            ErrorStep::PathPartIsDirectory { id: r.dto.object }.result()?;
+        }
+    }
 
     db.obj_set(r.dto.owner, OID_ENTITY_FS as u32, fs.deref())
         .await?;
@@ -170,19 +233,110 @@ pub async fn fs_direct_get(
     let fs_guard = r.common.fs.get(r.dto.owner).await?;
     let fs = fs_guard.read().await;
 
-    Ok((
-        r.dto.owner,
-        fs.files
-            .get(&r.dto.object)
-            .ok_or_else(|| {
-                ErrorStep::DB(DBError::NotFoundID {
-                    owner: r.dto.owner,
-                    object: r.dto.object,
-                })
-            })?
-            .1
-            .clone(),
-    ))
+    let entry = fs
+        .entries
+        .get(&r.dto.object)
+        .ok_or(ErrorStep::NotFoundObject {
+            owner: r.dto.owner,
+            object: r.dto.object,
+            type_name: "file",
+        })?;
+
+    match entry {
+        Entry::File { chunks, .. } => {
+            return Ok((r.dto.owner, chunks.clone()));
+        }
+        Entry::Directory { .. } => {
+            return Err(ErrorStep::PathPartIsDirectory { id: r.dto.object }.into());
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MoveDTO {
+    pub owner: u32,
+    pub object: u32,
+    pub path: String,
+}
+impl DTO for MoveDTO {
+    fn check(&self) -> Result<()> {
+        if self.owner == 0 {
+            ErrorStep::FieldZero { name: "owner" }.result()?
+        } else if self.object == 0 {
+            ErrorStep::FieldZero { name: "object" }.result()?
+        }
+        check_path(&self.path)?;
+        Ok(())
+    }
+}
+pub async fn fs_direct_move(db: &impl DB, r: OpRequest<MoveDTO>) -> Result<()> {
+    r.token.check_access_write(r.dto.owner, OID_ENTITY_FS)?;
+
+    let owner = r.dto.owner;
+    let fs_guard = r.common.fs.get(owner).await?;
+    let mut fs = fs_guard.write().await;
+
+    // Get entry and its parent ID
+    let entry = fs
+        .entries
+        .get_mut(&r.dto.object)
+        .ok_or(ErrorStep::NotFoundObject {
+            owner,
+            object: r.dto.object,
+            type_name: "fs-entry",
+        })?;
+    let old_parent_id = match entry {
+        Entry::Directory { parent, .. } => *parent,
+        Entry::File { parent, .. } => *parent,
+    };
+
+    // Remove item from the parent children
+    match fs.entries.get_mut(&old_parent_id) {
+        Some(Entry::Directory {
+            parent: _,
+            children,
+        }) => {
+            children.retain(|_, &mut id| id != r.dto.object);
+        }
+        Some(Entry::File { .. }) => {
+            return Err(Error::new([
+                ErrorStep::IncoherentFS {
+                    owner,
+                    id: old_parent_id,
+                },
+                ErrorStep::PathPartIsFile { id: old_parent_id },
+            ]));
+        }
+        None => {
+            return Err(Error::new([ErrorStep::IncoherentFS {
+                owner,
+                id: old_parent_id,
+            }]))
+        }
+    }
+
+    // Insert the entry into the new parent's children
+    let path = prepare_path(&r.dto.path);
+    let (path, name) = path.rsplit_once('/').unwrap_or(("", path));
+    let new_parent = fs_direct_make(&mut fs, path, owner)?;
+    let new_children = get_children(&mut fs, owner, new_parent)?;
+    new_children.insert(name.to_string(), r.dto.object);
+    let entry = fs
+        .entries
+        .get_mut(&r.dto.object)
+        .ok_or(ErrorStep::NotFoundObject {
+            owner,
+            object: r.dto.object,
+            type_name: "fs-entry",
+        })?;
+    match entry {
+        Entry::Directory { parent, .. } => *parent = new_parent,
+        Entry::File { parent, .. } => *parent = new_parent,
+    }
+
+    db.obj_set(owner, OID_ENTITY_FS as u32, fs.deref()).await?;
+
+    Ok(())
 }
 
 pub async fn fs_direct_rm(db: &impl DB, r: OpRequest<EntityAndObjectDTO>) -> Result<()> {
@@ -191,41 +345,44 @@ pub async fn fs_direct_rm(db: &impl DB, r: OpRequest<EntityAndObjectDTO>) -> Res
     let fs_guard = r.common.fs.get(r.dto.owner).await?;
     let mut fs = fs_guard.write().await;
 
-    /// Remove item (file or directory) and return parent ID.
-    /// This function do not remove link to the parent.
-    async fn rm(db: &impl DB, fs: &mut FSState, owner: u32, id: u32) -> Result<u32> {
-        if let Some((parent, chunks)) = fs.files.remove(&id) {
-            for chunk in chunks {
-                db.fs_rm_object(owner, chunk.oid).await?;
+    let mut root = None; // get only the first parent encountered
+    let mut ids_to_remove = vec![r.dto.object];
+    while let Some(id) = ids_to_remove.pop() {
+        match fs.entries.remove(&id) {
+            Some(Entry::Directory { parent, children }) => {
+                root = root.or(Some(parent));
+                ids_to_remove.extend(children.values().copied());
             }
-            Ok(parent)
-        } else if let Some((parent, entries)) = fs.dirs.remove(&id) {
-            for entry in entries {
-                Box::pin(rm(db, fs, owner, entry.id)).await?;
+            Some(Entry::File { parent, chunks }) => {
+                root = root.or(Some(parent));
+                for id in chunks.iter().map(|chunk| chunk.oid) {
+                    db.fs_rm_object(r.dto.owner, id).await?;
+                }
             }
-            Ok(parent)
-        } else {
-            Err(NOT_FOUND.push(format!("not found {} neither files nor directory", id)))
+            None => {}
         }
     }
-    let parent = rm(db, &mut fs, r.dto.owner, r.dto.object).await?;
 
-    // remove parent link
-    let (_, dir) = fs.dirs.get_mut(&parent).ok_or_else(|| {
-        errs::DATA_INCOHERENT.push(format!("parent directory {} do not exist", parent))
-    })?;
-    let (i, _) = dir
-        .iter()
-        .enumerate()
-        .filter(|(_, entry)| entry.id == r.dto.object)
-        .next()
-        .ok_or_else(|| {
-            errs::DATA_INCOHERENT.push(format!(
-                "in parent {} do not find file {}",
-                parent, r.dto.object
-            ))
-        })?;
-    dir.swap_remove(i);
+    if let Some(parent) = root {
+        match fs.entries.get_mut(&parent) {
+            Some(Entry::Directory {
+                parent: _,
+                children,
+            }) => {
+                children.retain(|_, &mut id| id != r.dto.object);
+            }
+            Some(Entry::File { .. }) => {
+                return Err(Error::new([
+                    ErrorStep::IncoherentFS {
+                        owner: r.dto.owner,
+                        id: parent,
+                    },
+                    ErrorStep::PathPartIsDirectory { id: parent },
+                ]));
+            }
+            None => {}
+        }
+    }
 
     db.obj_set(r.dto.owner, OID_ENTITY_FS as u32, fs.deref())
         .await?;
@@ -235,47 +392,44 @@ pub async fn fs_direct_rm(db: &impl DB, r: OpRequest<EntityAndObjectDTO>) -> Res
 
 pub async fn fs_direct_resolve(_: &impl DB, r: OpRequest<MakeDTO>) -> Result<u32> {
     r.token.check_access_read(r.dto.owner, OID_ENTITY_FS)?;
-    let path = prepare_path(&r.dto.path);
+
+    fn walk(fs: &FSState, owner: u32, id: u32, part: &str) -> Result<u32> {
+        let part = part.trim();
+        let entry = fs.entries.get(&id).ok_or_else(|| {
+            Error::new([
+                ErrorStep::IncoherentFS { owner, id },
+                ErrorStep::NotFoundObject {
+                    owner,
+                    object: id,
+                    type_name: "fs-entry",
+                },
+            ])
+        })?;
+        let children = match entry {
+            Entry::Directory { children, .. } => children,
+            Entry::File { .. } => {
+                return Err(ErrorStep::PathPartIsFile { id }.into());
+            }
+        };
+        children.get(part).copied().ok_or_else(|| {
+            ErrorStep::NotFoundObject {
+                owner,
+                object: id,
+                type_name: "fs-entry",
+            }
+            .into()
+        })
+    }
 
     let fs_guard = r.common.fs.get(r.dto.owner).await?;
     let fs = fs_guard.read().await;
 
-    fn walk<'a>(fs: &'a FSState, id: u32, part: &str) -> Result<&'a Entry> {
-        let part = part.trim();
-        let (_, children) = fs.dirs.get(&id).ok_or_else(|| {
-            errs::INCOHERENT_WITH_STATE.push(format!("not found {part:?} in directory {id}"))
-        })?;
-        let entry = children
-            .iter()
-            .find(|&entry| entry.name == part)
-            .ok_or_else(|| errs::NOT_FOUND.push(format!("not found {part:?} in directory {id}")))?;
-        Ok(entry)
-    }
-
-    let (path, rest) = path.rsplit_once('/').unwrap_or(("", path));
     let mut id = 0;
-    if !path.is_empty() {
-        for part in path.split('/') {
-            let entry = walk(&fs, id, part)?;
-            if !entry.is_dir {
-                errs::EXPECTED
-                    .push_result(format!("Expected {part:?} in {path:?} is a dirctory"))?;
-            }
-            id = entry.id;
-        }
-    }
-    if !rest.is_empty() {
-        let entry = walk(&fs, id, rest)?;
-        id = entry.id;
+    for part in prepare_path(&r.dto.path).split("/") {
+        id = walk(&fs, r.dto.owner, id, part)?;
     }
 
     Ok(id)
-}
-
-fn prepare_path(path: &str) -> &str {
-    let path = path.strip_prefix("/").unwrap_or(path);
-    let path = path.strip_suffix("/").unwrap_or(path);
-    path
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -288,46 +442,224 @@ pub struct Branch {
 pub async fn fs_direct_tree(_: &impl DB, r: OpRequest<u32>) -> Result<Branch> {
     r.token.check_access_read(r.dto, OID_ENTITY_FS)?;
 
-    fn new_branch_file(fs: &FSState, id: u32) -> Result<Branch> {
-        let (_, file) = fs
-            .files
-            .get(&id)
-            .ok_or_else(|| errs::INCOHERENT_WITH_STATE.push(format!("do not find file {id}")))?;
-        Ok(Branch {
-            id,
-            is_dir: false,
-            content: chuncks_len(&file),
-            children: BTreeMap::new(),
-        })
-    }
-    fn new_branch_dir(fs: &FSState, id: u32) -> Result<Branch> {
-        let (_, dir) = fs
-            .dirs
-            .get(&id)
-            .ok_or_else(|| errs::INCOHERENT_WITH_STATE.push(format!("not found directory {id}")))?;
-        let children: Result<BTreeMap<String, Branch>> = dir
-            .iter()
-            .map(|entry| -> Result<(String, Branch)> {
-                Ok((
-                    entry.name.clone(),
-                    if entry.is_dir {
-                        new_branch_dir(fs, entry.id)?
-                    } else {
-                        new_branch_file(fs, entry.id)?
-                    },
-                ))
-            })
-            .collect();
-        Ok(Branch {
-            id,
-            is_dir: true,
-            content: 0,
-            children: children?,
-        })
+    fn new_branch(fs: &FSState, owner: u32, id: u32) -> Result<Branch> {
+        let entry = fs.entries.get(&id).ok_or_else(|| {
+            Error::new([
+                ErrorStep::IncoherentFS { owner, id },
+                ErrorStep::NotFoundObject {
+                    owner,
+                    object: id,
+                    type_name: "fs-entry",
+                },
+            ])
+        })?;
+        match entry {
+            Entry::Directory { children, .. } => {
+                let mut branch_children = BTreeMap::new();
+                for (name, &child_id) in children {
+                    branch_children.insert(name.clone(), new_branch(fs, owner, child_id)?);
+                }
+                Ok(Branch {
+                    id,
+                    is_dir: true,
+                    content: 0,
+                    children: branch_children,
+                })
+            }
+            Entry::File { chunks, .. } => Ok(Branch {
+                id,
+                is_dir: false,
+                content: chuncks_len(chunks),
+                children: BTreeMap::new(),
+            }),
+        }
     }
 
     let fs_guard = r.common.fs.get(r.dto).await?;
     let fs = fs_guard.read().await;
 
-    new_branch_dir(&fs, 0)
+    new_branch(&fs, r.dto, 0)
+}
+
+#[tokio::test]
+async fn test() {
+    use crate::op::{Common, Token, TokenItem};
+    use n1_tool::DBMemory;
+    use std::sync::Arc;
+
+    let db = DBMemory::new();
+    let common = Arc::new(Common::new());
+    let token = Token {
+        uid: 1,
+        is_admin: true,
+        access: [TokenItem::default(); Token::ACCESS_LEN],
+    };
+    fs_direct_mkfile(
+        &db,
+        OpRequest {
+            common: common.clone(),
+            token: token.clone(),
+            dto: MakeDTO {
+                owner: 1,
+                path: "/dir/sub/file.txt".to_string(),
+            },
+        },
+    )
+    .await
+    .unwrap();
+
+    {
+        let guard = common.fs.get(1).await.unwrap();
+        let state = guard.read().await;
+        assert_eq!(
+            &FSState {
+                entries: BTreeMap::from([
+                    (
+                        0,
+                        Entry::Directory {
+                            parent: 0,
+                            children: BTreeMap::from([("dir".to_string(), 1)]),
+                        }
+                    ),
+                    (
+                        1,
+                        Entry::Directory {
+                            parent: 0,
+                            children: BTreeMap::from([("sub".to_string(), 2)]),
+                        }
+                    ),
+                    (
+                        2,
+                        Entry::Directory {
+                            parent: 1,
+                            children: BTreeMap::from([("file.txt".to_string(), 3)]),
+                        }
+                    ),
+                    (
+                        3,
+                        Entry::File {
+                            parent: 2,
+                            chunks: Vec::new(),
+                        }
+                    )
+                ]),
+                inc: 4
+            },
+            state.deref(),
+        );
+    }
+
+    // Resolve
+    assert_eq!(
+        fs_direct_resolve(
+            &db,
+            OpRequest {
+                common: common.clone(),
+                token: token.clone(),
+                dto: MakeDTO {
+                    owner: 1,
+                    path: "/dir/sub/".to_string(),
+                },
+            },
+        )
+        .await
+        .unwrap(),
+        2
+    );
+    assert_eq!(
+        fs_direct_resolve(
+            &db,
+            OpRequest {
+                common: common.clone(),
+                token: token.clone(),
+                dto: MakeDTO {
+                    owner: 1,
+                    path: "/dir/sub/file.txt".to_string(),
+                },
+            },
+        )
+        .await
+        .unwrap(),
+        3
+    );
+
+    // Move
+    fs_direct_move(
+        &db,
+        OpRequest {
+            common: common.clone(),
+            token: token.clone(),
+            dto: MoveDTO {
+                owner: 1,
+                object: 3,
+                path: "file.txt".to_string(),
+            },
+        },
+    )
+    .await
+    .unwrap();
+    fs_direct_move(
+        &db,
+        OpRequest {
+            common: common.clone(),
+            token: token.clone(),
+            dto: MoveDTO {
+                owner: 1,
+                object: 2,
+                path: "dir/sub/subsub".to_string(),
+            },
+        },
+    )
+    .await
+    .unwrap();
+    {
+        let guard = common.fs.get(1).await.unwrap();
+        let state = guard.read().await;
+        assert_eq!(
+            &FSState {
+                entries: BTreeMap::from([
+                    (
+                        0,
+                        Entry::Directory {
+                            parent: 0,
+                            children: BTreeMap::from([
+                                ("dir".to_string(), 1),
+                                ("file.txt".to_string(), 3),
+                            ]),
+                        }
+                    ),
+                    (
+                        1,
+                        Entry::Directory {
+                            parent: 0,
+                            children: BTreeMap::from([("sub".to_string(), 4)]),
+                        }
+                    ),
+                    (
+                        2,
+                        Entry::Directory {
+                            parent: 4,
+                            children: BTreeMap::from([]),
+                        }
+                    ),
+                    (
+                        3,
+                        Entry::File {
+                            parent: 0,
+                            chunks: Vec::new(),
+                        }
+                    ),
+                    (
+                        4,
+                        Entry::Directory {
+                            parent: 1,
+                            children: BTreeMap::from([("subsub".to_string(), 2)]),
+                        }
+                    )
+                ]),
+                inc: 5
+            },
+            state.deref(),
+        );
+    }
 }
