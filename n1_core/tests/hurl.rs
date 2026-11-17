@@ -1,5 +1,5 @@
 use hurl::{
-    runner::{run, RunnerOptionsBuilder, VariableSet},
+    runner::{RunnerOptionsBuilder, VariableSet, run},
     util::{
         logger::{LoggerOptionsBuilder, Verbosity},
         path::ContextDir,

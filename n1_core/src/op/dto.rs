@@ -88,6 +88,7 @@ impl n1_html::Html for EntityAndObjectDTO {
     }
 }
 
+/// DTO for an entity and an object where the object can be zero.
 #[derive(Debug, PartialEq, Deserialize)]
 pub struct EntityAndObjectNullDTO {
     pub owner: u32,

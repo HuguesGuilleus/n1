@@ -864,7 +864,6 @@ dependencies = [
  "bytes",
  "rmp-serde",
  "serde",
- "serde_json",
  "tokio",
  "urlencoding",
 ]

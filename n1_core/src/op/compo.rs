@@ -68,17 +68,17 @@ pub const FETCHER_JS: DirectHTML = js_const! {
             _out.innerText = "[!!!] " + _err;
             throw _err;
         })
-    )
+    );
 };
 
 /// Define `F` a JS function to handle request promise.
 /// Define it within a constant declaration.
 pub fn fetcher_js(lang: &'static Lang) -> impl Html {
     js! {
-        F = (p, o) => (
+        F = (p, o, B) => (
             o.innerText = {extern lang.js_waiting},
             p.then(async r => {
-                if (r.ok) return o.innerText = {extern lang.js_ok}, r.json();
+                if (r.ok) return o.innerText = {extern lang.js_ok}, B ? r.blob() : r.json();
                 else throw await r.text();
             }).catch(e => {
                 o.innerText = {extern lang.js_error} + e;
@@ -87,3 +87,14 @@ pub fn fetcher_js(lang: &'static Lang) -> impl Html {
         )
     }
 }
+
+pub const NEW_ELEMENT_JS: DirectHTML = js_const! {
+    N = (type, o, ...c) => {
+        const [t, ...n] = type.split({regexp "\\.(\\w+)"}),
+            e = document.createElement(t || "div");
+        e.classList.add(...n.filter(x => x));
+        e.append(...c);
+        Object.assign(e, o || {});
+        return e;
+    }
+};

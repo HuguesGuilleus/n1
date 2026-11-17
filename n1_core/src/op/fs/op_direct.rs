@@ -1,15 +1,15 @@
 use std::{collections::BTreeMap, ops::Deref};
 
-use n1_tool::{chuncks_len, read_to_chunks, Chunk, DB};
+use n1_tool::{Chunk, DB, chuncks_len, read_to_chunks};
 use serde::{Deserialize, Serialize};
 use tokio::io::AsyncRead;
 
 use crate::{
+    DTO, Error, ErrorStep, OpRequest, Result,
     op::{
-        fs::{Entry, FSState, CHUNK_LEN},
         EntityAndObjectDTO, OID_ENTITY_FS,
+        fs::{CHUNK_LEN, Entry, FSState},
     },
-    Error, ErrorStep, OpRequest, Result, DTO,
 };
 
 #[derive(Debug, Deserialize)]
@@ -104,7 +104,7 @@ async fn make(db: &impl DB, r: OpRequest<MakeDTO>, is_dir: bool) -> Result<u32> 
                             object: child_id,
                             type_name: "fs-item",
                         },
-                    ]))
+                    ]));
                 }
             },
             None => {
@@ -179,7 +179,7 @@ fn get_children(fs: &mut FSState, owner: u32, id: u32) -> Result<&mut BTreeMap<S
                     object: id,
                     type_name: "fs-item",
                 },
-            ]))
+            ]));
         }
     };
     Ok(children)
@@ -311,7 +311,7 @@ pub async fn fs_direct_move(db: &impl DB, r: OpRequest<MoveDTO>) -> Result<()> {
             return Err(Error::new([ErrorStep::IncoherentFS {
                 owner,
                 id: old_parent_id,
-            }]))
+            }]));
         }
     }
 

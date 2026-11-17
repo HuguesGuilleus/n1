@@ -10,5 +10,4 @@ bytes = { workspace = true }
 tokio = { workspace = true }
 rmp-serde = { workspace = true }
 serde = { workspace = true }
-serde_json = { workspace = true }
 urlencoding = { workspace = true }

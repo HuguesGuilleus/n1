@@ -5,14 +5,14 @@ use std::{
 
 use bytes::Bytes;
 use tokio::{
-    fs::{create_dir_all, read, remove_dir_all, remove_file, try_exists, write, File},
+    fs::{File, create_dir_all, read, remove_dir_all, remove_file, try_exists, write},
     io::AsyncReadExt,
     sync::Mutex,
 };
 
 use crate::{
-    db::{DBError, DB_RESERVED},
-    Page, DB,
+    DB, Page,
+    db::{DB_RESERVED, DBError},
 };
 
 #[derive(Debug)]

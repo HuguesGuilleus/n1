@@ -5,7 +5,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use crate::{db::DBError, Page};
+use crate::{Page, db::DBError};
 use bytes::Bytes;
 use tokio::sync::Mutex;
 

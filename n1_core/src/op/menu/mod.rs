@@ -54,8 +54,7 @@ pub async fn menu_console(_: &impl DB, r: OpRequest<()>) -> Result<String> {
                     .access_info(owner, OID_ENTITY_BIO)
                     .map(|_| H - "a.bl href=/_bio/" - owner + lang.bio)
                 + token.access_info(owner, OID_ENTITY_FS).map(|_| {
-                    H - "a.bl href=/_fs_index/" - EntityAndObjectNullDTO { owner, object: 0 }
-                        + lang.fs
+                    H - "a.bl href=/_fs/" - EntityAndObjectNullDTO { owner, object: 0 } + lang.fs
                 })
                 + token
                     .access_info(owner, OID_ENTITY_WIKI)

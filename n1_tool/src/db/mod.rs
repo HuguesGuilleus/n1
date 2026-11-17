@@ -7,9 +7,9 @@ mod page;
 use std::fmt::Debug;
 
 use bytes::Bytes;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
-pub use chunks::{chuncks_len, read_to_chunks, Chunk, Chunks};
+pub use chunks::{Chunk, Chunks, chuncks_len, read_to_chunks};
 pub use db_directory::DBDirectory;
 pub use db_mem::DBMemory;
 pub use db_onefile::DBOneFile;

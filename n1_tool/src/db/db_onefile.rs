@@ -14,7 +14,7 @@ use tokio::{
 };
 
 use super::{DB, DB_RESERVED};
-use crate::{db::DBError, Page};
+use crate::{Page, db::DBError};
 
 const MAGIC: [u8; 8] = *b"Kventry_";
 

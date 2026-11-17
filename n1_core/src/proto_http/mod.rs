@@ -3,7 +3,7 @@ use std::io;
 use std::sync::Arc;
 
 use bytes::Bytes;
-use n1_html::{Html, H};
+use n1_html::{H, Html};
 use n1_tool::mime::REDIRECT;
 use serde::Serialize;
 use tokio::io::{AsyncRead, AsyncReadExt};
@@ -11,13 +11,13 @@ use tokio::net::TcpListener;
 use tokio::spawn;
 
 use crate::op::login::logout_console;
-use crate::op::{self, Common, Token, DTO, URLDTO};
+use crate::op::{self, Common, DTO, Token, URLDTO};
 use crate::token::{token_decode, token_encode};
-use crate::{errs, front, Error, ErrorCategory, ErrorStep, OpRequest, Result};
+use crate::{Error, ErrorCategory, ErrorStep, OpRequest, Result, errs, front};
 use n1_tool::proto_http::{
-    next_req, write_response, HTTPParser, HTTPRequest, Response, ResponseBody, StatusHTTP,
+    HTTPParser, HTTPRequest, Response, ResponseBody, StatusHTTP, next_req, write_response,
 };
-use n1_tool::{mime, Chunk, Chunks, DB};
+use n1_tool::{Chunk, Chunks, DB, mime};
 
 #[derive(Clone)]
 pub struct HTTPServer<B: DB> {
@@ -74,7 +74,7 @@ pub async fn handle<R: AsyncRead + Unpin + Send, C: DB>(
         "_auth_global_admin" => with_url(s, r, op::auth::auth_global_admin).await,
         "_auth_login" => with_url(s, r, op::auth::login::login_console).await,
         "_bio" => with_url(s, r, op::bio::console).await,
-        "_fs_index" => with_url(s, r, op::fs::fs_direct_index).await,
+        "_fs" => with_url(s, r, op::fs::fs_direct_index).await,
         "_home" => with_url(s, r, op::home::home_console).await,
         "_wiki_new" => with_url(s, r, op::wiki::render_priv_new).await,
         "_wiki_article" => with_url(s, r, op::wiki::render_priv_page).await,
