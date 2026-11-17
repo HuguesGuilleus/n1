@@ -33,10 +33,10 @@
 ///
 /// A more realistic example:
 /// ```rust
-/// use n1_html::{Html, js};
+/// use n1_html::{Html, js_const};
 ///
 /// let raw = r#"document.querySelectorAll("time").forEach(t=>t.innerText=new Intl.DateTimeFormat(document.documentElement.lang,{dateStyle:"full",timeStyle:"long"}).format(new Date(parseInt(t.innerText)*1000)));"#;
-/// let with_js = js!(
+/// let with_js = js_const!(
 ///     document.querySelectorAll("time").forEach(t =>
 ///         t.innerText = new Intl.DateTimeFormat(document.documentElement.lang, {
 ///             dateStyle: "full",

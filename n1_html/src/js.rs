@@ -136,20 +136,8 @@ macro_rules! js {
     (void) => ( $crate::DirectHTML("void ") );
     (yield) => ( $crate::DirectHTML("yield ") );
 
-    ($i:ident) => {
-        $crate::DirectHTML(stringify!($i))
-    };
-    ($l:literal) => {
-        $crate::DirectHTML(stringify!($l))
-    };
-
-    (($($v:tt)*)) => {
-        $crate::H + $crate::DirectHTML("(") $(+ js!($v))* + $crate::DirectHTML(")")
-    };
-
-    ([$($v:tt)*]) => {
-        $crate::H + $crate::DirectHTML("[") $(+ js!($v))* + $crate::DirectHTML("]")
-    };
+    ($i:ident) => { $crate::DirectHTML(stringify!($i)) };
+    ($l:literal) => { $crate::DirectHTML(stringify!($l)) };
 
     ({regexp $r:literal}) => {
         $crate::DirectHTML(concat!("/", $r, "/"))
@@ -163,11 +151,53 @@ macro_rules! js {
         $crate::J( $e )
     };
 
-    ({$($x:tt)*}) => {
-        $crate::H + $crate::DirectHTML("{") $(+ js!($x) )* + $crate::DirectHTML("}")
+    (($($v:tt)*)) => {
+        $crate::HtmlFn {
+            render_fn: |buf: &mut String| {
+                $crate::DirectHTML("(").render(buf);
+                $( js!($v).render(buf); )*
+                $crate::DirectHTML(")").render(buf);
+            },
+            size_fn: || {
+                2 $( + js!($v).size() )*
+            },
+        }
     };
 
-    ($($token:tt)*) => {
-        [ $crate::H $( + js!($token) )* ]
+    ([$($v:tt)*]) => {
+        $crate::HtmlFn {
+            render_fn: |buf: &mut String| {
+                $crate::DirectHTML("[").render(buf);
+                $( js!($v).render(buf); )*
+                $crate::DirectHTML("]").render(buf);
+            },
+            size_fn:   || {
+                2 $( + js!($v).size() )*
+            },
+        }
+    };
+
+    ({$($v:tt)*}) => {
+        $crate::HtmlFn {
+            render_fn: |buf: &mut String| {
+                $crate::DirectHTML("{").render(buf);
+                $( js!($v).render(buf); )*
+                $crate::DirectHTML("}").render(buf);
+            },
+            size_fn: || {
+                2 $( + js!($v).size() )*
+            },
+        }
+    };
+
+    ($($v:tt)*) => {
+        $crate::HtmlFn {
+            render_fn: |buf: &mut String| {
+                $( js!($v).render(buf); )*
+            },
+            size_fn: || {
+                0 $( + js!($v).size() )*
+            },
+        }
     };
 }

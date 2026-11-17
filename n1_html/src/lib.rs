@@ -171,6 +171,20 @@ impl<F: Fn() -> I, I: Iterator<Item = U>, U: Html> Html for F {
     }
 }
 
+pub struct HtmlFn<F: Fn(&mut String), G: Fn() -> usize> {
+    pub render_fn: F,
+    pub size_fn: G,
+}
+
+impl<F: Fn(&mut String), G: Fn() -> usize> Html for HtmlFn<F, G> {
+    fn render(&self, buf: &mut String) {
+        (self.render_fn)(buf);
+    }
+    fn size(&self) -> usize {
+        (self.size_fn)()
+    }
+}
+
 /* HTML Node */
 
 #[derive(Debug)]
