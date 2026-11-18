@@ -1,7 +1,6 @@
 use std::iter::once;
 
-use n1_html::{DirectHTML, H, Html};
-use n1_js::js;
+use n1_html::{H, Html, js};
 use n1_tool::DB;
 
 use crate::{
@@ -67,7 +66,7 @@ pub async fn auth_global_admin(_: &impl DB, r: OpRequest<()>) -> Result<String> 
                                 }
                         })
                     }]]]
-            + [H - "script" + [H + "const owner=" + true + ","] + DirectHTML(js!(true)) + ""]
+            + [H - "script" + js! {} + ""]
             + ""]];
 
     Ok(console.render_page())

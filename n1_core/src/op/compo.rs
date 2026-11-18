@@ -57,20 +57,6 @@ pub const LOGIN_JS_CONNECTED: DirectHTML = js_const! {
     new BroadcastChannel("auth").onmessage = _ => location.reload();
 };
 
-/// JS script to fetch api and indicate when request end and his sttaus.
-pub const FETCHER_JS: DirectHTML = js_const! {
-    fetcher = (_promise, _out) => (
-        _out.innerText = "[...]",
-        _promise.then(async _response => {
-            if (!_response.ok ) throw await _response.text();
-            _out.innerText = "[OK]";
-        }).catch(_err => {
-            _out.innerText = "[!!!] " + _err;
-            throw _err;
-        })
-    );
-};
-
 /// Define `F` a JS function to handle request promise.
 /// Define it within a constant declaration.
 pub fn fetcher_js(lang: &'static Lang) -> impl Html {

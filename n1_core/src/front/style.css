@@ -6,7 +6,8 @@
 	--c: white;
 }
 
-[hidden] {
+[hidden],
+#out:empty {
 	display: none !important;
 }
 

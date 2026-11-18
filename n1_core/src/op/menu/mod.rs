@@ -69,7 +69,7 @@ pub async fn menu_console(_: &impl DB, r: OpRequest<()>) -> Result<String> {
         + [H - "head" + front::HEAD + [H - "title" + lang.common_menu]]
         + [H - "body"
             + [H - "header.fh.gap"
-                + [H - "h1.bl" + lang.common_menu + " @" + &names[0].1]
+                + [H - "h1.bl" + " @" + &names[0].1 + " " + lang.common_menu]
                 + compo::header_menu_logged(lang)]
             + [H - "main.w"
                 + [H + || {

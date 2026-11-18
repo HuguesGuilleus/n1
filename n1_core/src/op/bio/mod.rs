@@ -5,16 +5,15 @@
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
-use n1_html::{js, Html, H, Q};
-use n1_tool::{mime, DB};
+use n1_html::{H, Html, Q, js};
+use n1_tool::{DB, mime};
 
 use crate::{
-    front,
+    Common, DTO, ErrorStep, OpRequest, Result, front,
     op::{
-        compo::{self, fetcher_js, LOGIN_JS_CONNECTED, TIME_JS},
         OID_ENTITY_BIO,
+        compo::{self, LOGIN_JS_CONNECTED, TIME_JS, fetcher_js},
     },
-    Common, ErrorStep, OpRequest, Result, DTO,
 };
 
 /// Information stored for on entity.
@@ -99,7 +98,7 @@ async fn generate_one_page(
         + [H - "head" + front::HEAD + [H - "title" + "@" + entity_name]]
         + [H - "body"
             + compo::goto_main(lang)
-            + [H - "header.fh"
+            + [H - "header.fh.gap"
                 + [H - "h1.bl" + "@" + entity_name]
                 + compo::header_menu(&lang)
                 + ""]
@@ -157,9 +156,9 @@ pub async fn console(db: &impl DB, r: OpRequest<u32>) -> Result<String> {
         + [H - "head" + front::HEAD + [H - "title" + lang.bio_edit_page + &entity_name]]
         + [H - "body"
             + compo::goto_main(lang)
-            + [H - "header.fh"
+            + [H - "header.fh.gap"
                 + [H - "h1.bl" + lang.bio_edit_page + &entity_name]
-                + compo::header_menu(lang)
+                + compo::header_menu_logged(lang)
                 + ""]
             + [H - "main.w id=main"
                 + [H + || {

@@ -1,10 +1,12 @@
-use n1_html::{DirectHTML, H, Html, Q};
-use n1_js::js;
+use n1_html::{H, Html, js};
 use n1_tool::DB;
 use serde::Deserialize;
 
 use super::{super::compo, DTO, Entity, OpRequest, Token, TokenItem};
-use crate::{Result, errs, front, op::Lang};
+use crate::{
+    Result, errs, front,
+    op::{Lang, compo::fetcher_js},
+};
 
 #[derive(Debug, Deserialize)]
 pub struct LoginDTO {
@@ -56,7 +58,6 @@ pub async fn login_console(_: &impl DB, request: OpRequest<()>) -> Result<String
             + compo::goto_main(lang)
             + [H - "header.fh"
                 + [H - "h1.bl" + lang.login_title]
-                + compo::header_menu(lang)
                 + ""]
             + [H - "main.w id=main"
                 + [H - "form.act.bb.fv.gap id=form"
@@ -64,31 +65,28 @@ pub async fn login_console(_: &impl DB, request: OpRequest<()>) -> Result<String
                     + [H - "input.bl id=username autocomplete=username placeholder='eve'"]
                     + [H - "label for=password" + lang.login_password]
                     + [H - "input.bl type=password id=password autocomplete=current-password placeholder='a5_6yV'"]
-                    + [H - "div.fh.gap"
-                        + [H - "input.bl type=submit value=" - Q(lang.login_send)]
-                        + [H - "span.mv id=out"]
+                    + [H - "div.fh"
+                        + [H - "button.bl type=submit" + lang.login_send]
                         + ""]
+                    + [H - "pre id=out"]
                     + ""]
                 + ""]
             + ""]
-        + [H - "script"
-            + "const "
-            + compo::FETCHER_JS
-            + ";"
-            + DirectHTML(js!(
-                form.onsubmit = _event => _event.preventDefault() | _event.stopPropagation() |
-                    fetcher(fetch("/:auth.login", {
+        + [H - "script" + js!{
+            const {html fetcher_js(lang)};
+                form.onsubmit = e => e.preventDefault() |
+                    F(fetch("/:auth.login", {
                         method: "PUT",
                         body: JSON.stringify({
                             name: username.value,
                             password: password.value,
                         }),
-                    }), out).then(_ => {
+                    }), out, 1).then(_ => {
                         localStorage.setItem("auth", 1);
                         new BroadcastChannel("auth").postMessage(1);
                         location = "/_";
                    });
-            ))]
+        }]
         + ""]
     .render_page())
 }
@@ -98,17 +96,17 @@ pub fn logout_console(lang: &Lang) -> String {
         + [H - "head" + front::HEAD + [H - "title" + lang.logout_title]]
         + [H - "body"
             + compo::goto_main(lang)
-            + [H - "header.fh"
+            + [H - "header.fh.gap"
                 + [H - "h1.bl" + lang.logout_title]
                 + [H - "a.bl.mlauto href=/_auth_login" + lang.login_title]
                 + ""]
             + [H - "main.w id=main" + lang.logout_info]
             + ""]
         + [H - "script"
-            + DirectHTML(js!(
+            + js! {
                 localStorage.removeItem("auth");
                 new BroadcastChannel("auth").postMessage(1);
-            ))]
+            }]
         + ""]
     .render_page()
 }
