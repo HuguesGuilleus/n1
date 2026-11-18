@@ -3,18 +3,18 @@
 //! HURL test file: <https://github.com/HuguesGuilleus/n1/blob/main/n1_core/tests/bio.hurl>
 
 use bytes::Bytes;
-use n1_js::js;
 use serde::{Deserialize, Serialize};
 
-use n1_html::{DirectHTML, H, Html, Q};
-use n1_tool::{DB, mime};
+use n1_html::{js, Html, H, Q};
+use n1_tool::{mime, DB};
 
 use crate::{
-    Common, DTO, ErrorStep, OpRequest, Result, front,
+    front,
     op::{
+        compo::{self, fetcher_js, LOGIN_JS_CONNECTED, TIME_JS},
         OID_ENTITY_BIO,
-        compo::{self, FETCHER_JS, LOGIN_JS, TIME_JS},
     },
+    Common, ErrorStep, OpRequest, Result, DTO,
 };
 
 /// Information stored for on entity.
@@ -181,19 +181,19 @@ pub async fn console(db: &impl DB, r: OpRequest<u32>) -> Result<String> {
                 + compo::footer_home(lang)
                 + ""]
             + [H - "script"
-                + LOGIN_JS
-                + TIME_JS
-                + [H + "const owner=" + r.dto + ","]
-                + [H + FETCHER_JS + ","]
-                + DirectHTML(js!(
-                    send = () => fetcher(fetch("/:bio.set/", {
+                + js! {
+                    {html LOGIN_JS_CONNECTED}
+                    {html TIME_JS}
+                    const owner = {extern r.dto},
+                    {html fetcher_js(lang)},
+                    send = () => F(fetch("/:bio.set/", {
                         method: "PUT",
                         body: JSON.stringify({
                             owner,
                             content: content.innerText,
                         }),
                     }), out);
-                ))
+                }
                 + ""]
             + ""]];
 
