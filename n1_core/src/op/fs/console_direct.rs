@@ -138,13 +138,34 @@ pub async fn fs_direct_index(_: &impl DB, r: OpRequest<EntityAndObjectNullDTO>) 
                     {html compo::NEW_ELEMENT_JS},
                     method = "PUT",
                     b = document.body,
-                    rm = event => {
+                    rm = async event => {
                         const
                             p = event.target.parentElement,
                             d = p.dataset,
                             o = N("span", 0),
                             M = {extern lang.fs_remove} + ": " + d.name;
-                        if (confirm(M)) {
+                        if ("popover" in HTMLElement.prototype
+                            ? await new Promise(r => {
+                                const p = N("div.act.bb", {popover:"auto"},
+                                        {extern lang.common_remove_confirm} + ": " + d.name,
+                                        N(".mt.fh.gap", 0,
+                                            N("button.bl", {
+                                            onclick() {
+                                                p.remove();
+                                            }
+                                            }, {extern lang.common_cancel}),
+                                            N("button.bl", {
+                                                onclick() {
+                                                    r(1);
+                                                    p.remove();
+                                                }
+                                            }, {extern lang.fs_remove})
+                                        ),
+                                    );
+                                document.body.append(p);
+                                p.showPopover();
+                            })
+                            : confirm(M)) {
                             out.append(N("", 0, M + " => ", o));
                             F(fetch("/:fs.direct.rm", {
                                 method,

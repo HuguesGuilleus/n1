@@ -9,6 +9,8 @@ pub struct Lang {
 
     /// Slug of administrator.
     pub common_administor: DirectHTML<'static>,
+    /// Cancel an operation
+    pub common_cancel: DirectHTML<'static>,
     /// Help text of download button.
     pub common_download: DirectHTML<'static>,
     /// Edit the page button text.

@@ -8,6 +8,7 @@ pub const LANG_EN: Lang = Lang {
     auth_admin_global: DirectHTML("Global administration"),
 
     common_administor: DirectHTML("Administrator"),
+    common_cancel: DirectHTML("Cancel"),
     common_download: DirectHTML("Download"),
     common_edit: DirectHTML("Edit"),
     common_gotomain: DirectHTML("Go to main content"),
