@@ -1,5 +1,7 @@
+use std::collections::BTreeMap;
+
 use n1_html::{H, Html, Q, js};
-use n1_tool::DB;
+use n1_tool::{DB, chuncks_len};
 
 use crate::{
     ErrorStep, OpRequest, Result, front,
@@ -25,17 +27,33 @@ pub async fn fs_direct_index(_: &impl DB, r: OpRequest<EntityAndObjectNullDTO>) 
         s
     };
 
-    let children = match fs
-        .entries
-        .get(&r.dto.object)
-        .ok_or(ErrorStep::NotFoundObject {
-            owner: r.dto.owner,
-            object: r.dto.object,
-            type_name: "fs-entry",
-        })? {
-        Entry::Directory { children, .. } => children,
-        Entry::File { .. } => return Err(ErrorStep::PathPartIsFile { id: r.dto.object }.into()),
-    };
+    let children: &BTreeMap<String, u32> =
+        match fs
+            .entries
+            .get(&r.dto.object)
+            .ok_or(ErrorStep::NotFoundObject {
+                owner: r.dto.owner,
+                object: r.dto.object,
+                type_name: "fs-entry",
+            })? {
+            Entry::Directory { children, .. } => children,
+            Entry::File { .. } => return Err(ErrorStep::PathPartIsFile { id: r.dto.object }.into()),
+        };
+
+    let mut children = children
+        .iter()
+        .map(|(name, id)| -> Result<(&str, u32, &Entry)> {
+            Ok((
+                name.as_str(),
+                *id,
+                fs.entries.get(id).ok_or(ErrorStep::IncoherentFS {
+                    owner: owner.id(),
+                    id: *id,
+                })?,
+            ))
+        })
+        .collect::<Result<Vec<(&str, u32, &Entry)>>>()?;
+    children.sort_by(|a, b| a.0.cmp(b.0));
 
     let lang = r.common.lang;
     let page = [H - "html lang=" - lang.code
@@ -79,22 +97,32 @@ pub async fn fs_direct_index(_: &impl DB, r: OpRequest<EntityAndObjectNullDTO>) 
             + [H - "pre id=out"]
             + [H - "ul.p0"
                 + [H + || {
-                    children.iter().map(|(name, id)| {
-                        [H - "li.fh.gap data-id=" - *id - " data-name=" - Q(name)
+                    children.iter().map(|&(name, id, entry)| {
+                        [H - "li.fh.gap.mv data-id=" - id - " data-name=" - Q(name)
                             + [H - "a.bg href="
                                 - EntityAndObjectNullDTO {
                                     owner: owner.id(),
-                                    object: *id,
+                                    object: id,
                                 }
                                 + name]
-                            + [H - "a.bg href=/;fs.direct.get/"
-                                - EntityAndObjectDTO {
-                                    owner: owner.id(),
-                                    object: *id,
+                            + match entry {
+                                Entry::Directory { children, .. } => {
+                                    [H + "[" + children.len() + "]"]
                                 }
-                                - " download="
-                                - Q(name)
-                                + lang.common_download]
+                                Entry::File { chunks, .. } => {
+                                    [H + "[" + chuncks_len(chunks) + "B]"]
+                                }
+                            }
+                            + entry.is_file().then(|| {
+                                [H - "a.bg href=/;fs.direct.get/"
+                                    - EntityAndObjectDTO {
+                                        owner: owner.id(),
+                                        object: id,
+                                    }
+                                    - " download="
+                                    - Q(name)
+                                    + lang.common_download]
+                            })
                             + [H - "button.bg onclick=rm(event)" + lang.fs_remove]
                             + ""]
                     })

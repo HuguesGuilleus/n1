@@ -20,7 +20,6 @@ const CHUNK_LEN: usize = 65536;
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct FSState {
     pub entries: BTreeMap<u32, Entry>,
-
     pub inc: u32,
 }
 
@@ -61,4 +60,19 @@ pub async fn init(db: &impl DB, common: &Common) -> Result<()> {
         *fs = db.obj_get(id, OID_ENTITY_FS as u32).await?;
     }
     Ok(())
+}
+
+impl Entry {
+    pub fn is_file(&self) -> bool {
+        match self {
+            Entry::Directory { .. } => false,
+            Entry::File { .. } => true,
+        }
+    }
+    pub fn is_dir(&self) -> bool {
+        match self {
+            Entry::Directory { .. } => true,
+            Entry::File { .. } => false,
+        }
+    }
 }
