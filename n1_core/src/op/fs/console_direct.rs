@@ -123,6 +123,7 @@ pub async fn fs_direct_index(_: &impl DB, r: OpRequest<EntityAndObjectNullDTO>) 
                                     - Q(name)
                                     + lang.common_download]
                             })
+                            + [H - "button.bg onclick=move(event)" + lang.fs_move]
                             + [H - "button.bg onclick=rm(event)" + lang.fs_remove]
                             + ""]
                     })
@@ -138,6 +139,48 @@ pub async fn fs_direct_index(_: &impl DB, r: OpRequest<EntityAndObjectNullDTO>) 
                     {html compo::NEW_ELEMENT_JS},
                     method = "PUT",
                     b = document.body,
+                    move = async event => {
+                        const
+                            p = event.target.parentElement,
+                            d = p.dataset,
+                            o = N("span", 0),
+                            i = N("input.bl", {value: path + d.name}),
+                            M = {extern lang.fs_move} + ": " + path + d.name,
+                            v = "popover" in HTMLElement.prototype
+                                ? await new Promise(r => {
+                                    const p = N("div.act.bb", {popover: "auto"},
+                                            M,
+                                            N(".mt.fh.gap", 0,
+                                                i,
+                                                N("button.bl", {
+                                                    onclick() {
+                                                        p.remove();
+                                                    }
+                                                }, {extern lang.common_cancel}),
+                                                N("button.bl", {
+                                                    onclick() {
+                                                        r(i.value);
+                                                        p.remove();
+                                                    }
+                                                }, {extern lang.fs_move})
+                                            ),
+                                        );
+                                    document.body.append(p);
+                                    p.showPopover();
+                                })
+                                : prompt(M, path + d.name);
+                        if (v) {
+                            out.append(N("", 0, {extern lang.fs_move} + v + " => ", o));
+                            await F(fetch("/:fs.direct.move", {
+                                method,
+                                body: JSON.stringify({
+                                    owner,
+                                    object: parseInt(d.id),
+                                    path: v,
+                                }),
+                            }), o);
+                        }
+                    },
                     rm = async event => {
                         const
                             p = event.target.parentElement,
@@ -146,13 +189,13 @@ pub async fn fs_direct_index(_: &impl DB, r: OpRequest<EntityAndObjectNullDTO>) 
                             M = {extern lang.fs_remove} + ": " + d.name;
                         if ("popover" in HTMLElement.prototype
                             ? await new Promise(r => {
-                                const p = N("div.act.bb", {popover:"auto"},
+                                const p = N("div.act.bb", {popover: "auto"},
                                         {extern lang.common_remove_confirm} + ": " + d.name,
                                         N(".mt.fh.gap", 0,
                                             N("button.bl", {
-                                            onclick() {
-                                                p.remove();
-                                            }
+                                                onclick() {
+                                                    p.remove();
+                                                }
                                             }, {extern lang.common_cancel}),
                                             N("button.bl", {
                                                 onclick() {
@@ -167,13 +210,14 @@ pub async fn fs_direct_index(_: &impl DB, r: OpRequest<EntityAndObjectNullDTO>) 
                             })
                             : confirm(M)) {
                             out.append(N("", 0, M + " => ", o));
-                            F(fetch("/:fs.direct.rm", {
+                            await F(fetch("/:fs.direct.rm", {
                                 method,
                                 body: JSON.stringify({
                                     owner,
                                     object: parseInt(d.id),
                                 }),
-                            }), o).then(_ => p.remove())
+                            }), o);
+                            p.remove();
                         }
                     },
                     newDir = async _ => {

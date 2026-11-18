@@ -41,11 +41,13 @@ pub struct Lang {
     pub fs: DirectHTML<'static>,
     /// Title for directory.
     pub fs_directory: DirectHTML<'static>,
+    /// Help text to move an entry.
+    pub fs_move: DirectHTML<'static>,
     /// Create a new directory.
     pub fs_new_directory: DirectHTML<'static>,
-    /// Help text to remove a file or a directory.
+    /// Help text to remove an entry.
     pub fs_remove: DirectHTML<'static>,
-    /// Label text to remove a file or a directory.
+    /// Label text to upload a file.
     pub fs_upload: DirectHTML<'static>,
 
     /// Home anchor.
