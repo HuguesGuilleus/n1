@@ -90,6 +90,23 @@ impl<'a> Html for DirectHTML<'a> {
     }
 }
 
+/// JS ident or keyword, add space if need and write this.
+pub struct DirectJSWord<'a>(pub &'a str);
+impl<'a> Html for DirectJSWord<'a> {
+    fn render(&self, buf: &mut String) {
+        match buf.as_bytes().last() {
+            Some(b'_' | b'0'..=b'9' | b'A'..=b'Z' | b'a'..=b'z') => {
+                buf.push(' ');
+            }
+            _ => {}
+        }
+        buf.push_str(self.0);
+    }
+    fn size(&self) -> usize {
+        self.0.len()
+    }
+}
+
 impl<T: Html> Html for Option<T> {
     fn render(&self, buf: &mut String) {
         if let Some(sub) = self {
@@ -171,17 +188,17 @@ impl<F: Fn() -> I, I: Iterator<Item = U>, U: Html> Html for F {
     }
 }
 
-pub struct HtmlFn<F: Fn(&mut String), G: Fn() -> usize> {
+pub struct HtmlFn<F: Fn(&mut String)> {
     pub render_fn: F,
-    pub size_fn: G,
+    pub len: usize,
 }
 
-impl<F: Fn(&mut String), G: Fn() -> usize> Html for HtmlFn<F, G> {
+impl<F: Fn(&mut String)> Html for HtmlFn<F> {
     fn render(&self, buf: &mut String) {
         (self.render_fn)(buf);
     }
     fn size(&self) -> usize {
-        (self.size_fn)()
+        self.len
     }
 }
 
