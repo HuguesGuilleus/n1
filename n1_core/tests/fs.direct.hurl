@@ -61,19 +61,15 @@ HTTP 200
 [Asserts]
 jsonpath "$.id" == 0
 jsonpath "$.is_dir" == true
-jsonpath "$.content" == 0
 jsonpath "$.children.dir.id" toString == {{dirRootDir}}
 jsonpath "$.children.dir.is_dir" == true
-jsonpath "$.children.dir.content" == 0
 jsonpath "$.children.dir.children.sub.id" != 0
 jsonpath "$.children.dir.children.sub.is_dir" == true
-jsonpath "$.children.dir.children.sub.content" == 0
 jsonpath "$.children.dir.children.sub.children['demo.txt'].id" toString == {{fileID}}
 jsonpath "$.children.dir.children.sub.children['demo.txt'].is_dir" == false
 jsonpath "$.children.dir.children.sub.children['demo.txt'].content" == 266668
 jsonpath "$.children.dir.children.subdir1.id" toString == {{dirID}}
 jsonpath "$.children.dir.children.subdir1.is_dir" == true
-jsonpath "$.children.dir.children.subdir1.content" == 0
 
 PUT http://localhost:8000/:fs.direct.rm/
 Cookie: auth={{cookie}}

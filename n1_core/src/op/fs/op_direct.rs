@@ -436,8 +436,10 @@ pub async fn fs_direct_resolve(_: &impl DB, r: OpRequest<MakeDTO>) -> Result<u32
 pub struct Branch {
     id: u32,
     is_dir: bool,
-    content: usize,
-    children: BTreeMap<String, Branch>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    content: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    children: Option<BTreeMap<String, Branch>>,
 }
 pub async fn fs_direct_tree(_: &impl DB, r: OpRequest<u32>) -> Result<Branch> {
     r.token.check_access_read(r.dto, OID_ENTITY_FS)?;
@@ -462,15 +464,15 @@ pub async fn fs_direct_tree(_: &impl DB, r: OpRequest<u32>) -> Result<Branch> {
                 Ok(Branch {
                     id,
                     is_dir: true,
-                    content: 0,
-                    children: branch_children,
+                    content: None,
+                    children: Some(branch_children),
                 })
             }
             Entry::File { chunks, .. } => Ok(Branch {
                 id,
                 is_dir: false,
-                content: chuncks_len(chunks),
-                children: BTreeMap::new(),
+                content: Some(chuncks_len(chunks)),
+                children: None,
             }),
         }
     }
