@@ -2,7 +2,7 @@ use std::{io, net::SocketAddr, sync::Arc};
 
 use n1_core::{
     init_dev,
-    proto_http::{self, HTTPServer},
+    proto_http::{HTTPServer, HTTPServerArc},
 };
 use tokio::net::TcpListener;
 
@@ -17,13 +17,14 @@ async fn main() -> io::Result<()> {
         .await
         .map_err(|err| io::Error::new(io::ErrorKind::Other, format!("{:?}", err)))?;
 
-    let server = Arc::new(HTTPServer {
-        db: Arc::new(db),
+    let server = HTTPServerArc(Arc::new(HTTPServer {
+        db: db,
         common,
         token_key,
-    });
+    }));
 
     let addr: SocketAddr = ([127, 0, 0, 1], 8000).into();
     let listener = TcpListener::bind(addr).await?;
-    proto_http::run(listener, server.clone()).await
+
+    n1_tool::proto_http::run(listener, server).await
 }

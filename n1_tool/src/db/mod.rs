@@ -7,9 +7,9 @@ mod page;
 use std::fmt::Debug;
 
 use bytes::Bytes;
-use serde::{Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Serialize};
 
-pub use chunks::{Chunk, Chunks, chuncks_len, read_to_chunks};
+pub use chunks::{chuncks_len, read_to_chunks, Chunk, Chunks};
 pub use db_directory::DBDirectory;
 pub use db_mem::DBMemory;
 pub use db_onefile::DBOneFile;
@@ -25,32 +25,33 @@ pub trait DB: Debug + Send + Sync {
         &self,
         owner: u32,
         object: u32,
-    ) -> impl Future<Output = Result<Bytes, DBError>> + Send;
+    ) -> impl Future<Output = Result<Bytes, DBError>> + Send + Sync;
     fn fs_set(
         &self,
         owner: u32,
         object: u32,
         data: Bytes,
-    ) -> impl Future<Output = Result<(), DBError>> + Send;
+    ) -> impl Future<Output = Result<(), DBError>> + Send + Sync;
     fn fs_rm_object(
         &self,
         owner: u32,
         object: u32,
-    ) -> impl Future<Output = Result<(), DBError>> + Send;
-    fn fs_rm_owner(&self, owner: u32) -> impl Future<Output = Result<(), DBError>> + Send;
-    fn fs_new_owner(&self) -> impl Future<Output = Result<u32, DBError>> + Send;
-    fn fs_new_object(&self, owner: u32) -> impl Future<Output = Result<u32, DBError>> + Send;
+    ) -> impl Future<Output = Result<(), DBError>> + Send + Sync;
+    fn fs_rm_owner(&self, owner: u32) -> impl Future<Output = Result<(), DBError>> + Send + Sync;
+    fn fs_new_owner(&self) -> impl Future<Output = Result<u32, DBError>> + Send + Sync;
+    fn fs_new_object(&self, owner: u32)
+        -> impl Future<Output = Result<u32, DBError>> + Send + Sync;
 
     /// Get all keys of the database.
-    fn fs_keys(&self) -> impl Future<Output = Result<Vec<(u32, u32)>, DBError>> + Send;
+    fn fs_keys(&self) -> impl Future<Output = Result<Vec<(u32, u32)>, DBError>> + Send + Sync;
 
     /// Store/Fetch encoded object
-    fn obj_set<T: Serialize + Debug + Send>(
+    fn obj_set<T: Serialize + Debug + Send + Sync>(
         &self,
         owner: u32,
         object: u32,
         value: T,
-    ) -> impl Future<Output = Result<(), DBError>> + Send {
+    ) -> impl Future<Output = Result<(), DBError>> + Send + Sync {
         async move {
             let data = rmp_serde::to_vec_named(&value).map_err(|err| DBError::Encode(err))?;
             self.fs_set(owner, object, Bytes::from(data)).await
@@ -63,7 +64,7 @@ pub trait DB: Debug + Send + Sync {
         &self,
         owner: u32,
         object: u32,
-    ) -> impl Future<Output = Result<T, DBError>> + Send {
+    ) -> impl Future<Output = Result<T, DBError>> + Send + Sync {
         async move {
             match self.fs_get(owner, object).await {
                 Ok(data) => rmp_serde::from_slice(&data).map_err(|err| DBError::Decode(err)),
@@ -79,17 +80,17 @@ pub trait DB: Debug + Send + Sync {
         path: &str,
         mime: &'static str,
         data: Bytes,
-    ) -> impl Future<Output = Result<(), DBError>> + Send;
+    ) -> impl Future<Output = Result<(), DBError>> + Send + Sync;
 
     /// Get a page
     fn page_get(
         &self,
         path: &str,
-    ) -> impl Future<Output = Result<(&'static str, Bytes), DBError>> + Send;
+    ) -> impl Future<Output = Result<(&'static str, Bytes), DBError>> + Send + Sync;
     /// Delete all page with the prefix.
-    fn page_del(&self, prefix: &str) -> impl Future<Output = Result<(), DBError>> + Send;
+    fn page_del(&self, prefix: &str) -> impl Future<Output = Result<(), DBError>> + Send + Sync;
 
-    fn random(&self) -> impl Future<Output = Result<u32, DBError>> + Send;
+    fn random(&self) -> impl Future<Output = Result<u32, DBError>> + Send + Sync;
 
     // Get time, seconds since epoch.
     fn now(&self) -> Result<u64, DBError>;

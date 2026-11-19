@@ -8,6 +8,7 @@ pub struct HTTPParser {
     pub cursor_end: usize,
 }
 
+#[derive(Debug)]
 /// Meta information about the HTTP request.
 pub struct HTTPRequest {
     pub method: Method,

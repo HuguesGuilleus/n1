@@ -105,6 +105,7 @@ pub enum ErrorStep {
     NotFoundEntity {
         entity: u32,
     },
+    NotFoundHandler,
     NotFoundObject {
         owner: u32,
         object: u32,
@@ -165,6 +166,7 @@ impl ErrorStep {
             ErrorStep::NameTooLong { .. } => ErrorCategory::BadRequest,
             ErrorStep::NeedNoData => ErrorCategory::BadRequest,
             ErrorStep::NotFoundEntity { .. } => ErrorCategory::NotFound,
+            ErrorStep::NotFoundHandler => ErrorCategory::NotFound,
             ErrorStep::NotFoundObject { .. } => ErrorCategory::NotFound,
             ErrorStep::Parsing2Integer => ErrorCategory::BadRequest,
             ErrorStep::ParsingInteger { .. } => ErrorCategory::BadRequest,
@@ -221,6 +223,7 @@ impl ErrorStep {
             ErrorStep::NameTooLong { len } => format!("name too long: {len}"),
             ErrorStep::NeedNoData => "need no data".to_string(),
             ErrorStep::NotFoundEntity { entity } => format!("not found entity {entity}"),
+            ErrorStep::NotFoundHandler => "not found handler for the this request".to_string(),
             ErrorStep::NotFoundObject {
                 owner,
                 object,
