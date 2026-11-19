@@ -56,7 +56,7 @@
 /// assert_eq!(raw, &buff);
 /// ```
 ///
-/// Source: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators
+/// Source: <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators>
 #[macro_export]
 macro_rules! js {
     [$($v:tt)*] => {
@@ -73,60 +73,60 @@ macro_rules! js {
 
 #[macro_export]
 macro_rules! js_render {
-    ($buf:ident _) => ( $crate::DirectHTML("_").render($buf) );
-    ($buf:ident -) => ( $crate::DirectHTML("-").render($buf) );
-    ($buf:ident ,) => ( $crate::DirectHTML(",").render($buf) );
-    ($buf:ident ;) => ( $crate::DirectHTML(";").render($buf) );
-    ($buf:ident :) => ( $crate::DirectHTML(":").render($buf) );
-    ($buf:ident !) => ( $crate::DirectHTML("!").render($buf) );
-    ($buf:ident ?) => ( $crate::DirectHTML("?").render($buf) );
-    ($buf:ident .) => ( $crate::DirectHTML(".").render($buf) );
-    ($buf:ident @) => ( $crate::DirectHTML("@").render($buf) );
-    ($buf:ident *) => ( $crate::DirectHTML("*").render($buf) );
-    ($buf:ident /) => ( $crate::DirectHTML("/").render($buf) );
-    ($buf:ident &) => ( $crate::DirectHTML("&").render($buf) );
-    ($buf:ident #) => ( $crate::DirectHTML("#").render($buf) );
-    ($buf:ident %) => ( $crate::DirectHTML("%").render($buf) );
-    ($buf:ident ^) => ( $crate::DirectHTML("^").render($buf) );
-    ($buf:ident +) => ( $crate::DirectHTML("+").render($buf) );
-    ($buf:ident <) => ( $crate::DirectHTML("<").render($buf) );
-    ($buf:ident =) => ( $crate::DirectHTML("=").render($buf) );
-    ($buf:ident >) => ( $crate::DirectHTML(">").render($buf) );
-    ($buf:ident |) => ( $crate::DirectHTML("|").render($buf) );
-    ($buf:ident ~) => ( $crate::DirectHTML("~").render($buf) );
+    ($buf:ident _) => ( $buf.push_str("_") );
+    ($buf:ident -) => ( $buf.push_str("-") );
+    ($buf:ident ,) => ( $buf.push_str(",") );
+    ($buf:ident ;) => ( $buf.push_str(";") );
+    ($buf:ident :) => ( $buf.push_str(":") );
+    ($buf:ident !) => ( $buf.push_str("!") );
+    ($buf:ident ?) => ( $buf.push_str("?") );
+    ($buf:ident .) => ( $buf.push_str(".") );
+    ($buf:ident @) => ( $buf.push_str("@") );
+    ($buf:ident *) => ( $buf.push_str("*") );
+    ($buf:ident /) => ( $buf.push_str("/") );
+    ($buf:ident &) => ( $buf.push_str("&") );
+    ($buf:ident #) => ( $buf.push_str("#") );
+    ($buf:ident %) => ( $buf.push_str("%") );
+    ($buf:ident ^) => ( $buf.push_str("^") );
+    ($buf:ident +) => ( $buf.push_str("+") );
+    ($buf:ident <) => ( $buf.push_str("<") );
+    ($buf:ident =) => ( $buf.push_str("=") );
+    ($buf:ident >) => ( $buf.push_str(">") );
+    ($buf:ident |) => ( $buf.push_str("|") );
+    ($buf:ident ~) => ( $buf.push_str("~") );
 
-    ($buf:ident --) => ( $crate::DirectHTML("--").render($buf) );
-    ($buf:ident -=) => ( $crate::DirectHTML("-=").render($buf) );
-    ($buf:ident !=) => ( $crate::DirectHTML("!=").render($buf) );
-    ($buf:ident ??) => ( $crate::DirectHTML("??").render($buf) );
-    ($buf:ident ?.) => ( $crate::DirectHTML("?.").render($buf) );
-    ($buf:ident **) => ( $crate::DirectHTML("**").render($buf) );
-    ($buf:ident *=) => ( $crate::DirectHTML("*=").render($buf) );
-    ($buf:ident /=) => ( $crate::DirectHTML("/=").render($buf) );
-    ($buf:ident &&) => ( $crate::DirectHTML("&&").render($buf) );
-    ($buf:ident &=) => ( $crate::DirectHTML("&=").render($buf) );
-    ($buf:ident ^=) => ( $crate::DirectHTML("^=").render($buf) );
-    ($buf:ident ++) => ( $crate::DirectHTML("++").render($buf) );
-    ($buf:ident +=) => ( $crate::DirectHTML("+=").render($buf) );
-    ($buf:ident <<) => ( $crate::DirectHTML("<<").render($buf) );
-    ($buf:ident ==) => ( $crate::DirectHTML("==").render($buf) );
-    ($buf:ident =>) => ( $crate::DirectHTML("=>").render($buf) );
-    ($buf:ident |=) => ( $crate::DirectHTML("|=").render($buf) );
-    ($buf:ident ||) => ( $crate::DirectHTML("||").render($buf) );
+    ($buf:ident --) => ( $buf.push_str("--") );
+    ($buf:ident -=) => ( $buf.push_str("-=") );
+    ($buf:ident !=) => ( $buf.push_str("!=") );
+    ($buf:ident ??) => ( $buf.push_str("??") );
+    ($buf:ident ?.) => ( $buf.push_str("?.") );
+    ($buf:ident **) => ( $buf.push_str("**") );
+    ($buf:ident *=) => ( $buf.push_str("*=") );
+    ($buf:ident /=) => ( $buf.push_str("/=") );
+    ($buf:ident &&) => ( $buf.push_str("&&") );
+    ($buf:ident &=) => ( $buf.push_str("&=") );
+    ($buf:ident ^=) => ( $buf.push_str("^=") );
+    ($buf:ident ++) => ( $buf.push_str("++") );
+    ($buf:ident +=) => ( $buf.push_str("+=") );
+    ($buf:ident <<) => ( $buf.push_str("<<") );
+    ($buf:ident ==) => ( $buf.push_str("==") );
+    ($buf:ident =>) => ( $buf.push_str("=>") );
+    ($buf:ident |=) => ( $buf.push_str("|=") );
+    ($buf:ident ||) => ( $buf.push_str("||") );
 
-    ($buf:ident !==) => ( $crate::DirectHTML("!==").render($buf) );
-    ($buf:ident ??=) => ( $crate::DirectHTML("??=").render($buf) );
-    ($buf:ident ...) => ( $crate::DirectHTML("...").render($buf) );
-    ($buf:ident **=) => ( $crate::DirectHTML("**=").render($buf) );
-    ($buf:ident &&=) => ( $crate::DirectHTML("&&=").render($buf) );
-    ($buf:ident <<=) => ( $crate::DirectHTML("<<=").render($buf) );
-    ($buf:ident ===) => ( $crate::DirectHTML("===").render($buf) );
-    ($buf:ident >>=) => ( $crate::DirectHTML(">>=").render($buf) );
-    ($buf:ident >>>) => ( $crate::DirectHTML(">>>").render($buf) );
-    ($buf:ident >>>) => ( $crate::DirectHTML(">>>").render($buf) );
-    ($buf:ident ||=) => ( $crate::DirectHTML("||=").render($buf) );
+    ($buf:ident !==) => ( $buf.push_str("!==") );
+    ($buf:ident ??=) => ( $buf.push_str("??=") );
+    ($buf:ident ...) => ( $buf.push_str("...") );
+    ($buf:ident **=) => ( $buf.push_str("**=") );
+    ($buf:ident &&=) => ( $buf.push_str("&&=") );
+    ($buf:ident <<=) => ( $buf.push_str("<<=") );
+    ($buf:ident ===) => ( $buf.push_str("===") );
+    ($buf:ident >>=) => ( $buf.push_str(">>=") );
+    ($buf:ident >>>) => ( $buf.push_str(">>>") );
+    ($buf:ident >>>) => ( $buf.push_str(">>>") );
+    ($buf:ident ||=) => ( $buf.push_str("||=") );
 
-    ($buf:ident>>>=) => ( $crate::DirectHTML(">>>=").render($buf) );
+    ($buf:ident>>>=) => ( $buf.push_str(">>>=") );
 
     ($buf:ident async) => ( $crate::DirectJSWord("async").render($buf) );
     ($buf:ident await) => ( $crate::DirectJSWord("await").render($buf) );
@@ -154,7 +154,7 @@ macro_rules! js_render {
     ($buf:ident $l:literal) => { $crate::DirectJSWord(stringify!($l)).render($buf) };
 
     ($buf:ident {regexp $r:literal}) => {
-        $crate::DirectHTML(concat!("/", $r, "/")).render($buf)
+        $buf.push_str(concat!("/", $r, "/"))
     };
 
     ($buf:ident {html $e:expr}) => {
@@ -187,7 +187,7 @@ macro_rules! js_render {
         $buf.push('{');
         $( $crate::js_render!($buf $v) ; )*
         match $buf.as_bytes().last() {
-            Some(&b','  ) | Some(  &b';') => { $buf.pop(); }
+            Some(&b',' | &b';') => { $buf.pop(); }
             _ => { }
         }
         if $buf.as_bytes().last() == Some(&b',') {
@@ -277,7 +277,7 @@ macro_rules! js_size {
     (yield) => ( ( "yield ".len() ) );
 
     ($i:ident) => { stringify!($l).len() + 1 }; // +1 for space
-    ($l:literal) => { stringify!($l).len() };
+    ($l:literal) => { stringify!($l).len() + 1 }; // +1 for space
 
     ({regexp $r:literal}) => {
         2 + stringify!($r).len()
