@@ -2,7 +2,6 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use bytes::Bytes;
-use n1_html::{Html, H};
 use n1_tool::proto_http::{
     server_page, HTTPRequest, HttpHandler, Response, ResponseBody, StatusHTTP,
 };
@@ -11,7 +10,7 @@ use serde::Serialize;
 use tokio::io::{AsyncRead, AsyncReadExt};
 
 use crate::op::login::logout_console;
-use crate::op::{self, Common, Token, DTO, URLDTO};
+use crate::op::{self, print_error_html, Common, Token, DTO, URLDTO};
 use crate::token::{token_decode, token_encode};
 use crate::{errs, front, Error, ErrorCategory, ErrorStep, OpRequest, Result};
 
@@ -131,8 +130,32 @@ where
     }
 
     fn print_error(request: &HTTPRequest, err: Self::Error) -> Response<1> {
-        let accept_html = accept_html(&request.headers);
-        print_error(err, accept_html)
+        let status = match err.category() {
+            ErrorCategory::BadRequest => StatusHTTP::BadRequest,
+            ErrorCategory::AuthForbidden => StatusHTTP::Forbidden,
+            ErrorCategory::Internal => StatusHTTP::InternalServerError,
+            ErrorCategory::AuthNone => StatusHTTP::Unauthorized,
+            ErrorCategory::NotFound => StatusHTTP::NotFound,
+        };
+
+        let (mime, body) = if accept_html(&request.headers) {
+            (mime::HTML, print_error_html(err, status))
+        } else {
+            let mut body = status.as_str().to_string();
+            body.push_str("\n");
+            err.0.iter().rev().for_each(|step| {
+                body.push_str("--- ");
+                body.push_str(&step.to_string());
+                body.push_str("\n");
+            });
+            (mime::TEXT, body)
+        };
+        Response {
+            status,
+            mime,
+            header: [None],
+            body: ResponseBody::Bytes(Bytes::from_owner(body)),
+        }
     }
 
     fn db(&self) -> &B {
@@ -328,63 +351,6 @@ async fn make_token<
         header: [Some(("Set-Cookie", header_value))],
         body: ResponseBody::Bytes(Bytes::new()),
     })
-}
-
-fn print_error(err: Error, accept_html: bool) -> Response<1> {
-    let status = match err.category() {
-        ErrorCategory::BadRequest => StatusHTTP::BadRequest,
-        ErrorCategory::AuthForbidden => StatusHTTP::Forbidden,
-        ErrorCategory::Internal => StatusHTTP::InternalServerError,
-        ErrorCategory::AuthNone => StatusHTTP::Unauthorized,
-        ErrorCategory::NotFound => StatusHTTP::NotFound,
-    };
-
-    if accept_html {
-        let body = ResponseBody::Bytes(Bytes::from_owner(
-            [H - "html lang=en"
-                + [H - "head" + front::HEAD]
-                + [H - "body"
-                    + "\r\n"
-                    + [H - "header" + [H - "h1.bl" + status.as_str()]]
-                    + "\r\n"
-                    + [H - "main"
-                        + "\r\n"
-                        + [|| {
-                            err.0
-                                .iter()
-                                .map(|s| [H + [H - "div" + s.to_string()] + "\r\n"])
-                        }]]
-                    + "\r\n"
-                    + [H - "div.fh.gap.m"
-                        + [H - "a.bl href=/ " + "///"]
-                        + [H - "a.bl href=/_auth_login" + "Login"]
-                        + [H - "a.bl href=/_auth_logout" + "Logout"]
-                        + ""]
-                    + "\r\n"]
-                + ""]
-            .render_page(),
-        ));
-        Response {
-            status,
-            mime: mime::HTML,
-            header: [None],
-            body,
-        }
-    } else {
-        let mut body = status.as_str().to_string();
-        body.push_str("\n");
-        err.0.iter().rev().for_each(|step| {
-            body.push_str("--- ");
-            body.push_str(&step.to_string());
-            body.push_str("\n");
-        });
-        Response {
-            status,
-            mime: mime::TEXT,
-            header: [None],
-            body: ResponseBody::Bytes(Bytes::from_owner(body)),
-        }
-    }
 }
 
 fn accept_html(headers: &BTreeMap<String, String>) -> bool {
