@@ -1,11 +1,22 @@
 use std::collections::BTreeMap;
 
-use tokio::{
-    io::{AsyncRead, AsyncReadExt, Chain, Take},
-    net::tcp::ReadHalf,
-};
+use tokio::{io::AsyncReadExt, net::tcp::ReadHalf};
 
-pub type Incoming<'a, R> = HTTPRequest<Chain<&'a [u8], Take<&'a mut R>>>;
+pub struct HTTPParser {
+    pub buffer: [u8; 8 * 1024],
+    pub cursor_begin: usize,
+    pub cursor_end: usize,
+}
+
+/// Meta information about the HTTP request.
+pub struct HTTPRequest {
+    pub method: Method,
+    /// Decoded path
+    pub path: String,
+    /// Undecoded query without `?`
+    pub query: String,
+    pub headers: BTreeMap<String, String>,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Method {
@@ -17,23 +28,6 @@ pub enum Method {
     TRACE,
     OPTION,
     X,
-}
-
-pub struct HTTPRequest<B: AsyncRead> {
-    pub method: Method,
-    /// Decoded path
-    pub path: String,
-    /// Undecoded query without `?`
-    pub query: String,
-    pub headers: BTreeMap<String, String>,
-    pub body: B,
-}
-
-pub struct HTTPParser<R> {
-    pub r: R,
-    pub buffer: [u8; 8 * 1024],
-    pub cursor_begin: usize,
-    pub cursor_end: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -48,25 +42,20 @@ pub enum Error {
     TooLong,
 }
 
-pub async fn next_req(
-    parser: &mut HTTPParser<ReadHalf<'_>>,
-) -> Option<Result<HTTPRequest<impl AsyncRead>, Error>> {
-    let range = parser.cursor_begin..parser.cursor_end;
-    parser.buffer.copy_within(range, 0);
-    parser.cursor_end -= parser.cursor_begin;
-    parser.buffer[parser.cursor_end..].fill(0);
+pub async fn next_req<'a>(
+    reader: &mut ReadHalf<'_>,
+    parser: &'a mut HTTPParser,
+) -> Option<Result<(HTTPRequest, &'a [u8], u64), Error>> {
+    parser.reinit();
 
     while !parser.contain_full_headers() {
         if parser.cursor_end == parser.buffer.len() {
             return Some(Err(Error::TooLong));
         }
-        if let Err(_) = parser.r.readable().await {
+        if let Err(_) = reader.readable().await {
             return Some(Err(Error::IO));
         }
-        match (parser.r)
-            .read(&mut parser.buffer[parser.cursor_end..])
-            .await
-        {
+        match reader.read(&mut parser.buffer[parser.cursor_end..]).await {
             Ok(0) => return None,
             Ok(read_len) => parser.cursor_end += read_len,
             Err(_) => return Some(Err(Error::IO)),
@@ -76,14 +65,20 @@ pub async fn next_req(
     Some(parser.parse())
 }
 
-impl<R: AsyncRead + Unpin> HTTPParser<R> {
-    pub fn new(r: R) -> Self {
+impl HTTPParser {
+    pub fn new() -> Self {
         Self {
-            r,
             buffer: [0u8; 8 * 1024],
             cursor_begin: 0,
             cursor_end: 0,
         }
+    }
+
+    pub fn reinit(&mut self) {
+        let range = self.cursor_begin..self.cursor_end;
+        self.buffer.copy_within(range, 0);
+        self.cursor_end -= self.cursor_begin;
+        self.buffer[self.cursor_end..].fill(0);
     }
 
     fn contain_full_headers(&self) -> bool {
@@ -95,7 +90,7 @@ impl<R: AsyncRead + Unpin> HTTPParser<R> {
         return false;
     }
 
-    fn parse(&mut self) -> Result<Incoming<'_, R>, Error> {
+    fn parse<'a>(&'a mut self) -> Result<(HTTPRequest, &'a [u8], u64), Error> {
         let mut readed_len = 0;
 
         // First line
@@ -130,17 +125,18 @@ impl<R: AsyncRead + Unpin> HTTPParser<R> {
         let body_len = Self::get_content_len(&headers)?.unwrap_or(0);
         let body_bytes_len = body_len.min(self.cursor_end - header_len);
         let body_reader_len = body_len - body_bytes_len;
-        let body = (&self.buffer[header_len..header_len + body_bytes_len])
-            .chain((&mut self.r).take(body_reader_len as u64));
         self.cursor_begin = header_len + body_bytes_len;
 
-        Ok(HTTPRequest {
-            method,
-            path,
-            query,
-            headers,
-            body,
-        })
+        Ok((
+            HTTPRequest {
+                method,
+                path,
+                query,
+                headers,
+            },
+            &self.buffer[header_len..][..body_bytes_len],
+            body_reader_len as u64,
+        ))
     }
 
     fn split_line(&self, readed_len: &mut usize) -> Result<&str, Error> {
@@ -188,38 +184,33 @@ async fn next() {
         "foo-bar: hello\r\n",
         "\r\n",
     );
-    let mut parser = HTTPParser::new(data.as_bytes());
+    let mut parser = HTTPParser::new();
     parser.buffer[0..data.len()].copy_from_slice(data.as_bytes());
     parser.cursor_end = data.len();
 
     // Request 1
-    let mut next = parser.parse().unwrap();
-    assert_eq!(next.method, Method::PUT);
-    assert_eq!(next.path, String::from("/abc"));
-    assert_eq!(next.query, String::from("v=1"));
+    let (request, buffer, rest) = parser.parse().unwrap();
+    assert_eq!(request.method, Method::PUT);
+    assert_eq!(request.path, String::from("/abc"));
+    assert_eq!(request.query, String::from("v=1"));
     assert_eq!(
-        next.headers,
+        request.headers,
         BTreeMap::from_iter([(String::from("Content-Length"), String::from("5"))])
     );
-    let mut buff = String::new();
-    next.body.read_to_string(&mut buff).await.unwrap();
-    assert_eq!("01234", buff.as_str());
+    assert_eq!(buffer, &b"01234"[..]);
+    assert_eq!(rest, 0);
 
     // Request 2
-    let range = parser.cursor_begin..parser.cursor_end;
-    parser.buffer.copy_within(range, 0);
-    parser.cursor_end -= parser.cursor_begin;
-    parser.buffer[parser.cursor_end..].fill(0);
+    parser.reinit();
 
-    let mut next = parser.parse().unwrap();
-    assert_eq!(next.method, Method::GET);
-    assert_eq!(next.path, String::from("/ABC"));
-    assert_eq!(next.query, String::from("v=1"));
+    let (request, buffer, rest) = parser.parse().unwrap();
+    assert_eq!(request.method, Method::GET);
+    assert_eq!(request.path, String::from("/ABC"));
+    assert_eq!(request.query, String::from("v=1"));
     assert_eq!(
-        next.headers,
+        request.headers,
         BTreeMap::from_iter([(String::from("foo-bar"), String::from("hello"))])
     );
-    let mut buff = String::new();
-    next.body.read_to_string(&mut buff).await.unwrap();
-    assert_eq!("", buff.as_str());
+    assert_eq!(buffer, &b""[..]);
+    assert_eq!(rest, 0);
 }

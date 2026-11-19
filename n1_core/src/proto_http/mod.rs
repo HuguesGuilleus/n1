@@ -3,7 +3,7 @@ use std::io;
 use std::sync::Arc;
 
 use bytes::Bytes;
-use n1_html::{H, Html};
+use n1_html::{Html, H};
 use n1_tool::mime::REDIRECT;
 use serde::Serialize;
 use tokio::io::{AsyncRead, AsyncReadExt};
@@ -11,13 +11,13 @@ use tokio::net::TcpListener;
 use tokio::spawn;
 
 use crate::op::login::logout_console;
-use crate::op::{self, Common, DTO, Token, URLDTO};
+use crate::op::{self, Common, Token, DTO, URLDTO};
 use crate::token::{token_decode, token_encode};
-use crate::{Error, ErrorCategory, ErrorStep, OpRequest, Result, errs, front};
+use crate::{errs, front, Error, ErrorCategory, ErrorStep, OpRequest, Result};
 use n1_tool::proto_http::{
-    HTTPParser, HTTPRequest, Response, ResponseBody, StatusHTTP, next_req, write_response,
+    next_req, write_response, HTTPParser, HTTPRequest, Response, ResponseBody, StatusHTTP,
 };
-use n1_tool::{Chunk, Chunks, DB, mime};
+use n1_tool::{mime, Chunk, Chunks, DB};
 
 #[derive(Clone)]
 pub struct HTTPServer<B: DB> {
@@ -26,24 +26,25 @@ pub struct HTTPServer<B: DB> {
     pub token_key: [u8; 64],
 }
 
-pub async fn run<C: DB + 'static>(
-    listener: TcpListener,
-    server: Arc<HTTPServer<C>>,
-) -> io::Result<()> {
+pub async fn run<C>(listener: TcpListener, server: Arc<HTTPServer<C>>) -> io::Result<()>
+where
+    C: DB + 'static,
+{
     loop {
         let server = server.clone();
         let (mut stream, _) = listener.accept().await?;
         spawn(async move || -> io::Result<()> {
             let server = server;
-            let (r, mut w) = stream.split();
-            let mut parser = HTTPParser::new(r);
-            while let Some(request) = next_req(&mut parser).await {
-                let request = request.map_err(|http_err| {
-                    io::Error::new(io::ErrorKind::Other, format!("{:?}", http_err))
-                })?;
+            let (mut r, mut w) = stream.split();
+            let mut parser = HTTPParser::new();
+            let r = &mut r;
+            while let Some(request_result) = next_req(r, &mut parser).await {
+                let (request, buffer, rest) = request_result
+                    .map_err(|err| io::Error::new(io::ErrorKind::Other, format!("{:?}", err)))?;
                 let path = request.path.clone();
                 let accept_html = accept_html(&request.headers);
-                let response = match handle(&server, request).await {
+                let body = AsyncReadExt::chain(buffer, r.take(rest));
+                let response = match handle(&server, request, body).await {
                     Ok(response) => {
                         println!("{:?} <= {:?}", response.status, &path);
                         response
@@ -60,10 +61,11 @@ pub async fn run<C: DB + 'static>(
     }
 }
 
-pub async fn handle<R: AsyncRead + Unpin + Send, C: DB>(
-    s: &HTTPServer<C>,
-    r: HTTPRequest<R>,
-) -> Result<Response<C>> {
+pub async fn handle<B, R>(s: &HTTPServer<B>, r: HTTPRequest, body: R) -> Result<Response<B>>
+where
+    B: DB,
+    R: AsyncRead + Unpin + Send + Sync,
+{
     match r.path[1..].split_once('/').unwrap_or((&r.path[1..], "")).0 {
         "_style.css" => asset(mime::CSS, front::CSS),
         "_favicon.webp" => asset(mime::WEBP, front::FAVICON),
@@ -88,41 +90,47 @@ pub async fn handle<R: AsyncRead + Unpin + Send, C: DB>(
         }),
 
         // Actions API
-        ":auth.admin." => with_body(s, r, op::auth_test_access_read).await,
-        ":auth.admin.edit.name" => with_body(s, r, op::auth_admin_edit_name).await,
-        ":auth.admin.new" => with_body(s, r, op::auth_admin_new).await,
-        ":auth.check.access.read" => with_body(s, r, op::auth_check_access_read).await,
-        ":auth.check.access.write" => with_body(s, r, op::auth_check_access_write).await,
-        ":auth.check.auth" => with_body(s, r, op::auth_check_auth).await,
-        ":auth.check.isadmin" => with_body(s, r, op::auth_check_isadmin).await,
-        ":auth.login" => make_token(s, r, op::auth::login::login_action).await,
-        ":auth.test.access.read" => with_body(s, r, op::auth_test_access_read).await,
-        ":auth.test.access.write" => with_body(s, r, op::auth_test_access_write).await,
-        ":auth.test.id" => with_body(s, r, op::auth_test_id).await,
-        ":auth.test.isadmin" => with_body(s, r, op::auth_test_isadmin).await,
-        ":bio.get" => with_body(s, r, op::bio::get).await,
-        ":bio.set" => with_body(s, r, op::bio::set).await,
-        ":fs.direct.mkdir" => with_body(s, r, op::fs::fs_direct_mkdir).await,
-        ":fs.direct.mkfile" => with_body(s, r, op::fs::fs_direct_mkfile).await,
-        ":fs.direct.move" => with_body(s, r, op::fs::fs_direct_move).await,
-        ":fs.direct.resolve" => with_body(s, r, op::fs::fs_direct_resolve).await,
-        ":fs.direct.rm" => with_body(s, r, op::fs::fs_direct_rm).await,
-        ":fs.direct.tree" => with_body(s, r, op::fs::fs_direct_tree).await,
-        ":home.get" => with_body(s, r, op::home::json_get).await,
-        ":home.set" => with_body(s, r, op::home::json_set).await,
-        ":wiki.article.get" => with_body(s, r, op::wiki::article_get).await,
-        ":wiki.article.new" => with_body(s, r, op::wiki::article_new).await,
-        ":wiki.article.rm" => with_body(s, r, op::wiki::article_rm).await,
-        ":wiki.article.setContent" => with_body(s, r, op::wiki::article_set_content).await,
-        ":wiki.article.setSlug" => with_body(s, r, op::wiki::article_set_slug).await,
-        ":wiki.article.setTitle" => with_body(s, r, op::wiki::article_set_title).await,
+        ":auth.admin." => with_body(s, r, body, op::auth_test_access_read).await,
+        ":auth.admin.edit.name" => with_body(s, r, body, op::auth_admin_edit_name).await,
+        ":auth.admin.new" => with_body(s, r, body, op::auth_admin_new).await,
+        ":auth.check.access.read" => with_body(s, r, body, op::auth_check_access_read).await,
+        ":auth.check.access.write" => with_body(s, r, body, op::auth_check_access_write).await,
+        ":auth.check.auth" => with_body(s, r, body, op::auth_check_auth).await,
+        ":auth.check.isadmin" => with_body(s, r, body, op::auth_check_isadmin).await,
+        ":auth.login" => make_token(s, r, body, op::auth::login::login_action).await,
+        ":auth.test.access.read" => with_body(s, r, body, op::auth_test_access_read).await,
+        ":auth.test.access.write" => with_body(s, r, body, op::auth_test_access_write).await,
+        ":auth.test.id" => with_body(s, r, body, op::auth_test_id).await,
+        ":auth.test.isadmin" => with_body(s, r, body, op::auth_test_isadmin).await,
+        ":bio.get" => with_body(s, r, body, op::bio::get).await,
+        ":bio.set" => with_body(s, r, body, op::bio::set).await,
+        ":fs.direct.mkdir" => with_body(s, r, body, op::fs::fs_direct_mkdir).await,
+        ":fs.direct.mkfile" => with_body(s, r, body, op::fs::fs_direct_mkfile).await,
+        ":fs.direct.move" => with_body(s, r, body, op::fs::fs_direct_move).await,
+        ":fs.direct.resolve" => with_body(s, r, body, op::fs::fs_direct_resolve).await,
+        ":fs.direct.rm" => with_body(s, r, body, op::fs::fs_direct_rm).await,
+        ":fs.direct.tree" => with_body(s, r, body, op::fs::fs_direct_tree).await,
+        ":home.get" => with_body(s, r, body, op::home::json_get).await,
+        ":home.set" => with_body(s, r, body, op::home::json_set).await,
+        ":wiki.article.get" => with_body(s, r, body, op::wiki::article_get).await,
+        ":wiki.article.new" => with_body(s, r, body, op::wiki::article_new).await,
+        ":wiki.article.rm" => with_body(s, r, body, op::wiki::article_rm).await,
+        ":wiki.article.setContent" => with_body(s, r, body, op::wiki::article_set_content).await,
+        ":wiki.article.setSlug" => with_body(s, r, body, op::wiki::article_set_slug).await,
+        ":wiki.article.setTitle" => with_body(s, r, body, op::wiki::article_set_title).await,
 
         // Actions with request reader body or return body
         ";fs.direct.set" => {
-            with_reader(s, r, async |db, r, c| op::fs::fs_direct_set(db, r, c).await).await
+            with_reader(s, r, body, async |db, r, c| {
+                op::fs::fs_direct_set(db, r, c).await
+            })
+            .await
         }
         ";fs.direct.get" => {
-            with_reader(s, r, async |db, r, c| op::fs::fs_direct_get(db, r, c).await).await
+            with_reader(s, r, body, async |db, r, c| {
+                op::fs::fs_direct_get(db, r, c).await
+            })
+            .await
         }
 
         // Serve generated files
@@ -157,14 +165,9 @@ fn asset<C: DB>(mime: &'static str, bytes: &'static [u8]) -> Result<Response<C>>
     })
 }
 
-async fn with_url<
-    C: DB,
-    R: AsyncRead,
-    F: AsyncFn(&C, OpRequest<D>) -> Result<String>,
-    D: URLDTO,
->(
+async fn with_url<C: DB, F: AsyncFn(&C, OpRequest<D>) -> Result<String>, D: URLDTO>(
     s: &HTTPServer<C>,
-    r: HTTPRequest<R>,
+    r: HTTPRequest,
     f: F,
 ) -> Result<Response<C>> {
     let token: Token = get_token(s, &r);
@@ -197,20 +200,20 @@ async fn with_url<
 
 async fn with_body<
     B: DB,
-    R: AsyncRead + Unpin,
+    R: AsyncRead + Unpin + Send + Sync,
     F: AsyncFn(&B, OpRequest<D>) -> Result<O>,
     O: Serialize,
     D: DTO,
 >(
     s: &HTTPServer<B>,
-    mut r: HTTPRequest<R>,
+    r: HTTPRequest,
+    mut body: R,
     f: F,
 ) -> Result<Response<B>> {
     let token = get_token(s, &r);
 
     let mut buf = Vec::new();
-    r.body
-        .read_to_end(&mut buf)
+    body.read_to_end(&mut buf)
         .await
         .map_err(|err| ErrorStep::BodyRead(err))?;
     let data: &[u8] = match &buf[..] {
@@ -245,7 +248,8 @@ async fn with_reader<
     R: AsyncRead + Unpin + Send,
 >(
     s: &HTTPServer<B>,
-    r: HTTPRequest<R>,
+    r: HTTPRequest,
+    body: R,
     f: F,
 ) -> Result<Response<B>> {
     let token = get_token(s, &r);
@@ -265,7 +269,7 @@ async fn with_reader<
             token,
             dto,
         },
-        r.body,
+        body,
     )
     .await?;
 
@@ -277,7 +281,7 @@ async fn with_reader<
     })
 }
 
-fn get_token<B: AsyncRead>(s: &HTTPServer<impl DB>, request: &HTTPRequest<B>) -> Token {
+fn get_token(s: &HTTPServer<impl DB>, request: &HTTPRequest) -> Token {
     let cookie = request
         .headers
         .get("Cookie")
@@ -307,12 +311,12 @@ async fn make_token<
     D: DTO,
 >(
     s: &HTTPServer<C>,
-    mut r: HTTPRequest<R>,
+    r: HTTPRequest,
+    mut body: R,
     f: F,
 ) -> Result<Response<C>> {
     let mut buf = Vec::new();
-    r.body
-        .read_to_end(&mut buf)
+    body.read_to_end(&mut buf)
         .await
         .map_err(|err| ErrorStep::BodyRead(err))?;
     let data: &[u8] = match &buf[..] {
