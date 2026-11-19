@@ -1,4 +1,4 @@
-use std::{io, sync::Arc};
+use std::io;
 
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
@@ -10,8 +10,8 @@ use super::DB;
 
 /** A big file with multiple chunks as content. */
 #[derive(Debug)]
-pub struct Chunks<B: DB> {
-    db: Arc<B>,
+pub struct Chunks<'b, B: DB> {
+    db: &'b B,
     owner: u32,
     chunks: Vec<Chunk>,
     position: usize,
@@ -23,8 +23,8 @@ pub struct Chunk {
     pub oid: u32,
 }
 
-impl<B: DB> Chunks<B> {
-    pub fn new(db: Arc<B>, owner: u32, chunks: Vec<Chunk>) -> Self {
+impl<'b, B: DB> Chunks<'b, B> {
+    pub fn new(db: &'b B, owner: u32, chunks: Vec<Chunk>) -> Self {
         Self {
             db,
             owner,
@@ -89,7 +89,7 @@ async fn chunck() {
     db.fs_set(1, 3, Bytes::from_static(b"def")).await.unwrap();
 
     let mut c = Chunks::new(
-        Arc::new(db),
+        &db,
         1,
         vec![
             Chunk { len: 3, oid: 1 },

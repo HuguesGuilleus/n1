@@ -17,7 +17,7 @@ use crate::{errs, front, Error, ErrorCategory, ErrorStep, OpRequest, Result};
 use n1_tool::proto_http::{
     next_req, write_response, HTTPParser, HTTPRequest, Response, ResponseBody, StatusHTTP,
 };
-use n1_tool::{mime, Chunk, Chunks, DB};
+use n1_tool::{mime, Chunk, DB};
 
 #[derive(Clone)]
 pub struct HTTPServer<B: DB> {
@@ -54,14 +54,14 @@ where
                         print_error(err, accept_html)
                     }
                 };
-                write_response(&mut w, response).await?;
+                write_response(&mut w, response, server.db.as_ref()).await?;
             }
             Ok(())
         }());
     }
 }
 
-pub async fn handle<B, R>(s: &HTTPServer<B>, r: HTTPRequest, body: R) -> Result<Response<B>>
+pub async fn handle<B, R>(s: &HTTPServer<B>, r: HTTPRequest, body: R) -> Result<Response<1>>
 where
     B: DB,
     R: AsyncRead + Unpin + Send + Sync,
@@ -85,7 +85,7 @@ where
         "_auth_logout" => Ok(Response {
             status: StatusHTTP::OK,
             mime: mime::HTML,
-            header: Some(("Set-Cookie", "auth=; Max-Age=0; Path=/".to_string())),
+            header: [Some(("Set-Cookie", "auth=; Max-Age=0; Path=/".to_string()))],
             body: ResponseBody::Bytes(Bytes::from_owner(logout_console(s.common.lang))),
         }),
 
@@ -142,25 +142,25 @@ where
                 return Ok(Response {
                     status: StatusHTTP::Found,
                     mime: mime::TEXT,
-                    header: Some(("Location", location)),
+                    header: [Some(("Location", location))],
                     body: ResponseBody::Bytes(bytes),
                 });
             }
             Ok(Response {
                 status: StatusHTTP::OK,
                 mime: m,
-                header: None,
+                header: [None],
                 body: ResponseBody::Bytes(bytes),
             })
         }
     }
 }
 
-fn asset<C: DB>(mime: &'static str, bytes: &'static [u8]) -> Result<Response<C>> {
+fn asset(mime: &'static str, bytes: &'static [u8]) -> Result<Response<1>> {
     Ok(Response {
         status: StatusHTTP::OK,
         mime: mime,
-        header: None,
+        header: [None],
         body: ResponseBody::Bytes(Bytes::from_static(bytes)),
     })
 }
@@ -169,7 +169,7 @@ async fn with_url<C: DB, F: AsyncFn(&C, OpRequest<D>) -> Result<String>, D: URLD
     s: &HTTPServer<C>,
     r: HTTPRequest,
     f: F,
-) -> Result<Response<C>> {
+) -> Result<Response<1>> {
     let token: Token = get_token(s, &r);
 
     let dto: D = URLDTO::url_decode(
@@ -193,7 +193,7 @@ async fn with_url<C: DB, F: AsyncFn(&C, OpRequest<D>) -> Result<String>, D: URLD
     Ok(Response {
         status: StatusHTTP::OK,
         mime: mime::HTML,
-        header: None,
+        header: [None],
         body: ResponseBody::Bytes(Bytes::from_owner(html)),
     })
 }
@@ -209,7 +209,7 @@ async fn with_body<
     r: HTTPRequest,
     mut body: R,
     f: F,
-) -> Result<Response<B>> {
+) -> Result<Response<1>> {
     let token = get_token(s, &r);
 
     let mut buf = Vec::new();
@@ -236,7 +236,7 @@ async fn with_body<
     Ok(Response {
         status: StatusHTTP::OK,
         mime: mime::JSON,
-        header: None,
+        header: [None],
         body: ResponseBody::Bytes(Bytes::from_owner(serde_json::to_vec(&out).unwrap())),
     })
 }
@@ -251,7 +251,7 @@ async fn with_reader<
     r: HTTPRequest,
     body: R,
     f: F,
-) -> Result<Response<B>> {
+) -> Result<Response<1>> {
     let token = get_token(s, &r);
 
     let dto: D = URLDTO::url_decode(
@@ -262,7 +262,7 @@ async fn with_reader<
     )?;
     dto.check()?;
 
-    let (eid, chunks) = f(
+    let (owner, chunks) = f(
         &s.db,
         OpRequest {
             common: s.common.clone(),
@@ -276,8 +276,8 @@ async fn with_reader<
     Ok(Response {
         status: StatusHTTP::OK,
         mime: mime::OCTET_STREAM,
-        header: None,
-        body: ResponseBody::Chunks(Chunks::new(s.db.clone(), eid, chunks)),
+        header: [None],
+        body: ResponseBody::Chunks { owner, chunks },
     })
 }
 
@@ -314,7 +314,7 @@ async fn make_token<
     r: HTTPRequest,
     mut body: R,
     f: F,
-) -> Result<Response<C>> {
+) -> Result<Response<1>> {
     let mut buf = Vec::new();
     body.read_to_end(&mut buf)
         .await
@@ -341,12 +341,12 @@ async fn make_token<
     Ok(Response {
         status: StatusHTTP::OK,
         mime: "",
-        header: Some(("Set-Cookie", header_value)),
+        header: [Some(("Set-Cookie", header_value))],
         body: ResponseBody::Bytes(Bytes::new()),
     })
 }
 
-fn print_error<C: DB>(err: Error, accept_html: bool) -> Response<C> {
+fn print_error(err: Error, accept_html: bool) -> Response<1> {
     let status = match err.category() {
         ErrorCategory::BadRequest => StatusHTTP::BadRequest,
         ErrorCategory::AuthForbidden => StatusHTTP::Forbidden,
@@ -383,7 +383,7 @@ fn print_error<C: DB>(err: Error, accept_html: bool) -> Response<C> {
         Response {
             status,
             mime: mime::HTML,
-            header: None,
+            header: [None],
             body,
         }
     } else {
@@ -397,7 +397,7 @@ fn print_error<C: DB>(err: Error, accept_html: bool) -> Response<C> {
         Response {
             status,
             mime: mime::TEXT,
-            header: None,
+            header: [None],
             body: ResponseBody::Bytes(Bytes::from_owner(body)),
         }
     }
