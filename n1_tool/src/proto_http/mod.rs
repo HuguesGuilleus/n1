@@ -54,7 +54,7 @@ pub async fn run<const N: usize, B: DB, H: HttpHandler<N, B>>(
                     .handle(&request, body)
                     .await
                     .unwrap_or_else(|err| H::print_error(&request, err));
-                write_response(&mut w, response, h.db()).await?;
+                write_response(&mut w, response, h.db(), &request).await?;
             }
             Ok(())
         }(h, socket));

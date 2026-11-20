@@ -13,8 +13,9 @@ use super::DB;
 pub struct Chunks<'b, B: DB> {
     db: &'b B,
     owner: u32,
-    chunks: Vec<Chunk>,
+    chunks: &'b [Chunk],
     position: usize,
+    end: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
@@ -24,26 +25,27 @@ pub struct Chunk {
 }
 
 impl<'b, B: DB> Chunks<'b, B> {
-    pub fn new(db: &'b B, owner: u32, chunks: Vec<Chunk>) -> Self {
+    pub fn new(db: &'b B, owner: u32, chunks: &'b [Chunk]) -> Self {
         Self {
             db,
             owner,
-            chunks: chunks,
+            chunks,
             position: 0,
+            end: chuncks_len(chunks),
         }
     }
 
-    // Get total size of this chunks.
-    pub fn len(&self) -> usize {
-        self.chunks.iter().map(|item| item.len).sum()
-    }
-
     /// Move internal cursor at position arg to skip the begin.
-    pub fn skip(&mut self, position: usize) {
-        self.position = position;
+    pub fn set_range(&mut self, begin: usize, end: usize) {
+        self.position = begin;
+        self.end = end;
     }
 
     pub async fn next(&mut self) -> io::Result<Option<Bytes>> {
+        if self.position >= self.end {
+            return Ok(None);
+        }
+
         let mut cursor = 0;
         let chunck = self
             .chunks
@@ -71,7 +73,12 @@ impl<'b, B: DB> Chunks<'b, B> {
                 _ => io::Error::from(io::ErrorKind::Other),
             })?;
 
-        let data = data.slice(data.len() + self.position - cursor..);
+        let mut data = data.slice(data.len() + self.position - cursor..);
+
+        if self.end < cursor {
+            data = data.slice(0..data.len() + self.end - cursor);
+        }
+
         self.position = cursor;
 
         Ok(Some(data))
@@ -88,22 +95,19 @@ async fn chunck() {
     db.fs_set(1, 2, Bytes::from_static(b"abc")).await.unwrap();
     db.fs_set(1, 3, Bytes::from_static(b"def")).await.unwrap();
 
-    let mut c = Chunks::new(
-        &db,
-        1,
-        vec![
-            Chunk { len: 3, oid: 1 },
-            Chunk { len: 3, oid: 2 },
-            Chunk { len: 3, oid: 3 },
-        ],
-    );
+    let chunks = vec![
+        Chunk { len: 3, oid: 1 },
+        Chunk { len: 3, oid: 2 },
+        Chunk { len: 3, oid: 3 },
+        Chunk { len: 3, oid: 4 },
+    ];
+    let mut c = Chunks::new(&db, 1, &chunks);
 
-    assert_eq!(c.len(), 9);
-    assert_eq!(chuncks_len(&c.chunks), 9);
-    c.skip(5);
+    assert_eq!(chuncks_len(&c.chunks), 12);
+    c.set_range(5, 8);
 
     assert_eq!(c.next().await.unwrap(), Some(Bytes::from_static(b"c")));
-    assert_eq!(c.next().await.unwrap(), Some(Bytes::from_static(b"def")));
+    assert_eq!(c.next().await.unwrap(), Some(Bytes::from_static(b"de")));
     assert_eq!(c.next().await.unwrap(), None);
     assert_eq!(c.next().await.unwrap(), None);
 }
