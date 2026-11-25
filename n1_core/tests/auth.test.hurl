@@ -14,10 +14,10 @@ cookieEve: cookie "auth"
 ``
 
 PUT http://localhost:8000/:auth.login/
-{"name":"bob","password":"42"}
+{"name":"sarah","password":"21"}
 HTTP 200
 [Captures]
-cookieBob: cookie "auth"
+cookieSarah: cookie "auth"
 ``
 
 # ID
@@ -83,14 +83,14 @@ Content-Type: application/json
 # Simple user access
 
 PUT http://localhost:8000/:auth.test.access.read/
-Cookie: auth={{cookieBob}}
+Cookie: auth={{cookieSarah}}
 {"owner_id":201,"app_id":1}
 HTTP 200
 Content-Type: application/json
 `true`
 
 PUT http://localhost:8000/:auth.test.access.write/
-Cookie: auth={{cookieBob}}
+Cookie: auth={{cookieSarah}}
 {"owner_id":200,"app_id":1}
 HTTP 200
 Content-Type: application/json

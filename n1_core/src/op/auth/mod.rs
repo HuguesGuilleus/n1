@@ -15,8 +15,8 @@ use n1_tool::DB;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Common, DTO, OpRequest, Result,
-    op::{OID_GLOBAL_ENTITY, Token, TokenItem},
+    op::{Token, TokenItem, OID_GLOBAL_ENTITY},
+    Common, OpRequest, Result, DTO,
 };
 
 #[derive(Debug, PartialEq, Deserialize, Clone, Serialize)]
@@ -52,10 +52,10 @@ pub struct Group {
     pub users: Vec<TokenItem>,
 }
 
-pub async fn init(db: &impl DB, common: &mut Common) -> Result<()> {
-    // Load entities
+/// Load entities informations.
+pub async fn init(db: &impl DB, common: &Common) -> Result<()> {
     let entities: Vec<Entity> = db.obj_get(0, OID_GLOBAL_ENTITY as u32).await?;
-    let entities_map = common.entities.get_mut();
+    let mut entities_map = common.entities.write().await;
     entities.into_iter().for_each(|entity| {
         entities_map.insert(
             match entity {

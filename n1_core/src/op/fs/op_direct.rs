@@ -1,15 +1,15 @@
 use std::{collections::BTreeMap, ops::Deref};
 
-use n1_tool::{Chunk, DB, chuncks_len, read_to_chunks};
+use n1_tool::{chuncks_len, read_to_chunks, Chunk, DB};
 use serde::{Deserialize, Serialize};
 use tokio::io::AsyncRead;
 
 use crate::{
-    DTO, Error, ErrorStep, OpRequest, Result,
     op::{
+        fs::{Entry, FSState, CHUNK_LEN},
         EntityAndObjectDTO, OID_ENTITY_FS,
-        fs::{CHUNK_LEN, Entry, FSState},
     },
+    Error, ErrorStep, OpRequest, Result, DTO,
 };
 
 #[derive(Debug, Deserialize)]
@@ -490,7 +490,7 @@ async fn test() {
     use std::sync::Arc;
 
     let db = DBMemory::new();
-    let common = Arc::new(Common::new());
+    let common = Arc::new(Common::new(&db).await.unwrap());
     let token = Token {
         uid: 1,
         is_admin: true,

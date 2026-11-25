@@ -3,7 +3,9 @@ use std::{io, net::SocketAddr, sync::Arc};
 use n1_core::{
     init_dev,
     proto_http::{HTTPServer, HTTPServerArc},
+    Common,
 };
+use n1_tool::DBMemory;
 use tokio::net::TcpListener;
 
 #[tokio::main]
@@ -13,7 +15,10 @@ async fn main() -> io::Result<()> {
         token_key[i] = i as u8;
     }
 
-    let (db, common) = init_dev()
+    let db = DBMemory::new();
+    let common = Arc::new(Common::new(&db).await.unwrap());
+
+    init_dev(&db, common.clone())
         .await
         .map_err(|err| io::Error::new(io::ErrorKind::Other, format!("{:?}", err)))?;
 

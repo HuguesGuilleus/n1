@@ -55,45 +55,24 @@ pub struct Common {
     pub wiki: LockMap<wiki::WikiState>,
 }
 
-pub struct LockMap<T>(Mutex<BTreeMap<u32, Arc<RwLock<T>>>>);
-
-impl<T: Default> LockMap<T> {
-    /// Get data of a specific user
-    pub async fn get(&self, owner: u32) -> Result<Arc<RwLock<T>>> {
-        let mut guard = self.0.lock().await;
-        let arc = match guard.get(&owner) {
-            Some(arc) => arc.clone(),
-            None => {
-                let arc = Arc::new(RwLock::new(T::default()));
-                guard.insert(owner, arc.clone());
-                arc
-            }
-        };
-        Ok(arc)
-    }
-}
-
 impl Common {
-    pub fn new() -> Self {
-        Common {
+    pub async fn new(db: &impl DB) -> Result<Self> {
+        let c = Common {
             lang: &LANG_EN,
-
             entities: RwLock::new(BTreeMap::new()),
             shadow: RwLock::new(BTreeSet::new()),
             fs: LockMap(Mutex::new(BTreeMap::new())),
             wiki: LockMap(Mutex::new(BTreeMap::new())),
-        }
-    }
+        };
 
-    pub async fn init(&mut self, db: &impl DB) -> Result<()> {
-        auth::init(db, self).await?;
+        auth::init(db, &c).await?;
+        home::init(db, &c).await?;
 
-        bio::generate_all_pages(db, self).await?;
-        fs::init(db, self).await?;
-        home::init(db, self).await?;
-        wiki::render_pub_all(db, self).await?;
+        bio::generate_all_pages(db, &c).await?;
+        fs::init(db, &c).await?;
+        wiki::render_pub_all(db, &c).await?;
 
-        Ok(())
+        Ok(c)
     }
 
     pub async fn get_entity(&self, id: u32) -> Result<Entity> {
@@ -116,5 +95,23 @@ impl Common {
             ErrorStep::ExpectRealEntity { entity: id }.result()?
         }
         Ok(entity.name().to_string())
+    }
+}
+
+pub struct LockMap<T>(Mutex<BTreeMap<u32, Arc<RwLock<T>>>>);
+
+impl<T: Default> LockMap<T> {
+    /// Get data of a specific user
+    pub async fn get(&self, owner: u32) -> Result<Arc<RwLock<T>>> {
+        let mut guard = self.0.lock().await;
+        let arc = match guard.get(&owner) {
+            Some(arc) => arc.clone(),
+            None => {
+                let arc = Arc::new(RwLock::new(T::default()));
+                guard.insert(owner, arc.clone());
+                arc
+            }
+        };
+        Ok(arc)
     }
 }

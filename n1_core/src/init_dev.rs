@@ -1,145 +1,57 @@
-use std::{collections::BTreeMap, str::FromStr, sync::Arc};
+use std::{str::FromStr, sync::Arc};
 
-use bytes::Bytes;
-use n1_tool::{DB, DBMemory};
+use n1_tool::DB;
 
 use crate::{
-    Common, OpRequest, Result,
     op::{
-        self, Entity, EntityAndObjectDTO, Group, Name, OID_ENTITY_BIO, OID_ENTITY_DROPBOX,
-        OID_ENTITY_FS, OID_ENTITY_WIKI, OID_GLOBAL_ENTITY, OID_GLOBAL_HOME, Token, TokenItem, User,
         bio,
-        fs::{MakeDTO, fs_direct_mkdir, fs_direct_mkfile, fs_direct_set},
-        wiki,
+        fs::{fs_direct_mkdir, fs_direct_mkfile, fs_direct_set, MakeDTO},
+        wiki, Entity, EntityAndObjectDTO, Group, Name, Token, TokenItem, User, OID_ENTITY_BIO,
+        OID_ENTITY_DROPBOX, OID_ENTITY_FS, OID_ENTITY_WIKI, OID_GLOBAL_ENTITY, OID_GLOBAL_HOME,
     },
+    Common, OpRequest, Result,
 };
 
-const NOW: u64 = 1785597192;
-
-pub async fn init_dev() -> Result<(impl DB, Arc<Common>)> {
-    let db = DBMemory::new();
-    let mut common = Common::new();
-
-    common.lang = &crate::op::LANG_FR;
-
+/// Add data for development purposes.
+pub async fn init_dev(db: &impl DB, common: Arc<Common>) -> Result<()> {
     // Set "eve" user
-    let entities_map = common.entities.get_mut();
-    entities_map.insert(
-        101,
-        Entity::User(User {
-            uid: 101,
-            name: "eve".to_string(),
-            password: "56".to_string(),
-            is_admin: true,
-            access: vec![],
-        }),
-    );
-    db.obj_set(
-        101,
-        OID_ENTITY_BIO as u32,
-        op::bio::BioState {
-            last_edit: NOW,
-            content: concat!(
-                "me+https://github.com/octocat Octocat\n",
-                "me+https://octocat.github.io Website\n",
-                "https://github.com/octocat/Hello-World My hello world example\n",
-                "https://github.blog\n",
-                "Hello World ...",
-            )
-            .to_string(),
-        },
-    )
-    .await?;
+    {
+        let mut entities_map = common.entities.write().await;
+        entities_map.insert(
+            101,
+            Entity::User(User {
+                uid: 101,
+                name: "eve".to_string(),
+                password: "56".to_string(),
+                is_admin: true,
+                access: vec![],
+            }),
+        );
 
-    // Set bob user
-    entities_map.insert(
-        102,
-        Entity::User(User {
-            uid: 102,
-            name: "bob".to_string(),
-            password: "42".to_string(),
-            is_admin: false,
-            access: vec![
-                TokenItem {
-                    id: 201,
-                    app: OID_ENTITY_FS,
-                    can_write: false,
-                },
-                TokenItem {
-                    id: 201,
-                    app: OID_ENTITY_WIKI,
-                    can_write: true,
-                },
-            ],
-        }),
-    );
-
-    entities_map.insert(
-        201,
-        Entity::Group(Group {
-            gid: 201,
-            name: "world".to_string(),
-            users: vec![
-                TokenItem {
-                    id: 102,
-                    app: OID_ENTITY_FS,
-                    can_write: false,
-                },
-                TokenItem {
-                    id: 102,
-                    app: OID_ENTITY_WIKI,
-                    can_write: true,
-                },
-            ],
-        }),
-    );
-
-    // Wiki
-    db.obj_set(
-        201,
-        OID_ENTITY_WIKI as u32,
-        op::wiki::WikiState {
-            owner_id: 201,
-            articles: {
-                let mut m = BTreeMap::new();
-                m.insert(
-                    401,
-                    op::wiki::WikiArticle {
-                        id: 401,
-                        slug: Name::from_str("foo")?,
-                        title: "Foo article".to_string(),
-                        last_edit: NOW,
+        entities_map.insert(
+            201,
+            Entity::Group(Group {
+                gid: 201,
+                name: "world".to_string(),
+                users: vec![
+                    TokenItem {
+                        id: 102,
+                        app: OID_ENTITY_FS,
+                        can_write: false,
                     },
-                );
-                m.insert(
-                    402,
-                    op::wiki::WikiArticle {
-                        id: 402,
-                        slug: Name::from_str("bar")?,
-                        title: "Bar article".to_string(),
-                        last_edit: 1785597192,
+                    TokenItem {
+                        id: 102,
+                        app: OID_ENTITY_WIKI,
+                        can_write: true,
                     },
-                );
-                m
-            },
-        },
-    )
-    .await?;
-    db.fs_set(201, 401 , Bytes::from_static(b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat. Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim. Pellentesque congue. Ut in risus volutpat libero pharetra tempor. Cras vestibulum bibendum augue. Praesent egestas leo in pede. Praesent blandit odio eu enim. Pellentesque sed dui ut augue blandit sodales. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Aliquam nibh. Mauris ac mauris sed pede pellentesque fermentum. Maecenas adipiscing ante non diam sodales hendrerit.
+                ],
+            }),
+        );
+    }
 
-Ut velit mauris, egestas sed, gravida nec, ornare ut, mi. Aenean ut orci vel massa suscipit pulvinar. Nulla sollicitudin. Fusce varius, ligula non tempus aliquam, nunc turpis ullamcorper nibh, in tempus sapien eros vitae ligula. Pellentesque rhoncus nunc et augue. Integer id felis. Curabitur aliquet pellentesque diam. Integer quis metus vitae elit lobortis egestas. Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Morbi vel erat non mauris convallis vehicula. Nulla et sapien. Integer tortor tellus, aliquam faucibus, convallis id, congue eu, quam. Mauris ullamcorper felis vitae erat. Proin feugiat, augue non elementum posuere, metus purus iaculis lectus, et tristique ligula justo vitae magna.
+    init_sarah_data(db, common.clone()).await;
 
-liquam convallis sollicitudin purus. Praesent aliquam, enim at fermentum mollis, ligula massa adipiscing nisl, ac euismod nibh nisl eu lectus. Fusce vulputate sem at sapien. Vivamus leo. Aliquam euismod libero eu enim. Nulla nec felis sed leo placerat imperdiet. Aenean suscipit nulla in justo. Suspendisse cursus rutrum augue. Nulla tincidunt tincidunt mi. Curabitur iaculis, lorem vel rhoncus faucibus, felis magna fermentum augue, et ultricies lacus lorem varius purus. Curabitur eu amet..")).await?;
-    db.fs_set(201, 402, Bytes::from_static(b"Hello World"))
-        .await?;
-
-    // Final init
-    common.init(&db).await?;
-
-    let common = Arc::new(common);
-    init_sarah_data(&db, common.clone()).await;
-
-    Ok((db, common))
+    Ok(())
 }
 
 async fn init_sarah_data(db: &impl DB, common: Arc<Common>) {
@@ -166,6 +78,11 @@ async fn init_sarah_data(db: &impl DB, common: Arc<Common>) {
                     id: uid,
                     app: OID_ENTITY_WIKI,
                     can_write: true,
+                },
+                TokenItem {
+                    id: 201,
+                    app: OID_ENTITY_FS,
+                    can_write: false,
                 },
             ],
         }),
@@ -194,7 +111,14 @@ async fn init_sarah_data(db: &impl DB, common: Arc<Common>) {
             token: token.clone(),
             dto: bio::BioSetDTO {
                 owner: uid,
-                content: "I'm Sarah!".to_string(),
+                content: concat!(
+                    "me+https://github.com/octocat Octocat\n",
+                    "me+https://octocat.github.io Website\n",
+                    "https://github.com/octocat/Hello-World My hello world example\n",
+                    "https://github.blog\n",
+                    "Hello World ...",
+                )
+                .to_string(),
             },
         },
     )

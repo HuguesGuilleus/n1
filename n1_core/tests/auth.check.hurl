@@ -8,10 +8,10 @@ cookieEve: cookie "auth"
 ``
 
 PUT http://localhost:8000/:auth.login/
-{"name":"bob","password":"42"}
+{"name":"sarah","password":"21"}
 HTTP 200
 [Captures]
-cookieBob: cookie "auth"
+cookieSarah: cookie "auth"
 ``
 
 # Is connected
@@ -22,7 +22,7 @@ HTTP 200
 `null`
 
 PUT http://localhost:8000/:auth.check.auth/
-Cookie: auth={{cookieBob}}
+Cookie: auth={{cookieSarah}}
 HTTP 200
 `null`
 
@@ -38,7 +38,7 @@ HTTP 200
 `null`
 
 PUT http://localhost:8000/:auth.check.isadmin/
-Cookie: auth={{cookieBob}}
+Cookie: auth={{cookieSarah}}
 HTTP 403
 
 PUT http://localhost:8000/:auth.check.isadmin/
@@ -54,7 +54,7 @@ HTTP 200
 `null`
 
 PUT http://localhost:8000/:auth.check.access.read/
-Cookie: auth={{cookieBob}}
+Cookie: auth={{cookieSarah}}
 {"owner_id":201,"app_id":1}
 HTTP 200
 `null`
@@ -73,7 +73,7 @@ HTTP 200
 `null`
 
 PUT http://localhost:8000/:auth.check.access.write/
-Cookie: auth={{cookieBob}}
+Cookie: auth={{cookieSarah}}
 {"owner_id":201,"app_id":1}
 HTTP 403
 

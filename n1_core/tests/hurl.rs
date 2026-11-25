@@ -6,6 +6,7 @@ use hurl::{
     },
 };
 use hurl_core::input::Input;
+use n1_tool::DBMemory;
 use tokio::{net::TcpListener, spawn};
 
 use std::{fs, net::SocketAddr, path::Path, sync::Arc};
@@ -13,6 +14,7 @@ use std::{fs, net::SocketAddr, path::Path, sync::Arc};
 use n1_core::{
     init_dev,
     proto_http::{HTTPServer, HTTPServerArc},
+    Common,
 };
 
 #[tokio::test(flavor = "multi_thread")]
@@ -22,10 +24,12 @@ async fn hurl_tests() {
     for i in 0..token_key.len() {
         token_key[i] = i as u8;
     }
-    let (db, common) = init_dev().await.unwrap();
+    let db = DBMemory::new();
+    let common = Arc::new(Common::new(&db).await.unwrap());
+    init_dev(&db, common.clone()).await.unwrap();
     let server = HTTPServerArc(Arc::new(HTTPServer {
-        db: db,
-        common: common,
+        db,
+        common,
         token_key,
     }));
 
