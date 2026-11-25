@@ -58,7 +58,7 @@ pub struct Common {
 impl Common {
     pub async fn new(db: &impl DB) -> Result<Self> {
         let c = Common {
-            lang: &LANG_EN,
+            lang: &LANG_FR,
             entities: RwLock::new(BTreeMap::new()),
             shadow: RwLock::new(BTreeSet::new()),
             fs: LockMap(Mutex::new(BTreeMap::new())),

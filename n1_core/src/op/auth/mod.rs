@@ -1,12 +1,10 @@
 pub mod admin;
 mod auth_check;
-mod auth_test;
 mod console;
 pub mod login;
 
 pub use admin::*;
 pub use auth_check::*;
-pub use auth_test::*;
 pub use console::*;
 
 use std::collections::BTreeSet;

@@ -3,6 +3,14 @@
 PUT http://localhost:8000/:auth.login/
 {"name":"eve","password":"56"}
 HTTP 200
+[Asserts]
+cookie "auth" startsWith "T1."
+cookie "auth[Max-Age]" == 604800 # 1 week
+cookie "auth[Domain]" not exists
+cookie "auth[Path]" not exists
+cookie "auth[Secure]" exists
+cookie "auth[HttpOnly]" exists
+cookie "auth[SameSite]" == "Strict"
 [Captures]
 cookieEve: cookie "auth"
 ``
@@ -13,6 +21,19 @@ HTTP 200
 [Captures]
 cookieSarah: cookie "auth"
 ``
+
+# Get ID
+
+PUT http://localhost:8000/:auth.get.id/
+Cookie: auth={{cookieEve}}
+HTTP 200
+Content-Type: application/json
+`101`
+
+PUT http://localhost:8000/:auth.get.id/
+HTTP 200
+Content-Type: application/json
+`0`
 
 # Is connected
 

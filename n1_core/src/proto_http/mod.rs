@@ -70,7 +70,6 @@ where
                 ":auth.login" => make_token(s, r, body, op::auth::login::login_action).await,
 
                 // JSON actions API
-                ":auth.admin." => with_json(s, r, body, op::auth_test_access_read).await,
                 ":auth.admin.edit.name" => with_json(s, r, body, op::auth_admin_edit_name).await,
                 ":auth.admin.new" => with_json(s, r, body, op::auth_admin_new).await,
                 ":auth.check.access.read" => {
@@ -81,12 +80,7 @@ where
                 }
                 ":auth.check.auth" => with_json(s, r, body, op::auth_check_auth).await,
                 ":auth.check.isadmin" => with_json(s, r, body, op::auth_check_isadmin).await,
-                ":auth.test.access.read" => with_json(s, r, body, op::auth_test_access_read).await,
-                ":auth.test.access.write" => {
-                    with_json(s, r, body, op::auth_test_access_write).await
-                }
-                ":auth.test.id" => with_json(s, r, body, op::auth_test_id).await,
-                ":auth.test.isadmin" => with_json(s, r, body, op::auth_test_isadmin).await,
+                ":auth.get.id" => with_json(s, r, body, op::auth_get_id).await,
                 ":bio.get" => with_json(s, r, body, op::bio::get).await,
                 ":bio.set" => with_json(s, r, body, op::bio::set).await,
                 ":fs.direct.mkdir" => with_json(s, r, body, op::fs::fs_direct_mkdir).await,

@@ -5,15 +5,16 @@
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
-use n1_html::{H, Html, Q, js};
-use n1_tool::{DB, mime};
+use n1_html::{js, Html, H, Q};
+use n1_tool::{mime, DB};
 
 use crate::{
-    Common, DTO, ErrorStep, OpRequest, Result, front,
+    front,
     op::{
+        compo::{self, fetcher_js, LOGIN_JS_CONNECTED, TIME_JS},
         OID_ENTITY_BIO,
-        compo::{self, LOGIN_JS_CONNECTED, TIME_JS, fetcher_js},
     },
+    Common, ErrorStep, OpRequest, Result, DTO,
 };
 
 /// Information stored for on entity.
@@ -183,12 +184,11 @@ pub async fn console(db: &impl DB, r: OpRequest<u32>) -> Result<String> {
                 + js! {
                     {html LOGIN_JS_CONNECTED}
                     {html TIME_JS}
-                    const owner = {extern r.dto},
-                    {html fetcher_js(lang)},
+                    const {html fetcher_js(lang)},
                     send = () => F(fetch("/:bio.set/", {
                         method: "PUT",
                         body: JSON.stringify({
-                            owner,
+                            owner: {extern r.dto},
                             content: content.innerText,
                         }),
                     }), out);
