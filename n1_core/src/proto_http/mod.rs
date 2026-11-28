@@ -49,7 +49,7 @@ where
 
                 // Render HTML
                 "_" => with_url(s, r, op::menu::menu_console).await,
-                "_auth_global_admin" => with_url(s, r, op::auth::auth_global_admin).await,
+                "_auth_admin_user" => with_url(s, r, op::auth::auth_admin_user).await,
                 "_auth_login" => with_url(s, r, op::auth::login::login_console).await,
                 "_bio" => with_url(s, r, op::bio::console).await,
                 "_fs" => with_url(s, r, op::fs::fs_direct_index).await,
@@ -70,8 +70,8 @@ where
                 ":auth.login" => make_token(s, r, body, op::auth::login::login_action).await,
 
                 // JSON actions API
-                ":auth.admin.edit.name" => with_json(s, r, body, op::auth_admin_edit_name).await,
-                ":auth.admin.new" => with_json(s, r, body, op::auth_admin_new).await,
+                ":auth.org.edit.name" => with_json(s, r, body, op::auth_org_edit_name).await,
+                ":auth.org.new" => with_json(s, r, body, op::auth_org_new).await,
                 ":auth.check.access.read" => {
                     with_json(s, r, body, op::auth_check_access_read).await
                 }

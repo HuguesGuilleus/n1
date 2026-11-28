@@ -1,14 +1,15 @@
 use std::iter::once;
 
-use n1_html::{H, Html, js};
+use n1_html::{js, Html, H};
 use n1_tool::DB;
 
 use crate::{
-    OpRequest, Result, front,
-    op::{Entity, OID_ENTITY_BIO, User, compo},
+    front,
+    op::{compo, Entity, User, OID_ENTITY_BIO},
+    OpRequest, Result,
 };
 
-pub async fn auth_global_admin(_: &impl DB, r: OpRequest<()>) -> Result<String> {
+pub async fn auth_admin_user(_: &impl DB, r: OpRequest<()>) -> Result<String> {
     r.token.check_isadmin()?;
 
     let entities = r.common.entities.read().await;
@@ -44,7 +45,7 @@ pub async fn auth_global_admin(_: &impl DB, r: OpRequest<()>) -> Result<String> 
                                 + [H - "td"
                                     + || {
                                         once(
-                                            user.access
+                                            user.groups
                                                 .iter()
                                                 .find(|token_item| {
                                                     token_item.id == user.uid

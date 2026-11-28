@@ -62,6 +62,7 @@ impl Display for Error {
 #[non_exhaustive]
 pub enum ErrorStep {
     Action(&'static str),
+    AlreadyExist {},
     AuthForbiddenAdmin,
     AuthForbiddenRead {
         owner: u32,
@@ -81,6 +82,9 @@ pub enum ErrorStep {
     BodyRead(io::Error),
     BodyDecode(serde_json::Error),
     ExpectRealEntity {
+        entity: u32,
+    },
+    ExpectOrganizationEntity {
         entity: u32,
     },
     FieldEmpty {
@@ -135,13 +139,14 @@ impl ErrorStep {
 
     pub fn category(&self) -> ErrorCategory {
         match self {
+            ErrorStep::Action(..) => ErrorCategory::BadRequest,
+            ErrorStep::AlreadyExist {} => ErrorCategory::BadRequest,
             ErrorStep::AuthNone => ErrorCategory::AuthNone,
             ErrorStep::AuthForbiddenAdmin => ErrorCategory::AuthForbidden,
             ErrorStep::AuthForbiddenRead { .. } => ErrorCategory::AuthForbidden,
             ErrorStep::AuthForbiddenWrite { .. } => ErrorCategory::AuthForbidden,
             ErrorStep::BodyRead(..) => ErrorCategory::BadRequest,
             ErrorStep::BodyDecode(..) => ErrorCategory::BadRequest,
-            ErrorStep::Action(..) => ErrorCategory::BadRequest,
             ErrorStep::DB(DBError::ClientConnexion) => ErrorCategory::BadRequest,
             ErrorStep::DB(
                 DBError::Decode(..)
@@ -157,6 +162,7 @@ impl ErrorStep {
             }
             ErrorStep::DBDataNotString { .. } => ErrorCategory::Internal,
             ErrorStep::ExpectRealEntity { .. } => ErrorCategory::BadRequest,
+            ErrorStep::ExpectOrganizationEntity { .. } => ErrorCategory::BadRequest,
             ErrorStep::FieldEmpty { .. } => ErrorCategory::BadRequest,
             ErrorStep::FieldParsing { .. } => ErrorCategory::BadRequest,
             ErrorStep::FieldZero { .. } => ErrorCategory::BadRequest,
@@ -183,6 +189,7 @@ impl ErrorStep {
     pub fn to_string(&self) -> String {
         match self {
             ErrorStep::Action(action) => format!("in action {}", action),
+            ErrorStep::AlreadyExist {} => "already exist".to_string(),
             ErrorStep::AuthNone => "need auth".to_string(),
             ErrorStep::AuthForbiddenAdmin => "access forbidden for non-admin".to_string(),
             ErrorStep::AuthForbiddenRead { owner, app } => {
@@ -211,7 +218,10 @@ impl ErrorStep {
             ErrorStep::DBDataNotString { owner, object, err } => {
                 format!("DB data not string: owner={owner} object={object} err={err}")
             }
-            ErrorStep::ExpectRealEntity { entity } => format!("expect real entity for {entity}"),
+            ErrorStep::ExpectRealEntity { entity } => format!("expect {entity} is a real entity"),
+            ErrorStep::ExpectOrganizationEntity { entity } => {
+                format!("expect {entity} is an organization entity")
+            }
             ErrorStep::FieldZero { name } => format!("field {name:?} is zero"),
             ErrorStep::FieldParsing { name } => format!("parsing fail in field {name:?}"),
             ErrorStep::FieldEmpty { name } => format!("field {name:?} is empty"),

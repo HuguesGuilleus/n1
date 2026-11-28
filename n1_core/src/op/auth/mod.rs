@@ -1,9 +1,9 @@
-pub mod admin;
+pub mod admin_org;
 mod auth_check;
 mod console;
 pub mod login;
 
-pub use admin::*;
+pub use admin_org::*;
 pub use auth_check::*;
 pub use console::*;
 
@@ -19,18 +19,30 @@ use crate::{
 
 #[derive(Debug, PartialEq, Deserialize, Clone, Serialize)]
 pub enum Entity {
-    Administration(Administration),
+    /// A mega group containing multiple groups and users.
+    Organization(Organization),
+    /// One group.
     Group(Group),
-    None(u32),
+    /// One user.
     User(User),
+    /// Old entity id reserved.
+    None(u32),
 }
 
 #[derive(Debug, PartialEq, Deserialize, Clone, Serialize)]
-pub struct Administration {
+pub struct Organization {
     pub id: u32,
     pub name: String,
     pub entities: BTreeSet<u32>,
     pub default_access: Vec<TokenItem>,
+}
+
+#[derive(Debug, PartialEq, Deserialize, Clone, Serialize)]
+pub struct Group {
+    pub gid: u32,
+    pub name: String,
+    pub users: Vec<TokenItem>,
+    pub organization: u32,
 }
 
 #[derive(Debug, PartialEq, Deserialize, Clone, Serialize)]
@@ -39,15 +51,8 @@ pub struct User {
     pub name: String,
     pub password: String,
     pub is_admin: bool,
-    /// Access for this group
-    pub access: Vec<TokenItem>,
-}
-
-#[derive(Debug, PartialEq, Deserialize, Clone, Serialize)]
-pub struct Group {
-    pub gid: u32,
-    pub name: String,
-    pub users: Vec<TokenItem>,
+    pub organization: u32,
+    pub groups: Vec<TokenItem>,
 }
 
 /// Load entities informations.
@@ -57,7 +62,7 @@ pub async fn init(db: &impl DB, common: &Common) -> Result<()> {
     entities.into_iter().for_each(|entity| {
         entities_map.insert(
             match entity {
-                Entity::Administration(Administration { id, .. }) => id,
+                Entity::Organization(Organization { id, .. }) => id,
                 Entity::Group(Group { gid, .. }) => gid,
                 Entity::None(id) => id,
                 Entity::User(User { uid, .. }) => uid,
@@ -72,7 +77,7 @@ pub async fn init(db: &impl DB, common: &Common) -> Result<()> {
 impl Entity {
     pub fn id(&self) -> u32 {
         match self {
-            Entity::Administration(admin) => admin.id,
+            Entity::Organization(org) => org.id,
             Entity::Group(group) => group.gid,
             Entity::None(id) => *id,
             Entity::User(user) => user.uid,
@@ -81,16 +86,16 @@ impl Entity {
 
     pub fn name(&self) -> &str {
         match self {
-            Entity::Administration(admin) => &admin.name,
+            Entity::Organization(org) => &org.name,
             Entity::Group(group) => &group.name,
             Entity::User(user) => &user.name,
             Entity::None(_) => "~",
         }
     }
 
-    pub fn is_admin(&self) -> bool {
+    pub fn is_org(&self) -> bool {
         match self {
-            Entity::Administration(_) => true,
+            Entity::Organization(_) => true,
             _ => false,
         }
     }
@@ -102,16 +107,16 @@ impl Entity {
         }
     }
 
-    pub fn is_none(&self) -> bool {
+    pub fn is_user(&self) -> bool {
         match self {
-            Entity::None(_) => true,
+            Entity::User(_) => true,
             _ => false,
         }
     }
 
-    pub fn is_user(&self) -> bool {
+    pub fn is_none(&self) -> bool {
         match self {
-            Entity::User(_) => true,
+            Entity::None(_) => true,
             _ => false,
         }
     }
@@ -129,7 +134,7 @@ impl User {
         let mut groups_inc = 0;
 
         let mut previous = 0;
-        for TokenItem { id, .. } in &self.access {
+        for TokenItem { id, .. } in &self.groups {
             if *id != previous {
                 previous = *id;
                 groups[groups_inc] = *id;

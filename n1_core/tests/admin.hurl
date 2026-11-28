@@ -5,15 +5,15 @@ HTTP 200
 cookie: cookie "auth"
 ``
 
-PUT http://localhost:8000/:auth.admin.new/
+PUT http://localhost:8000/:auth.org.new/
 Cookie: auth={{cookie}}
-"syndicate"
+"section"
 HTTP 200
 [Captures]
 adminID: body
 
-PUT http://localhost:8000/:auth.admin.edit.name/
+PUT http://localhost:8000/:auth.org.edit.name/
 Cookie: auth={{cookie}}
-{"id":{{adminID}},"name":"new-syndicate"}
+{"id":{{adminID}},"name":"section-troyes"}
 HTTP 200
 `null`

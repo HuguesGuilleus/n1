@@ -14,9 +14,19 @@ use crate::{
 
 /// Add data for development purposes.
 pub async fn init_dev(db: &impl DB, common: Arc<Common>) -> Result<()> {
-    // Set "eve" user
+    // Set entities
     {
         let mut entities_map = common.entities.write().await;
+        entities_map.insert(
+            1,
+            Entity::Organization(crate::op::Organization {
+                id: 1,
+                name: "syndicate".to_string(),
+                entities: std::collections::BTreeSet::new(),
+                default_access: vec![],
+            }),
+        );
+
         entities_map.insert(
             101,
             Entity::User(User {
@@ -24,7 +34,8 @@ pub async fn init_dev(db: &impl DB, common: Arc<Common>) -> Result<()> {
                 name: "eve".to_string(),
                 password: "56".to_string(),
                 is_admin: true,
-                access: vec![],
+                groups: vec![],
+                organization: 1,
             }),
         );
 
@@ -45,6 +56,7 @@ pub async fn init_dev(db: &impl DB, common: Arc<Common>) -> Result<()> {
                         can_write: true,
                     },
                 ],
+                organization: 1,
             }),
         );
     }
@@ -63,7 +75,7 @@ async fn init_sarah_data(db: &impl DB, common: Arc<Common>) {
             name: "sarah".to_string(),
             password: "21".to_string(),
             is_admin: false,
-            access: vec![
+            groups: vec![
                 TokenItem {
                     id: uid,
                     app: OID_ENTITY_FS,
@@ -85,6 +97,7 @@ async fn init_sarah_data(db: &impl DB, common: Arc<Common>) {
                     can_write: false,
                 },
             ],
+            organization: 1,
         }),
     );
 

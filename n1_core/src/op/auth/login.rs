@@ -1,11 +1,12 @@
-use n1_html::{H, Html, js};
+use n1_html::{js, Html, H};
 use n1_tool::DB;
 use serde::Deserialize;
 
-use super::{super::compo, DTO, Entity, OpRequest, Token, TokenItem};
+use super::{super::compo, Entity, OpRequest, Token, TokenItem, DTO};
 use crate::{
-    Result, errs, front,
-    op::{Lang, compo::fetcher_js},
+    errs, front,
+    op::{compo::fetcher_js, Lang},
+    Result,
 };
 
 #[derive(Debug, Deserialize)]
@@ -31,7 +32,7 @@ pub async fn login_action(_: &impl DB, r: OpRequest<LoginDTO>) -> Result<Token> 
             if user.name == r.dto.name {
                 if user.password == r.dto.password {
                     let mut access = [TokenItem::default(); Token::ACCESS_LEN];
-                    access[0..user.access.len()].copy_from_slice(&user.access);
+                    access[0..user.groups.len()].copy_from_slice(&user.groups);
                     return Ok(Token {
                         uid: user.uid,
                         is_admin: user.is_admin,

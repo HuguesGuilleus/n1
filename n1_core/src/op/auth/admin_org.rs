@@ -4,11 +4,11 @@ use n1_tool::DB;
 use serde::Deserialize;
 
 use crate::{
-    DTO, Error, OpRequest, Result, errs,
-    op::{Administration, Entity, OID_GLOBAL_ENTITY},
+    op::{Entity, Organization, OID_GLOBAL_ENTITY},
+    Error, ErrorStep, OpRequest, Result, DTO,
 };
 
-pub async fn auth_admin_new(db: &impl DB, r: OpRequest<String>) -> Result<u32> {
+pub async fn auth_org_new(db: &impl DB, r: OpRequest<String>) -> Result<u32> {
     r.token.check_isadmin()?;
 
     let mut entities = r.common.entities.write().await;
@@ -17,13 +17,13 @@ pub async fn auth_admin_new(db: &impl DB, r: OpRequest<String>) -> Result<u32> {
         .find(|(_, entity)| entity.name() == r.dto)
         .is_some()
     {
-        errs::ALREADY_EXIST.push_result(format!("entity {:?} already exist", r.dto))?;
+        ErrorStep::AlreadyExist {}.result()?;
     }
 
     let id = db.fs_new_owner().await?;
     entities.insert(
         id,
-        Entity::Administration(Administration {
+        Entity::Organization(Organization {
             id,
             name: r.dto,
             entities: BTreeSet::new(),
@@ -43,14 +43,14 @@ pub struct EditNameDTO {
 impl DTO for EditNameDTO {
     fn check(&self) -> Result<()> {
         if self.id == 0 {
-            errs::FIELD_EMPTY.push_result("field 'id' cannot be zero")?;
+            ErrorStep::FieldZero { name: "id" }.result()?;
         } else if self.name.is_empty() {
-            errs::FIELD_EMPTY.push_result("field 'name' cannot be empty")?;
+            ErrorStep::FieldZero { name: "name" }.result()?;
         }
         Ok(())
     }
 }
-pub async fn auth_admin_edit_name(db: &impl DB, r: OpRequest<EditNameDTO>) -> Result<()> {
+pub async fn auth_org_edit_name(db: &impl DB, r: OpRequest<EditNameDTO>) -> Result<()> {
     r.token.check_isadmin()?;
 
     let mut entities = r.common.entities.write().await;
@@ -59,21 +59,18 @@ pub async fn auth_admin_edit_name(db: &impl DB, r: OpRequest<EditNameDTO>) -> Re
         .find(|(_, entity)| entity.name() == r.dto.name)
         .is_some()
     {
-        errs::ALREADY_EXIST.push_result(format!("entity {:?} already exist", r.dto.name))?;
+        ErrorStep::AlreadyExist {}.result()?;
     }
 
     match entities.get_mut(&r.dto.id) {
-        Some(Entity::Administration(admin)) => {
-            admin.name = r.dto.name;
+        Some(Entity::Organization(org)) => {
+            org.name = r.dto.name;
         }
         Some(_) => {
-            errs::INCOHERENT_WITH_STATE.push_result(format!(
-                "entity with id {:?} is not an administration",
-                r.dto.id
-            ))?;
+            ErrorStep::ExpectOrganizationEntity { entity: r.dto.id }.result()?;
         }
         None => {
-            errs::NOT_FOUND.push_result(format!("entity with id {:?} not found", r.dto.id))?;
+            ErrorStep::NotFoundEntity { entity: r.dto.id }.result()?;
         }
     }
 
